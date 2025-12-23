@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Api-gateway/api-gateway.csproj" />
+  <Project Path="shared/shared.csproj" />
+</Solution>

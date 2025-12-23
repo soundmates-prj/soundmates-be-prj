@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="AuthQueryService.Api/AuthQueryService.Api.csproj" />
+  <Project Path="AuthQueryService.Application/AuthQueryService.Application.csproj" />
+  <Project Path="AuthQueryService.Domain/AuthQueryService.Domain.csproj" />
+  <Project Path="AuthQueryService.Infrastructure/AuthQueryService.Infrastructure.csproj" />
+</Solution>

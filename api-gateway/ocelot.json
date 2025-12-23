@@ -1,0 +1,126 @@
+{
+  "Routes": [
+    // === AUTH COMMANDS ===
+    {
+      "DownstreamPathTemplate": "/api/v1/auth/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "auth-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/auth/{everything}",
+      "UpstreamHttpMethod": ["POST", "PUT", "DELETE", "OPTIONS"]
+    },
+
+    // === USER COMMANDS ===
+    {
+      "DownstreamPathTemplate": "/api/v1/user/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "auth-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/command/user/{everything}",
+      "UpstreamHttpMethod": ["POST", "PUT", "DELETE", "OPTIONS"]
+    },
+
+    // === USER QUERIES ===
+    {
+      "DownstreamPathTemplate": "/api/v1/user/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "auth-query-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/user/{everything}",
+      "UpstreamHttpMethod": ["GET", "OPTIONS"]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/users",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "auth-query-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/users",
+      "UpstreamHttpMethod": ["GET", "OPTIONS"]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/users/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "auth-query-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/users/{everything}",
+      "UpstreamHttpMethod": ["GET", "OPTIONS"]
+    },
+
+    // === ROLE COMMANDS ===
+    {
+      "DownstreamPathTemplate": "/api/v1/role/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "auth-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/command/role/{everything}",
+      "UpstreamHttpMethod": ["POST", "PUT", "DELETE", "OPTIONS"]
+    },
+
+    // === ROLE QUERIES ===
+    {
+      "DownstreamPathTemplate": "/api/v1/role/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "auth-query-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/query/role/{everything}",
+      "UpstreamHttpMethod": ["GET", "OPTIONS"]
+    },
+    // === ROLE QUERIES (friendly path) ===
+    {
+      "DownstreamPathTemplate": "/api/v1/role",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "auth-query-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/role",
+      "UpstreamHttpMethod": ["GET", "OPTIONS"]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/role/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "auth-query-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/role/{everything}",
+      "UpstreamHttpMethod": ["GET", "OPTIONS"]
+    }
+  ],
+
+  "GlobalConfiguration": {
+    "BaseUrl": "http://localhost:8080"
+  }
+}
