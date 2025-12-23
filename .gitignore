@@ -1,0 +1,99 @@
+# =========================
+# .NET / Visual Studio Ignore
+# =========================
+
+# Build results
+bin/
+obj/
+out/
+
+# Build results
+[Bb]in/
+[Oo]bj/
+[Pp]ublish/
+
+# User-specific files
+*.user
+*.rsuser
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio cache
+.vs/
+*.vsidx
+*.vscode/
+
+# Logs
+*.log
+logs/
+Logs/
+
+# Configuration
+appsettings.Development.json
+appsettings.Local.json
+
+# Docker
+docker-compose.override.yml
+*.env
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# JetBrains Rider
+.idea/
+.idea_modules/
+*.sln.iml
+
+# Test results
+TestResult*/
+*.coverage
+*.coveragexml
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+.nuget/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE temporary files
+.editorconfig.user
+launchSettings.json
+
+# Build and runtime artifacts
+.netnativecompile/
+artifacts/
+
+# ReSharper
+.resharper
+.resharper.user
+_ReSharper*/
+
+# Entity Framework
+*.edmx.diagram
+
+# Code coverage
+coverage/
+*.trx
+
+# Visual Studio for Mac
+.vscode
+.vscode/
+*.app
+*.exe
+*.dll
+
+# Node modules (if using frontend tools)
+node_modules/
+npm-debug.log
+
+# Environment-specific files
+.env.local
+.env.*.local
+secrets.json
