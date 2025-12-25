@@ -24,7 +24,13 @@ docker-compose up -d --build
 
 echo.
 echo [*] Waiting for services to be ready...
-timeout /t 10 /nobreak >nul
+timeout /t 15 /nobreak >nul
+
+REM Note about migrations
+echo.
+echo [*] Note: Database migrations are applied automatically when auth-service starts.
+echo [*] If you encounter migration errors, check the logs: docker logs soundmates-auth-service
+echo.
 
 REM Check service status
 echo.
