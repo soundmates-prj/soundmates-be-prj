@@ -70,8 +70,8 @@ namespace AuthQueryService.Api.Controllers
             return Ok(res);
         }
 
-        // GET: /api/v1/users/{id} - Get user by ID
-        [Authorize]
+        // GET: /api/v1/users/{id} - Get user by ID (ADMIN only)
+        [Authorize(Roles = "ADMIN")]
         [HttpGet("{id:guid}")]
         public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
         {
@@ -81,8 +81,8 @@ namespace AuthQueryService.Api.Controllers
             return Ok(res);
         }
 
-        // GET: /api/v1/users/{id}/profile - Get user's basic profile by ID
-        [Authorize]
+        // GET: /api/v1/users/{id}/profile - Get user's basic profile by ID (ADMIN only)
+        [Authorize(Roles = "ADMIN")]
         [HttpGet("{id:guid}/profile")]
         public async Task<IActionResult> GetProfileById(Guid id, CancellationToken ct)
         {
@@ -92,8 +92,8 @@ namespace AuthQueryService.Api.Controllers
             return Ok(res);
         }
 
-        // GET: /api/v1/users/{id}/profile/full - Get user's full profile by ID
-        [Authorize]
+        // GET: /api/v1/users/{id}/profile/full - Get user's full profile by ID (ADMIN only)
+        [Authorize(Roles = "ADMIN")]
         [HttpGet("{id:guid}/profile/full")]
         public async Task<IActionResult> GetFullProfileById(Guid id, CancellationToken ct)
         {
@@ -103,8 +103,8 @@ namespace AuthQueryService.Api.Controllers
             return Ok(res);
         }
 
-        // GET: /api/v1/users?q=abc&page=1&pageSize=20 - Search users
-        [Authorize]
+        // GET: /api/v1/users?q=abc&page=1&pageSize=20 - Search users (ADMIN only)
+        [Authorize(Roles = "ADMIN")]
         [HttpGet]
         public async Task<IActionResult> SearchUsers([FromQuery] string? q, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
         {
@@ -112,8 +112,8 @@ namespace AuthQueryService.Api.Controllers
             return Ok(res);
         }
 
-        // GET: /api/v1/users/by-username/{username} - Get user by username
-        [Authorize]
+        // GET: /api/v1/users/by-username/{username} - Get user by username (ADMIN only)
+        [Authorize(Roles = "ADMIN")]
         [HttpGet("by-username/{username}")]
         public async Task<IActionResult> GetByUsername(string username, CancellationToken ct)
         {

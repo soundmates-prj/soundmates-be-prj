@@ -93,7 +93,8 @@ public sealed class RegisterHandler : ICommandHandler<RegisterCommand, UserDto>
                 firstName = user.FirstName,
                 lastName = user.LastName,
                 roleId = user.RoleId,
-                roleName = user.Role?.Name ?? "USER",
+                // Should always be loaded; fallback kept as safety but aligned to default MEMBER
+                roleName = user.Role?.Name ?? "MEMBER",
                 isActive = user.IsActive,
                 createdAt = user.CreatedAt
             }, cancellationToken);

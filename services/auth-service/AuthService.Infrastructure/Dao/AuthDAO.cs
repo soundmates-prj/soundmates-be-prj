@@ -52,7 +52,7 @@ namespace AuthService.Infrastructure.Dao
             return ok ? user : null;
         }
 
-        // Register a new user with default role as USER
+        // Register a new user with default role as MEMBER
         public async Task<User> RegisterAsync(string username, string email, string password, string firstName, string lastName)
         {
             // Check for existing username
@@ -75,8 +75,8 @@ namespace AuthService.Infrastructure.Dao
                     $"Email '{email}' is already registered");
             }
 
-            var defaultRoleName = RoleType.USER.ToString();
-            // Get the USER role
+            var defaultRoleName = RoleType.MEMBER.ToString();
+            // Get the MEMBER role (default role for new registrations)
             var userRole = await _db.UserRoles
                 .Where(r => r.Name == defaultRoleName)
                 .OrderBy(r => r.Id)
