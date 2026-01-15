@@ -8,7 +8,8 @@ namespace AuthService.Api.Controllers
 {
     [Route("api/v1/users")]
     [ApiController]
-    [Authorize(Roles = "HOST,ADMIN")]
+    // Only ADMIN can create/update/delete other users
+    [Authorize(Roles = "ADMIN")]
     public class UserController : ControllerBase
     {
         private readonly ICommandDispatcher _commands;

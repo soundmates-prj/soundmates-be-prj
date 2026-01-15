@@ -29,7 +29,8 @@ namespace AuthService.Infrastructure.Jwt
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
                 new Claim(JwtRegisteredClaimNames.UniqueName, user.Username),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                new Claim(ClaimTypes.Role, user.Role?.Name ?? "USER")
+                // Role should normally be loaded; fallback to MEMBER to match default role
+                new Claim(ClaimTypes.Role, user.Role?.Name ?? "MEMBER")
             };
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));

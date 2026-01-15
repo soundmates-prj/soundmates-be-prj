@@ -66,28 +66,28 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_DATABASE=auth_db
-      - POSTGRES_USERNAME=postgres
-      - POSTGRES_PASSWORD=postgres
-      - RABBITMQ_HOST=rabbitmq
-      - RABBITMQ_PORT=5672
-      - RABBITMQ_USERNAME=guest
-      - RABBITMQ_PASSWORD=guest
-      - RABBITMQ_VIRTUALHOST=/
-      - JWT_KEY=THIS_IS_A_MUCH_LONGER_AND_MORE_SECURE_SUPER_SECRET_KEY_123456789
-      - JWT_ISSUER=Soundmates.Auth
-      - JWT_AUDIENCE=Soundmates.Users
-      - JWT_EXPIRES_IN_HOURS=48
-      - GOOGLE_CLIENT_ID=93259588882-152q42sdkspqdv5e1t0ljjrq4gtkr3ka.apps.googleusercontent.com
-      - GOOGLE_CLIENT_SECRET=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
-      - EMAIL_HOST=smtp.gmail.com
-      - EMAIL_PORT=587
-      - EMAIL_FROM=tranthinh5801@gmail.com
-      - EMAIL_USERNAME=tranthinh5801@gmail.com
-      - EMAIL_PASSWORD=jbup rszt ukjz oodx
-      - FRONTEND_URL=http://localhost:3000
+      - POSTGRES_HOST=${POSTGRES_HOST:-postgres}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_DATABASE=${POSTGRES_DATABASE:-auth_db}
+      - POSTGRES_USERNAME=${POSTGRES_USERNAME:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
+      - RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
+      - RABBITMQ_USERNAME=${RABBITMQ_USERNAME:-guest}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-guest}
+      - RABBITMQ_VIRTUALHOST=${RABBITMQ_VIRTUALHOST:-/}
+      - JWT_KEY=${JWT_KEY}
+      - JWT_ISSUER=${JWT_ISSUER:-Soundmates.Auth}
+      - JWT_AUDIENCE=${JWT_AUDIENCE:-Soundmates.Users}
+      - JWT_EXPIRES_IN_HOURS=${JWT_EXPIRES_IN_HOURS:-48}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - EMAIL_HOST=${EMAIL_HOST:-smtp.gmail.com}
+      - EMAIL_PORT=${EMAIL_PORT:-587}
+      - EMAIL_FROM=${EMAIL_FROM}
+      - EMAIL_USERNAME=${EMAIL_USERNAME}
+      - EMAIL_PASSWORD=${EMAIL_PASSWORD}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
     ports:
       - "8001:8080"
     depends_on:
@@ -108,22 +108,22 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_DATABASE=auth_db
-      - POSTGRES_USERNAME=postgres
-      - POSTGRES_PASSWORD=postgres
-      - MONGODB_CONNECTION_STRING=mongodb://mongodb:27017
-      - MONGODB_DATABASE=auth_query
-      - RABBITMQ_HOST=rabbitmq
-      - RABBITMQ_PORT=5672
-      - RABBITMQ_USERNAME=guest
-      - RABBITMQ_PASSWORD=guest
-      - RABBITMQ_VIRTUALHOST=/
-      - JWT_KEY=THIS_IS_A_MUCH_LONGER_AND_MORE_SECURE_SUPER_SECRET_KEY_123456789
-      - JWT_ISSUER=Soundmates.Auth
-      - JWT_AUDIENCE=Soundmates.Users
-      - JWT_EXPIRES_IN_HOURS=48
+      - POSTGRES_HOST=${POSTGRES_HOST:-postgres}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_DATABASE=${POSTGRES_DATABASE:-auth_db}
+      - POSTGRES_USERNAME=${POSTGRES_USERNAME:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - MONGODB_CONNECTION_STRING=${MONGODB_CONNECTION_STRING:-mongodb://mongodb:27017}
+      - MONGODB_DATABASE=${MONGODB_DATABASE:-auth_query}
+      - RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
+      - RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
+      - RABBITMQ_USERNAME=${RABBITMQ_USERNAME:-guest}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-guest}
+      - RABBITMQ_VIRTUALHOST=${RABBITMQ_VIRTUALHOST:-/}
+      - JWT_KEY=${JWT_KEY}
+      - JWT_ISSUER=${JWT_ISSUER:-Soundmates.Auth}
+      - JWT_AUDIENCE=${JWT_AUDIENCE:-Soundmates.Users}
+      - JWT_EXPIRES_IN_HOURS=${JWT_EXPIRES_IN_HOURS:-48}
     ports:
       - "8002:8080"
     depends_on:

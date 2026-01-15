@@ -23,6 +23,7 @@ namespace AuthService.Api.Controllers
         }
 
         // POST: /api/v1/seed/default-users
+        // Creates core roles (MEMBER, HOST, STAFF, ADMIN) if missing and seeds a default admin & host user.
         [HttpPost("default-users")]
         public async Task<IActionResult> SeedDefaultUsers(CancellationToken ct)
         {
@@ -30,6 +31,27 @@ namespace AuthService.Api.Controllers
 
             try
             {
+                // Ensure MEMBER role exists (default role for normal users)
+                var memberRole = await _roleRepository.GetByNameAsync("MEMBER");
+                if (memberRole == null)
+                {
+                    var createMemberRoleCmd = new CreateRoleCommand { Name = "MEMBER" };
+                    var memberRoleRes = await _commands.Send<CreateRoleCommand, Guid>(createMemberRoleCmd, ct);
+                    if (memberRoleRes.Success)
+                    {
+                        memberRole = await _roleRepository.GetByIdAsync(memberRoleRes.Data);
+                        results.Add(new { action = "Create MEMBER role", success = true, roleId = memberRoleRes.Data });
+                    }
+                    else
+                    {
+                        results.Add(new { action = "Create MEMBER role", success = false, error = memberRoleRes.Message });
+                    }
+                }
+                else
+                {
+                    results.Add(new { action = "MEMBER role exists", success = true, roleId = memberRole.Id });
+                }
+
                 // Get or create ADMIN role
                 var adminRole = await _roleRepository.GetByNameAsync("ADMIN");
                 if (adminRole == null)
@@ -70,6 +92,27 @@ namespace AuthService.Api.Controllers
                 else
                 {
                     results.Add(new { action = "HOST role exists", success = true, roleId = hostRole.Id });
+                }
+
+                // Get or create STAFF role
+                var staffRole = await _roleRepository.GetByNameAsync("STAFF");
+                if (staffRole == null)
+                {
+                    var createStaffRoleCmd = new CreateRoleCommand { Name = "STAFF" };
+                    var staffRoleRes = await _commands.Send<CreateRoleCommand, Guid>(createStaffRoleCmd, ct);
+                    if (staffRoleRes.Success)
+                    {
+                        staffRole = await _roleRepository.GetByIdAsync(staffRoleRes.Data);
+                        results.Add(new { action = "Create STAFF role", success = true, roleId = staffRoleRes.Data });
+                    }
+                    else
+                    {
+                        results.Add(new { action = "Create STAFF role", success = false, error = staffRoleRes.Message });
+                    }
+                }
+                else
+                {
+                    results.Add(new { action = "STAFF role exists", success = true, roleId = staffRole.Id });
                 }
 
                 // Create admin user (admin@server.com, username: admin404, password: 123456)

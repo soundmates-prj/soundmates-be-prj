@@ -277,20 +277,8 @@ await using (var scope = app.Services.CreateAsyncScope())
 
             logger.LogInformation("Database connection check: {CanConnect}", canConnect);
 
-            if (!canConnect)
-            {
-                logger.LogWarning("Cannot connect to database. Attempting to create database...");
-                try
-                {
-                    await dbContext.Database.EnsureCreatedAsync();
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning("Failed to create database: {Message}. Will retry...", ex.Message);
-                    retryCount++;
-                    continue;
-                }
-            }
+            // Note: MigrateAsync() will automatically create the database if it doesn't exist
+            // So we don't need EnsureCreatedAsync() which creates schema without migrations
 
             // Get pending migrations before applying
             var pendingMigrations = dbContext.Database.GetPendingMigrations().ToList();
@@ -369,7 +357,9 @@ static async Task SeedDefaultRolesAsync(AsyncServiceScope scope, ILogger logger)
         var roleRepository = scope.ServiceProvider.GetRequiredService<AuthService.Domain.Interfaces.IRoleRepository>();
         var commandDispatcher = scope.ServiceProvider.GetRequiredService<AuthService.Application.Abstractions.Messaging.Dispatcher.Interfaces.ICommandDispatcher>();
 
-        var defaultRoles = new[] { "USER", "HOST", "ADMIN" };
+        // Seed core roles used in the system. 
+        // GUEST is treated as unauthenticated on the client side and is not stored as a role in DB.
+        var defaultRoles = new[] { "MEMBER", "HOST", "STAFF", "ADMIN" };
 
         foreach (var roleName in defaultRoles)
         {

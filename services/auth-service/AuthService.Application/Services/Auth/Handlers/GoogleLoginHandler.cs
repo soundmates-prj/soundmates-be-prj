@@ -74,11 +74,11 @@ namespace AuthService.Application.Services.Auth.Handlers
                 
                 if (user == null)
                 {
-                    // Create new user with USER role as default
-                    var userRole = await _roleRepository.GetByNameAsync("USER");
+                    // Create new user with MEMBER role as default
+                    var userRole = await _roleRepository.GetByNameAsync("MEMBER");
                     if (userRole == null)
                     {
-                        return ApiResponse<UserDto>.FailureResponse("Default USER role not found", 500);
+                        return ApiResponse<UserDto>.FailureResponse("Default MEMBER role not found", 500);
                     }
 
                     // Generate username from email (take part before @)

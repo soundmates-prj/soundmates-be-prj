@@ -13,6 +13,8 @@ namespace AuthQueryService.Api.Controllers
 {
     [Route("api/v1/[controller]")]
     [ApiController]
+    // Only ADMIN can view role information (HOST/STAFF manage live sessions in other services)
+    [Authorize(Roles = "ADMIN")]
     public class RoleController : ControllerBase
     {
         private readonly IQueryDispatcher _queries;
@@ -23,7 +25,6 @@ namespace AuthQueryService.Api.Controllers
         }
 
         // GET: /api/v1/role
-        [Authorize]
         [HttpGet]
         public async Task<IActionResult> GetAll(CancellationToken ct)
         {
@@ -32,7 +33,6 @@ namespace AuthQueryService.Api.Controllers
         }
 
         // GET: /api/v1/role/{id}
-        [Authorize]
         [HttpGet("{id:guid}")]
         public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
         {
@@ -43,7 +43,6 @@ namespace AuthQueryService.Api.Controllers
         }
 
         // GET: /api/v1/role/by-name/{name}
-        [Authorize]
         [HttpGet("by-name/{name}")]
         public async Task<IActionResult> GetByName(string name, CancellationToken ct)
         {
@@ -58,7 +57,6 @@ namespace AuthQueryService.Api.Controllers
         }
 
         // GET: /api/v1/role/search?q=abc&page=1&pageSize=20
-        [Authorize]
         [HttpGet("search")]
         public async Task<IActionResult> Search([FromQuery] string? q, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
         {
@@ -67,7 +65,6 @@ namespace AuthQueryService.Api.Controllers
         }
 
         // GET: /api/v1/role/user/{userId}
-        [Authorize]
         [HttpGet("user/{userId:guid}")]
         public async Task<IActionResult> GetUserRole(Guid userId, CancellationToken ct)
         {

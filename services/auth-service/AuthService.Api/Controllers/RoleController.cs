@@ -11,7 +11,8 @@ namespace AuthService.Api.Controllers
 {
     [Route("api/v1/[controller]")]
     [ApiController]
-    [Authorize(Roles = "HOST,ADMIN")]
+    // Only ADMIN can manage roles (HOST/STAFF/MEMBER behave as normal users)
+    [Authorize(Roles = "ADMIN")]
     public class RoleController : ControllerBase
     {
         private readonly ICommandDispatcher _commands;
