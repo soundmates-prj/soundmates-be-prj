@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore.Migrations;
-using System;
 
 #nullable disable
 
@@ -11,6 +10,7 @@ namespace AuthService.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            // Add IsActive column with default value false
             migrationBuilder.AddColumn<bool>(
                 name: "is_active",
                 table: "users",
@@ -18,20 +18,19 @@ namespace AuthService.Infrastructure.Migrations
                 nullable: false,
                 defaultValue: false);
 
+            // Add EmailVerificationToken column
             migrationBuilder.AddColumn<string>(
                 name: "email_verification_token",
                 table: "users",
                 type: "text",
                 nullable: true);
 
+            // Add EmailVerifiedAt column
             migrationBuilder.AddColumn<DateTime>(
                 name: "email_verified_at",
                 table: "users",
                 type: "timestamp with time zone",
                 nullable: true);
-
-            // Update existing users to be active (for backward compatibility)
-            migrationBuilder.Sql("UPDATE users SET is_active = true WHERE email_verification_token IS NULL;");
         }
 
         /// <inheritdoc />
@@ -51,4 +50,3 @@ namespace AuthService.Infrastructure.Migrations
         }
     }
 }
-
