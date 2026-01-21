@@ -5,6 +5,7 @@ using AuthService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
 using AuthService.Application.DTOs;
 using AuthService.Application.Services.Auth.Commands;
 using AuthService.Application.Services.Auth.Handlers;
+using AuthService.Application.Services.Common;
 using AuthService.Application.Services.Role.Commands;
 using AuthService.Application.Services.Role.Handlers;
 using AuthService.Application.Services.Role.Interfaces;
@@ -25,6 +26,9 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<CreateUserCommand, Guid>, CreateUserHandler>();
         services.AddScoped<ICommandHandler<UpdateUserCommand, bool>, UpdateUserHandler>();
         services.AddScoped<ICommandHandler<DeleteUserCommand, bool>, DeleteUserHandler>();
+        services.AddScoped<ICommandHandler<BanUserCommand, bool>, BanUserHandler>();
+        services.AddScoped<ICommandHandler<UnbanUserCommand, bool>, UnbanUserHandler>();
+        services.AddScoped<ICommandHandler<DeactivateUserCommand, bool>, DeactivateUserHandler>();
         services.AddScoped<ICommandHandler<CreateRoleCommand, Guid>, CreateRoleHandler>();
         services.AddScoped<ICommandHandler<UpdateRoleCommand, bool>, UpdateRoleHandler>();
         services.AddScoped<ICommandHandler<DeleteRoleCommand, bool>, DeleteRoleHandler>();
@@ -38,8 +42,12 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<UpdateProfileCommand, UserDto>, UpdateProfileHandler>();
         services.AddScoped<ICommandHandler<UpdateProfileOptionsCommand, UserDto>, UpdateProfileOptionsHandler>();
         services.AddScoped<ICommandHandler<VerifyEmailCommand, UserDto>, VerifyEmailHandler>();
+        services.AddScoped<ICommandHandler<ResendOtpCommand, bool>, ResendOtpHandler>();
+        
         // Application services
         services.AddScoped<IRoleService, Services.RoleService>();
+        services.AddScoped<IOtpService, OtpService>();
+        services.AddScoped<IAccountStatusService, AccountStatusService>();
 
         return services;
     }

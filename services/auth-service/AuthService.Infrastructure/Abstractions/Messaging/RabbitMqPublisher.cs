@@ -9,6 +9,7 @@ namespace AuthService.Infrastructure.Messaging;
 
 public sealed class RabbitMqPublisher : IMessageBusPublisher
 {
+    // Configuration for RabbitMQ connection is here
     private readonly ConnectionFactory _factory;
     private IConnection? _connection;
     public RabbitMqPublisher(IConfiguration cfg)

@@ -12,6 +12,7 @@ namespace AuthQueryService.Infrastructure.Data.Entities
         public string? LastName { get; set; }
         public Guid? RoleId { get; set; }
         public string? RoleName { get; set; }
+        public bool IsActive { get; set; } = true;
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
     }

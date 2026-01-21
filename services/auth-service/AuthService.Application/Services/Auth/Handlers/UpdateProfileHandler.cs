@@ -14,27 +14,20 @@ namespace AuthService.Application.Services.Auth.Handlers
     {
         private readonly IUserRepository _userRepository;
         private readonly IOutbox _outbox;
+        private readonly IDateTimeProvider _dateTimeProvider;
 
         public UpdateProfileHandler(
             IUserRepository userRepository,
-            IOutbox outbox)
+            IOutbox outbox,
+            IDateTimeProvider dateTimeProvider)
         {
             _userRepository = userRepository;
             _outbox = outbox;
+            _dateTimeProvider = dateTimeProvider;
         }
 
         public async Task<ApiResponse<UserDto>> Handle(UpdateProfileCommand command, CancellationToken cancellationToken)
         {
-            // Validate first and last name
-            if (string.IsNullOrWhiteSpace(command.FirstName))
-            {
-                return ApiResponse<UserDto>.FailureResponse("First name cannot be empty", 400);
-            }
-            if (string.IsNullOrWhiteSpace(command.LastName))
-            {
-                return ApiResponse<UserDto>.FailureResponse("Last name cannot be empty", 400);
-            }
-
             // Get user
             var user = await _userRepository.GetByIdAsync(command.UserId);
             if (user == null)
@@ -42,10 +35,18 @@ namespace AuthService.Application.Services.Auth.Handlers
                 return ApiResponse<UserDto>.FailureResponse("User not found", 404);
             }
 
-            // Update first and last name and updated_at timestamp
-            user.FirstName = command.FirstName.Trim();
-            user.LastName = command.LastName.Trim();
-            user.UpdatedAt = DateTime.UtcNow;
+            // Use domain method for updating name
+            try
+            {
+                user.UpdateName(
+                    command.FirstName,
+                    command.LastName,
+                    _dateTimeProvider);
+            }
+            catch (ArgumentException ex)
+            {
+                return ApiResponse<UserDto>.FailureResponse(ex.Message, 400);
+            }
 
             await _userRepository.UpdateAsync(user);
 

@@ -6,7 +6,10 @@ using AuthService.Domain.Interfaces;
 
 namespace AuthService.Application.Services.Users.Handlers;
 
-public sealed class CreateUserHandler(IUserRepository repo, IOutbox outbox) : ICommandHandler<CreateUserCommand, Guid>
+public sealed class CreateUserHandler(
+    IUserRepository repo, 
+    IOutbox outbox,
+    IDateTimeProvider dateTimeProvider) : ICommandHandler<CreateUserCommand, Guid>
 {
     public async Task<ApiResponse<Guid>> Handle(CreateUserCommand command, CancellationToken cancellationToken)
     {
@@ -27,20 +30,25 @@ public sealed class CreateUserHandler(IUserRepository repo, IOutbox outbox) : IC
         // Hash password if provided
         var passwordHash = !string.IsNullOrWhiteSpace(command.Password)
             ? BCrypt.Net.BCrypt.HashPassword(command.Password)
-            : null;
+            : string.Empty;
 
-        var user = new User
+        // Use domain factory method to create user
+        User user;
+        try
         {
-            Id = Guid.NewGuid(),
-            Username = command.Username,
-            Email = command.Email,
-            FirstName = command.FirstName,
-            LastName = command.LastName,
-            RoleId = command.RoleId,
-            Password = passwordHash ?? string.Empty,
-            IsActive = true, // Admin-created users are active by default
-            CreatedAt = DateTime.UtcNow
-        };
+            user = User.CreateAdminUser(
+                command.Username,
+                command.Email,
+                passwordHash,
+                command.FirstName,
+                command.LastName,
+                command.RoleId,
+                dateTimeProvider);
+        }
+        catch (ArgumentException ex)
+        {
+            return ApiResponse<Guid>.FailureResponse(ex.Message, 400);
+        }
 
         await repo.AddAsync(user);
 

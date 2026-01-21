@@ -16,19 +16,22 @@ public sealed class LoginHandler : ICommandHandler<LoginCommand, UserDto>
     private readonly IRefreshTokenRepository _refreshTokenRepository;
     private readonly IOutbox _outbox;
     private readonly ILogger<LoginHandler> _logger;
+    private readonly IDateTimeProvider _dateTimeProvider;
 
     public LoginHandler(
         IAuthRepository repo, 
         IJwtTokenGenerator jwt,
         IRefreshTokenRepository refreshTokenRepository,
         IOutbox outbox,
-        ILogger<LoginHandler> logger)
+        ILogger<LoginHandler> logger,
+        IDateTimeProvider dateTimeProvider)
     {
         _repo = repo;
         _jwt = jwt;
         _refreshTokenRepository = refreshTokenRepository;
         _outbox = outbox;
         _logger = logger;
+        _dateTimeProvider = dateTimeProvider;
     }
 
     public async Task<ApiResponse<UserDto>> Handle(LoginCommand command, CancellationToken cancellationToken)
@@ -43,7 +46,7 @@ public sealed class LoginHandler : ICommandHandler<LoginCommand, UserDto>
                 emailOrUsername = command.EmailOrUsername,
                 reason = "Invalid username/email or password",
                 errorCode = 401,
-                occurredAtUtc = DateTime.UtcNow
+                occurredAtUtc = _dateTimeProvider.UtcNow
             }, cancellationToken);
             
             return ApiResponse<UserDto>.FailureResponse("Invalid username/email or password", 401);
@@ -59,7 +62,7 @@ public sealed class LoginHandler : ICommandHandler<LoginCommand, UserDto>
                 userId = user.Id,
                 reason = "Email not verified",
                 errorCode = 403,
-                occurredAtUtc = DateTime.UtcNow
+                occurredAtUtc = _dateTimeProvider.UtcNow
             }, cancellationToken);
             
             return ApiResponse<UserDto>.FailureResponse("Please verify your email address before logging in. Check your inbox for the verification OTP code.", 403);
@@ -73,7 +76,7 @@ public sealed class LoginHandler : ICommandHandler<LoginCommand, UserDto>
             username = user.Username,
             ipAddress = command.IpAddress ?? "Unknown",
             userAgent = command.UserAgent ?? "Unknown",
-            loginTime = DateTime.UtcNow,
+            loginTime = _dateTimeProvider.UtcNow,
             isSuccessful = true
         });
 
@@ -99,8 +102,8 @@ public sealed class LoginHandler : ICommandHandler<LoginCommand, UserDto>
             Id = Guid.NewGuid(),
             UserId = user.Id,
             Token = refreshToken,
-            ExpiresAt = DateTime.UtcNow.AddDays(7),
-            CreatedAt = DateTime.UtcNow,
+            ExpiresAt = _dateTimeProvider.UtcNow.AddDays(7),
+            CreatedAt = _dateTimeProvider.UtcNow,
             IsRevoked = false
         };
 
@@ -116,7 +119,7 @@ public sealed class LoginHandler : ICommandHandler<LoginCommand, UserDto>
         await _outbox.EnqueueAsync("auth.user.login.successful", new
         {
             user = dto,
-            occurredAtUtc = DateTime.UtcNow
+            occurredAtUtc = _dateTimeProvider.UtcNow
         }, cancellationToken);
 
         return ApiResponse<UserDto>.SuccessResponse(dto, "Login successful");
