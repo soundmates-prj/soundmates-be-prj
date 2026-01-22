@@ -300,7 +300,7 @@ namespace AuthService.Api.Controllers
 
         // api/v1/auth/change-password
         [HttpPost("change-password")]
-        [Microsoft.AspNetCore.Authorization.Authorize]
+        [Authorize]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request, CancellationToken ct)
         {
             if (!ModelState.IsValid)

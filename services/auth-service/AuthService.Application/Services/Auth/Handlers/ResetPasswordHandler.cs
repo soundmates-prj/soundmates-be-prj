@@ -1,9 +1,10 @@
 using AuthService.Application.Abstractions.Messaging;
 using AuthService.Application.DTOs.Response;
 using AuthService.Application.Services.Auth.Commands;
-using AuthService.Application.Services.Common;
 using AuthService.Domain.Entities;
+using AuthService.Domain.Exceptions;
 using AuthService.Domain.Interfaces;
+using AuthService.Domain.Rules;
 using System;
 using System.Text.Json;
 using System.Threading;
@@ -38,11 +39,14 @@ namespace AuthService.Application.Services.Auth.Handlers
 
         public async Task<ApiResponse<bool>> Handle(ResetPasswordCommand command, CancellationToken cancellationToken)
         {
-            // Validate password
-            var (isValid, errorMessage) = PasswordValidator.Validate(command.NewPassword);
-            if (!isValid)
+            // Validate password using Domain Rule
+            try
             {
-                return ApiResponse<bool>.FailureResponse(errorMessage!, 400);
+                PasswordRule.Validate(command.NewPassword);
+            }
+            catch (UserValidationException ex)
+            {
+                return ApiResponse<bool>.FailureResponse(ex.Message, ex.StatusCode);
             }
 
             // Verify OTP

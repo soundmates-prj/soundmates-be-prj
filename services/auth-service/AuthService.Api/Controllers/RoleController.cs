@@ -2,7 +2,6 @@
 using AuthService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
 using AuthService.Application.DTOs;
 using AuthService.Application.Services.Role.Commands;
-using AuthService.Application.Services.Role.Interfaces;
 using AuthService.Domain.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -74,18 +73,19 @@ namespace AuthService.Api.Controllers
         }
 
         // Sync Roles to Query Service
+        // Sau khi deploy xóa cái này
         // api/v1/role/sync
         [HttpPost("sync")]
-        public async Task<IActionResult> SyncRoles([FromServices] IRoleService roleService, CancellationToken ct)
+        public async Task<IActionResult> SyncRoles([FromServices] IRoleRepository roleRepository, CancellationToken ct)
         {
-            var rolesResult = await roleService.GetAllAsync();
-            if (!rolesResult.Success)
+            var roles = await roleRepository.GetAllAsync();
+            if (roles == null || !roles.Any())
             {
-                return BadRequest(rolesResult);
+                return Ok(new { message = "No roles to sync", count = 0 });
             }
 
             var synced = 0;
-            foreach (var role in rolesResult.Data!)
+            foreach (var role in roles)
             {
                 await _outbox.EnqueueAsync("auth.role.created", new
                 {

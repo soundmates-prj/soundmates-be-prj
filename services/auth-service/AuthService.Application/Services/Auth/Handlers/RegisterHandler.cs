@@ -1,9 +1,11 @@
 using AuthService.Application.DTOs;
 using AuthService.Application.DTOs.Response;
 using AuthService.Application.Services.Common;
-using AuthService.Application.Common;
+using AuthService.Application.Configuration;
 using AuthService.Domain.Entities;
+using AuthService.Domain.Exceptions;
 using AuthService.Domain.Interfaces;
+using AuthService.Domain.Rules;
 using AuthService.Application.Abstractions.Messaging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
@@ -42,21 +44,24 @@ public sealed class RegisterHandler : ICommandHandler<RegisterCommand, UserDto>
     {
         try
         {
-            // Validate password
-            var (isValid, errorMessage) = PasswordValidator.Validate(command.Password);
-            if (!isValid)
+            // Validate password using Domain Rule
+            try
+            {
+                PasswordRule.Validate(command.Password);
+            }
+            catch (UserValidationException ex)
             {
                 // Publish registration failed event
                 await _outbox.EnqueueAsync("auth.user.registration.failed", new
                 {
                     username = command.Username,
                     email = command.Email,
-                    reason = errorMessage,
-                    errorCode = 400,
+                    reason = ex.Message,
+                    errorCode = ex.ErrorCode,
                     occurredAtUtc = _dateTimeProvider.UtcNow
                 }, cancellationToken);
                 
-                return ApiResponse<UserDto>.FailureResponse(errorMessage!, 400);
+                return ApiResponse<UserDto>.FailureResponse(ex.Message, ex.StatusCode);
             }
 
             var user = await _repo.RegisterAsync(command.Username, command.Email, command.Password, command.FirstName, command.LastName);

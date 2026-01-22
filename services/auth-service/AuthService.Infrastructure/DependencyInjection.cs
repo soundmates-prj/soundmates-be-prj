@@ -7,7 +7,7 @@ using AuthService.Infrastructure.Jwt;
 using AuthService.Infrastructure.Messaging;
 using AuthService.Infrastructure.Repositories;
 using AuthService.Infrastructure.Services;
-using AuthService.Application.Common;
+using AuthService.Application.Configuration;
 using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;

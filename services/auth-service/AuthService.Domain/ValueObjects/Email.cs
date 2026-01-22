@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using AuthService.Domain.Errors;
 using AuthService.Domain.Exceptions;
 
 namespace AuthService.Domain.ValueObjects;

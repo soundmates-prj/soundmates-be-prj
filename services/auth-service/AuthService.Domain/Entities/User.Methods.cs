@@ -1,4 +1,5 @@
 using AuthService.Domain.Interfaces;
+using AuthService.Domain.Errors;
 using AuthService.Domain.Exceptions;
 using AuthService.Domain.ValueObjects;
 
