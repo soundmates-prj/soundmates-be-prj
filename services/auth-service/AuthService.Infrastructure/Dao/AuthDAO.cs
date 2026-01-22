@@ -13,11 +13,13 @@ namespace AuthService.Infrastructure.Dao
     {
         private readonly IUnitOfWork _uow;
         private readonly AuthDbContext _db;
+        private readonly IDateTimeProvider _dateTimeProvider;
 
-        public AuthDao(IUnitOfWork uow)
+        public AuthDao(IUnitOfWork uow, IDateTimeProvider dateTimeProvider)
         {
             _uow = uow;
             _db = (AuthDbContext)_uow.Context;
+            _dateTimeProvider = dateTimeProvider;
         }
 
         // Login user by email and password
@@ -96,7 +98,7 @@ namespace AuthService.Infrastructure.Dao
                 Password = passwordHash,
                 FirstName = firstName,
                 LastName = lastName,
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = _dateTimeProvider.UtcNow,
                 RoleId = userRole.Id,
                 Role = userRole,
                 IsActive = false, // User must verify email before activation
@@ -148,11 +150,8 @@ namespace AuthService.Infrastructure.Dao
             // Note: OTP verification is done in the handler before calling this method
             // This method just activates the user account
 
-            // Mark user as active
-            user.IsActive = true;
-            user.EmailVerifiedAt = DateTime.UtcNow;
-            user.EmailVerificationToken = null; // Clear any old token if exists
-            user.UpdatedAt = DateTime.UtcNow;
+            // Use domain method instead of directly setting properties
+            user.VerifyEmail(_dateTimeProvider);
 
             await _uow.SaveChangesAsync();
             return user;

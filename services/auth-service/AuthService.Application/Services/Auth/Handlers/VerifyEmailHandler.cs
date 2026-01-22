@@ -13,17 +13,20 @@ public sealed class VerifyEmailHandler : ICommandHandler<VerifyEmailCommand, Use
     private readonly IOtpRepository _otpRepository;
     private readonly IOutbox _outbox;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IDateTimeProvider _dateTimeProvider;
 
     public VerifyEmailHandler(
         IAuthRepository repo,
         IOtpRepository otpRepository,
         IOutbox outbox,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IDateTimeProvider dateTimeProvider)
     {
         _repo = repo;
         _otpRepository = otpRepository;
         _outbox = outbox;
         _unitOfWork = unitOfWork;
+        _dateTimeProvider = dateTimeProvider;
     }
 
     public async Task<ApiResponse<UserDto>> Handle(VerifyEmailCommand command, CancellationToken cancellationToken)
@@ -49,7 +52,7 @@ public sealed class VerifyEmailHandler : ICommandHandler<VerifyEmailCommand, Use
 
         // Mark OTP as used
         otp.IsUsed = true;
-        otp.UsedAt = DateTime.UtcNow;
+        otp.UsedAt = _dateTimeProvider.UtcNow;
         await _otpRepository.UpdateAsync(otp);
 
         // Publish user updated event

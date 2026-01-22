@@ -205,6 +205,47 @@ namespace AuthService.Api.Controllers
             }
         }
 
+        // api/v1/auth/resend-otp
+        [HttpPost("resend-otp")]
+        public async Task<IActionResult> ResendOtp([FromBody] ResendOtpRequest request, CancellationToken ct)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ApiResponse<bool>.FailureResponse("Invalid input", 400));
+
+            if (string.IsNullOrWhiteSpace(request.Email))
+            {
+                return BadRequest(ApiResponse<bool>.FailureResponse("Email is required", 400));
+            }
+
+            try
+            {
+                var cmd = new ResendOtpCommand
+                {
+                    Email = request.Email
+                };
+
+                var response = await _commands.Send<ResendOtpCommand, bool>(cmd, ct);
+
+                if (!response.Success)
+                {
+                    // Return appropriate status code based on error
+                    if (response.Message?.Contains("wait") == true)
+                        return StatusCode(StatusCodes.Status429TooManyRequests, response);
+                    
+                    if (response.Message?.Contains("not found") == true)
+                        return NotFound(response);
+
+                    return BadRequest(response);
+                }
+
+                return Ok(response);
+            }
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, ApiResponse<bool>.FailureResponse("An unexpected error occurred", 500));
+            }
+        }
+
         // api/v1/auth/forget-password
         [HttpPost("forget-password")]
         public async Task<IActionResult> ForgetPassword([FromBody] ForgetPasswordRequest request, CancellationToken ct)

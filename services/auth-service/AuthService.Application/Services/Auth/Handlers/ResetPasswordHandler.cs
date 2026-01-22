@@ -18,19 +18,22 @@ namespace AuthService.Application.Services.Auth.Handlers
         private readonly IRefreshTokenRepository _refreshTokenRepository;
         private readonly IOutbox _outbox;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IDateTimeProvider _dateTimeProvider;
 
         public ResetPasswordHandler(
             IUserRepository userRepository,
             IOtpRepository otpRepository,
             IRefreshTokenRepository refreshTokenRepository,
             IOutbox outbox,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            IDateTimeProvider dateTimeProvider)
         {
             _userRepository = userRepository;
             _otpRepository = otpRepository;
             _refreshTokenRepository = refreshTokenRepository;
             _outbox = outbox;
             _unitOfWork = unitOfWork;
+            _dateTimeProvider = dateTimeProvider;
         }
 
         public async Task<ApiResponse<bool>> Handle(ResetPasswordCommand command, CancellationToken cancellationToken)
@@ -60,13 +63,13 @@ namespace AuthService.Application.Services.Auth.Handlers
                 return ApiResponse<bool>.FailureResponse("User not found", 404);
             }
 
-            // Hash new password
+            // Hash new password and use domain method
             var passwordHash = BCrypt.Net.BCrypt.HashPassword(command.NewPassword);
-            user.Password = passwordHash;
+            user.ChangePassword(passwordHash, _dateTimeProvider);
 
             // Mark OTP as used
             otp.IsUsed = true;
-            otp.UsedAt = DateTime.UtcNow;
+            otp.UsedAt = _dateTimeProvider.UtcNow;
 
             // Invalidate all refresh tokens for security
             await _refreshTokenRepository.RevokeAllUserTokensAsync(user.Id);

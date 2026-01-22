@@ -1,5 +1,6 @@
 ﻿using AuthService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
 using AuthService.Application.DTOs;
+using AuthService.Application.DTOs.Request;
 using AuthService.Application.Services.Users.Commands;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -70,7 +71,55 @@ namespace AuthService.Api.Controllers
             return Ok(res);
         }
 
-        // Delete Account Method
+        // Ban User Account - Set IsActive = false (Admin action)
+        [HttpPost("{id:guid}/ban")]
+        public async Task<IActionResult> Ban(Guid id, [FromBody] BanUserRequest? request, CancellationToken ct)
+        {
+            var cmd = new BanUserCommand(id, request?.Reason);
+            var res = await _commands.Send<BanUserCommand, bool>(cmd, ct);
+
+            if (!res.Success)
+                return BadRequest(res);
+
+            // Note: Event 'auth.user.banned' is published by BanUserHandler
+            return Ok(res);
+        }
+
+        // Unban User Account - Set IsActive = true (Admin action)
+        [HttpPost("{id:guid}/unban")]
+        public async Task<IActionResult> Unban(Guid id, CancellationToken ct)
+        {
+            var cmd = new UnbanUserCommand(id);
+            var res = await _commands.Send<UnbanUserCommand, bool>(cmd, ct);
+
+            if (!res.Success)
+                return BadRequest(res);
+
+            // Note: Event 'auth.user.unbanned' is published by UnbanUserHandler
+            return Ok(res);
+        }
+
+        // Deactivate Account - Soft delete (User or Admin action)
+        // This is the RECOMMENDED approach instead of hard DELETE
+        [HttpPost("{id:guid}/deactivate")]
+        [Authorize] // Any authenticated user can deactivate their own account
+        public async Task<IActionResult> Deactivate(Guid id, CancellationToken ct)
+        {
+            // TODO: Add authorization check to ensure user can only deactivate their own account
+            // unless they are ADMIN
+            
+            var cmd = new DeactivateUserCommand(id);
+            var res = await _commands.Send<DeactivateUserCommand, bool>(cmd, ct);
+
+            if (!res.Success)
+                return BadRequest(res);
+
+            // Note: Event 'auth.user.deactivated' is published by DeactivateUserHandler
+            return Ok(res);
+        }
+
+        // Delete Account Method - HARD DELETE (Use with caution!)
+        // WARNING: This permanently deletes the user. Consider using Deactivate instead.
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
         {

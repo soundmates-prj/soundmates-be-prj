@@ -1,4 +1,4 @@
-using AuthService.Application.Abstractions.Messaging;
+﻿using AuthService.Application.Abstractions.Messaging;
 using AuthService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
 using AuthService.Application.DTOs;
 using AuthService.Application.DTOs.Response;
@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AuthService.Api.Controllers
 {
+    // Sau khi code xong sẽ xóa cái này đi
     [Route("api/v1/[controller]")]
     [ApiController]
     public class SeedController : ControllerBase

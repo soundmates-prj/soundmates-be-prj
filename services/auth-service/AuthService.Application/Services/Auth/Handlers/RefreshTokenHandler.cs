@@ -15,17 +15,20 @@ namespace AuthService.Application.Services.Auth.Handlers
         private readonly IJwtTokenGenerator _jwtTokenGenerator;
         private readonly IOutbox _outbox;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IDateTimeProvider _dateTimeProvider;
 
         public RefreshTokenHandler(
             IRefreshTokenRepository refreshTokenRepository,
             IJwtTokenGenerator jwtTokenGenerator,
             IOutbox outbox,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            IDateTimeProvider dateTimeProvider)
         {
             _refreshTokenRepository = refreshTokenRepository;
             _jwtTokenGenerator = jwtTokenGenerator;
             _outbox = outbox;
             _unitOfWork = unitOfWork;
+            _dateTimeProvider = dateTimeProvider;
         }
 
         public async Task<ApiResponse<UserDto>> Handle(RefreshTokenCommand command, CancellationToken cancellationToken)
@@ -33,7 +36,7 @@ namespace AuthService.Application.Services.Auth.Handlers
             // Find refresh token
             var refreshToken = await _refreshTokenRepository.GetByTokenAsync(command.RefreshToken);
             
-            if (refreshToken == null || refreshToken.IsRevoked || refreshToken.ExpiresAt < DateTime.UtcNow)
+            if (refreshToken == null || refreshToken.IsRevoked || refreshToken.ExpiresAt < _dateTimeProvider.UtcNow)
             {
                 return ApiResponse<UserDto>.FailureResponse("Invalid or expired refresh token", 401);
             }
@@ -46,7 +49,7 @@ namespace AuthService.Application.Services.Auth.Handlers
 
             // Revoke old refresh token
             refreshToken.IsRevoked = true;
-            refreshToken.RevokedAt = DateTime.UtcNow;
+            refreshToken.RevokedAt = _dateTimeProvider.UtcNow;
             await _refreshTokenRepository.UpdateAsync(refreshToken);
 
             // Generate new token pair
@@ -58,8 +61,8 @@ namespace AuthService.Application.Services.Auth.Handlers
                 Id = Guid.NewGuid(),
                 UserId = user.Id,
                 Token = newRefreshToken,
-                ExpiresAt = DateTime.UtcNow.AddDays(7),
-                CreatedAt = DateTime.UtcNow,
+                ExpiresAt = _dateTimeProvider.UtcNow.AddDays(7),
+                CreatedAt = _dateTimeProvider.UtcNow,
                 IsRevoked = false
             };
 
@@ -69,7 +72,7 @@ namespace AuthService.Application.Services.Auth.Handlers
             await _outbox.EnqueueAsync("auth.user.token.refreshed", new
             {
                 user.Id,
-                occurredAtUtc = DateTime.UtcNow
+                occurredAtUtc = _dateTimeProvider.UtcNow
             }, cancellationToken);
 
             // Return user with new tokens

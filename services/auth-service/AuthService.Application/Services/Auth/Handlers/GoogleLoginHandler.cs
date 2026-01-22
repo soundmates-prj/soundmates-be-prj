@@ -22,6 +22,7 @@ namespace AuthService.Application.Services.Auth.Handlers
         private readonly IJwtTokenGenerator _jwtTokenGenerator;
         private readonly IRefreshTokenRepository _refreshTokenRepository;
         private readonly IOutbox _outbox;
+        private readonly IDateTimeProvider _dateTimeProvider;
 
         public GoogleLoginHandler(
             IGoogleAuthService googleAuthService,
@@ -30,7 +31,8 @@ namespace AuthService.Application.Services.Auth.Handlers
             IRoleRepository roleRepository,
             IJwtTokenGenerator jwtTokenGenerator,
             IRefreshTokenRepository refreshTokenRepository,
-            IOutbox outbox)
+            IOutbox outbox,
+            IDateTimeProvider dateTimeProvider)
         {
             _googleAuthService = googleAuthService;
             _authRepository = authRepository;
@@ -39,6 +41,7 @@ namespace AuthService.Application.Services.Auth.Handlers
             _jwtTokenGenerator = jwtTokenGenerator;
             _refreshTokenRepository = refreshTokenRepository;
             _outbox = outbox;
+            _dateTimeProvider = dateTimeProvider;
         }
 
         public async Task<ApiResponse<UserDto>> Handle(GoogleLoginCommand command, CancellationToken cancellationToken)
@@ -52,7 +55,7 @@ namespace AuthService.Application.Services.Auth.Handlers
                 {
                     reason = "Invalid Google token",
                     errorCode = 401,
-                    occurredAtUtc = DateTime.UtcNow
+                    occurredAtUtc = _dateTimeProvider.UtcNow
                 }, cancellationToken);
                 
                 return ApiResponse<UserDto>.FailureResponse("Invalid Google token", 401);
@@ -108,8 +111,8 @@ namespace AuthService.Application.Services.Auth.Handlers
                         Password = string.Empty, // No password for OAuth users
                         RoleId = userRole.Id,
                         IsActive = true, // Google users are automatically active (email already verified by Google)
-                        EmailVerifiedAt = DateTime.UtcNow, // Mark as verified since Google verified it
-                        CreatedAt = DateTime.UtcNow
+                        EmailVerifiedAt = _dateTimeProvider.UtcNow, // Mark as verified since Google verified it
+                        CreatedAt = _dateTimeProvider.UtcNow
                     };
 
                     await _userRepository.AddAsync(user);
@@ -151,7 +154,7 @@ namespace AuthService.Application.Services.Auth.Handlers
                 {
                     reason = "Failed to retrieve or create user",
                     errorCode = 500,
-                    occurredAtUtc = DateTime.UtcNow
+                    occurredAtUtc = _dateTimeProvider.UtcNow
                 }, cancellationToken);
                 
                 return ApiResponse<UserDto>.FailureResponse("Failed to retrieve or create user", 500);
@@ -173,8 +176,8 @@ namespace AuthService.Application.Services.Auth.Handlers
                 Id = Guid.NewGuid(),
                 UserId = user.Id,
                 Token = refreshToken,
-                ExpiresAt = DateTime.UtcNow.AddDays(7), // Refresh token expires in 7 days
-                CreatedAt = DateTime.UtcNow,
+                ExpiresAt = _dateTimeProvider.UtcNow.AddDays(7), // Refresh token expires in 7 days
+                CreatedAt = _dateTimeProvider.UtcNow,
                 IsRevoked = false
             };
 

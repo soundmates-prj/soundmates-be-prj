@@ -5,7 +5,10 @@ using AuthService.Domain.Interfaces;
 
 namespace AuthService.Application.Services.Users.Handlers;
 
-public sealed class UpdateUserHandler(IUserRepository repo, IOutbox outbox) : ICommandHandler<UpdateUserCommand, bool>
+public sealed class UpdateUserHandler(
+    IUserRepository repo, 
+    IOutbox outbox,
+    IDateTimeProvider dateTimeProvider) : ICommandHandler<UpdateUserCommand, bool>
 {
     public async Task<ApiResponse<bool>> Handle(UpdateUserCommand command, CancellationToken cancellationToken)
     {
@@ -32,12 +35,21 @@ public sealed class UpdateUserHandler(IUserRepository repo, IOutbox outbox) : IC
             }
         }
 
-        user.Username = command.Username;
-        user.Email = command.Email;
-        user.FirstName = command.FirstName;
-        user.LastName = command.LastName;
-        user.RoleId = command.RoleId;
-        user.UpdatedAt = DateTime.UtcNow;
+        // Use domain method instead of directly setting properties
+        try
+        {
+            user.UpdateProfile(
+                command.Username,
+                command.Email,
+                command.FirstName,
+                command.LastName,
+                command.RoleId,
+                dateTimeProvider);
+        }
+        catch (ArgumentException ex)
+        {
+            return ApiResponse<bool>.FailureResponse(ex.Message, 400);
+        }
 
         await repo.UpdateAsync(user);
 
@@ -53,6 +65,7 @@ public sealed class UpdateUserHandler(IUserRepository repo, IOutbox outbox) : IC
             lastName = user.LastName,
             roleId = user.RoleId,
             roleName = user.Role?.Name,
+            isActive = user.IsActive,
             createdAt = user.CreatedAt,
             updatedAt = user.UpdatedAt
         }, cancellationToken);

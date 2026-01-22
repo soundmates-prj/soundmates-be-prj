@@ -57,6 +57,9 @@ public static class DependencyInjection
         // OTP repository
         services.AddScoped<IOtpRepository, OtpRepository>();
 
+        // DateTime provider (infrastructure concern)
+        services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
+
         // Outbox + background publisher
         services.AddScoped<IOutbox, EfCoreOutbox>();
         services.AddHostedService<OutboxPublisherBackgroundService>();

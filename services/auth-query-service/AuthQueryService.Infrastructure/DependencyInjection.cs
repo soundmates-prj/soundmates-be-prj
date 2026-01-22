@@ -4,6 +4,7 @@ using AuthQueryService.Domain.Interfaces;
 using AuthQueryService.Infrastructure.DAO;
 using AuthQueryService.Infrastructure.DAO.Interfaces;
 using AuthQueryService.Infrastructure.Messaging;
+using AuthQueryService.Infrastructure.Messaging.EventHandlers;
 using AuthQueryService.Infrastructure.Repositories;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -75,6 +76,8 @@ public static class DependencyInjection
         services.AddScoped<IUserReadDAO, MongoUserReadDAO>();
         services.AddScoped<IUserReadRepository, UserReadRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();
+        services.AddScoped<IUserActivityLogRepository, MongoUserActivityLogDAO>();
+        services.AddScoped<IUserActivityLogDAO, MongoUserActivityLogDAO>();
 
         // Query dispatcher
         services.AddScoped<IQueryDispatcher, QueryDispatcher>();
@@ -92,11 +95,51 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<GetRoleByNameQuery, RoleDto>, GetRoleByNameQueryHandler>();
         services.AddScoped<IQueryHandler<SearchRolesQuery, PagedResult<RoleDto>>, SearchRolesQueryHandler>();
 
-        // Background projector (RabbitMQ subscriber) - syncs from Write service to MongoDB
+        // Query handlers - Activity Logs
+        services.AddScoped<IQueryHandler<AuthQueryService.Application.ActivityLogs.Queries.GetUserActivityLogs.GetUserActivityLogsQuery, List<UserActivityLogDto>>, 
+            AuthQueryService.Application.ActivityLogs.Queries.GetUserActivityLogs.GetUserActivityLogsQueryHandler>();
+        services.AddScoped<IQueryHandler<AuthQueryService.Application.ActivityLogs.Queries.GetRecentActivityLogs.GetRecentActivityLogsQuery, List<UserActivityLogDto>>, 
+            AuthQueryService.Application.ActivityLogs.Queries.GetRecentActivityLogs.GetRecentActivityLogsQueryHandler>();
+
+
+        // ============================================
+        // Event Handlers (Clean Architecture) 
+        // ============================================
+        
+        // User Data Sync Handlers
+        services.AddScoped<IUserEventHandler, Messaging.EventHandlers.Handlers.UserCreatedEventHandler>();
+        services.AddScoped<IUserEventHandler, Messaging.EventHandlers.Handlers.UserUpdatedEventHandler>();
+        services.AddScoped<IUserEventHandler, Messaging.EventHandlers.Handlers.UserProfileUpdatedEventHandler>();
+        services.AddScoped<IUserEventHandler, Messaging.EventHandlers.Handlers.UserBannedEventHandler>();
+        services.AddScoped<IUserEventHandler, Messaging.EventHandlers.Handlers.UserUnbannedEventHandler>();
+        services.AddScoped<IUserEventHandler, Messaging.EventHandlers.Handlers.UserDeactivatedEventHandler>();
+        services.AddScoped<IUserEventHandler, Messaging.EventHandlers.Handlers.UserDeletedEventHandler>();
+        
+        // Activity/Security Event Handlers
+        services.AddScoped<IActivityEventHandler, Messaging.EventHandlers.ActivityHandlers.LoginSuccessfulHandler>();
+        services.AddScoped<IActivityEventHandler, Messaging.EventHandlers.ActivityHandlers.LoginFailedHandler>();
+        services.AddScoped<IActivityEventHandler, Messaging.EventHandlers.ActivityHandlers.LoginActivityHandler>();
+        services.AddScoped<IActivityEventHandler, Messaging.EventHandlers.ActivityHandlers.GoogleLoginSuccessfulHandler>();
+        services.AddScoped<IActivityEventHandler, Messaging.EventHandlers.ActivityHandlers.GoogleLoginFailedHandler>();
+        services.AddScoped<IActivityEventHandler, Messaging.EventHandlers.ActivityHandlers.RegistrationFailedHandler>();
+        services.AddScoped<IActivityEventHandler, Messaging.EventHandlers.ActivityHandlers.TokenRefreshedHandler>();
+        
+        // Event Handler Factory
+        services.AddSingleton<IEventHandlerFactory>(sp =>
+        {
+            var handlers = sp.GetServices<IUserEventHandler>();
+            return new Messaging.EventHandlers.EventHandlerFactory(sp, handlers);
+        });
+
+        // ============================================
+        // Background Projection Services (Clean & Refactored)
+        // ============================================
         services.AddHostedService<RabbitMqUserProjectionService>();
         services.AddHostedService<RabbitMqRoleProjectionService>();
+        services.AddHostedService<RabbitMqActivityProjectionService>();
         
-        // Register RabbitMQ publisher with logger
+        
+        // Register RabbitMQ publisher
         services.AddScoped<IMessageBusPublisher, RabbitMqPublisher>();
 
         return services;

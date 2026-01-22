@@ -16,17 +16,20 @@ namespace AuthService.Application.Services.Auth.Handlers
         private readonly IRefreshTokenRepository _refreshTokenRepository;
         private readonly IOutbox _outbox;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IDateTimeProvider _dateTimeProvider;
 
         public ChangePasswordHandler(
             IUserRepository userRepository,
             IRefreshTokenRepository refreshTokenRepository,
             IOutbox outbox,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            IDateTimeProvider dateTimeProvider)
         {
             _userRepository = userRepository;
             _refreshTokenRepository = refreshTokenRepository;
             _outbox = outbox;
             _unitOfWork = unitOfWork;
+            _dateTimeProvider = dateTimeProvider;
         }
 
         public async Task<ApiResponse<bool>> Handle(ChangePasswordCommand command, CancellationToken cancellationToken)
@@ -59,9 +62,9 @@ namespace AuthService.Application.Services.Auth.Handlers
                 return ApiResponse<bool>.FailureResponse("New password must be different from old password", 400);
             }
 
-            // Hash new password
+            // Hash new password and use domain method
             var passwordHash = BCrypt.Net.BCrypt.HashPassword(command.NewPassword);
-            user.Password = passwordHash;
+            user.ChangePassword(passwordHash, _dateTimeProvider);
 
             // Invalidate all refresh tokens for security
             await _refreshTokenRepository.RevokeAllUserTokensAsync(user.Id);
