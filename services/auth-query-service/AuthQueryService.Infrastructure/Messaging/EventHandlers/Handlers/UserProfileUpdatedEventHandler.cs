@@ -1,6 +1,6 @@
 using System.Text.Json;
 using AuthQueryService.Domain.Entities.ReadModels;
-using AuthQueryService.Infrastructure.DAO.Interfaces;
+using AuthQueryService.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace AuthQueryService.Infrastructure.Messaging.EventHandlers.Handlers
@@ -9,15 +9,15 @@ namespace AuthQueryService.Infrastructure.Messaging.EventHandlers.Handlers
     {
         public override string EventType => "auth.user.profile.updated";
 
-        public UserProfileUpdatedEventHandler(IUserReadDAO dao, ILogger<UserProfileUpdatedEventHandler> logger) 
-            : base(dao, logger) { }
+        public UserProfileUpdatedEventHandler(IUserReadRepository repository, ILogger<UserProfileUpdatedEventHandler> logger) 
+            : base(repository, logger) { }
 
         protected override async Task HandleEventAsync(JsonElement root, CancellationToken cancellationToken)
         {
             var userId = GetUserId(root);
             _logger.LogDebug("Updating user profile in MongoDB: {UserId}", userId);
 
-            var existing = await _dao.GetByIdAsync(userId);
+            var existing = await _repository.GetByIdAsync(userId);
             if (existing is null)
             {
                 _logger.LogWarning("User not found in MongoDB for profile update: {UserId}. Creating new entry.", userId);
@@ -81,7 +81,7 @@ namespace AuthQueryService.Infrastructure.Messaging.EventHandlers.Handlers
 
             existing.UpdatedAt = DateTime.UtcNow;
 
-            await _dao.UpsertAsync(existing);
+            await _repository.UpsertAsync(existing);
             _logger.LogDebug("User profile updated in MongoDB: {UserId}", userId);
         }
     }

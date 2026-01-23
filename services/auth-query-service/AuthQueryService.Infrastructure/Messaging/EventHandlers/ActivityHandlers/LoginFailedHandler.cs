@@ -1,6 +1,6 @@
 using System.Text.Json;
 using AuthQueryService.Domain.Entities.ReadModels;
-using AuthQueryService.Infrastructure.DAO.Interfaces;
+using AuthQueryService.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace AuthQueryService.Infrastructure.Messaging.EventHandlers.ActivityHandlers
@@ -9,8 +9,8 @@ namespace AuthQueryService.Infrastructure.Messaging.EventHandlers.ActivityHandle
     {
         public override string EventType => "auth.user.login.failed";
 
-        public LoginFailedHandler(IUserActivityLogDAO dao, ILogger<LoginFailedHandler> logger) 
-            : base(dao, logger) { }
+        public LoginFailedHandler(IUserActivityLogRepository repository, ILogger<LoginFailedHandler> logger) 
+            : base(repository, logger) { }
 
         protected override async Task HandleEventAsync(JsonElement root, CancellationToken cancellationToken)
         {
@@ -48,7 +48,7 @@ namespace AuthQueryService.Infrastructure.Messaging.EventHandlers.ActivityHandle
                 OccurredAt = occurredAt
             };
 
-            await _dao.CreateAsync(log);
+            await _repository.CreateAsync(log);
             _logger.LogDebug("Logged failed login attempt for: {EmailOrUsername} (UserId: {UserId})", emailOrUsername, userId?.ToString() ?? "N/A");
         }
     }

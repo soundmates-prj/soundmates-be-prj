@@ -1,8 +1,6 @@
 using System;
 using AuthQueryService.Application.Abstractions.Messaging;
 using AuthQueryService.Domain.Interfaces;
-using AuthQueryService.Infrastructure.DAO;
-using AuthQueryService.Infrastructure.DAO.Interfaces;
 using AuthQueryService.Infrastructure.Messaging;
 using AuthQueryService.Infrastructure.Messaging.EventHandlers;
 using AuthQueryService.Infrastructure.Repositories;
@@ -14,17 +12,19 @@ using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 using AuthQueryService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
 using AuthQueryService.Application.Abstractions.Messaging.Dispatcher;
-using AuthQueryService.Application.Users.Queries.GetUserById;
-using AuthQueryService.Application.Users.Queries.GetUserByUsername;
-using AuthQueryService.Application.Users.Queries.SearchUsers;
-using AuthQueryService.Application.Users.Queries.GetUserRole;
-using AuthQueryService.Application.Users.Queries.GetFullUserProfile;
-using AuthQueryService.Application.Roles.Queries.GetAllRoles;
-using AuthQueryService.Application.Roles.Queries.GetRoleById;
-using AuthQueryService.Application.Roles.Queries.GetRoleByName;
-using AuthQueryService.Application.Roles.Queries.SearchRoles;
 using AuthQueryService.Application.DTOs;
 using AuthQueryService.Application.DTOs.Response;
+using AuthQueryService.Application.Services.ActivityLogs.Queries.GetRecentActivityLogs;
+using AuthQueryService.Application.Services.ActivityLogs.Queries.GetUserActivityLogs;
+using AuthQueryService.Application.Services.Roles.Queries.GetAllRoles;
+using AuthQueryService.Application.Services.Roles.Queries.GetRoleById;
+using AuthQueryService.Application.Services.Roles.Queries.GetRoleByName;
+using AuthQueryService.Application.Services.Roles.Queries.SearchRoles;
+using AuthQueryService.Application.Services.Users.Queries.GetFullUserProfile;
+using AuthQueryService.Application.Services.Users.Queries.GetUserById;
+using AuthQueryService.Application.Services.Users.Queries.GetUserByUsername;
+using AuthQueryService.Application.Services.Users.Queries.GetUserRole;
+using AuthQueryService.Application.Services.Users.Queries.SearchUsers;
 
 namespace AuthQueryService.Infrastructure;
 
@@ -72,12 +72,10 @@ public static class DependencyInjection
             return client.GetDatabase(databaseName);
         });
 
-        // MongoDB Read DAO and Repository
-        services.AddScoped<IUserReadDAO, MongoUserReadDAO>();
+        // MongoDB Repositories (directly connect to MongoDB, no DAO layer)
         services.AddScoped<IUserReadRepository, UserReadRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();
-        services.AddScoped<IUserActivityLogRepository, MongoUserActivityLogDAO>();
-        services.AddScoped<IUserActivityLogDAO, MongoUserActivityLogDAO>();
+        services.AddScoped<IUserActivityLogRepository, UserActivityLogRepository>();
 
         // Query dispatcher
         services.AddScoped<IQueryDispatcher, QueryDispatcher>();
@@ -96,10 +94,10 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<SearchRolesQuery, PagedResult<RoleDto>>, SearchRolesQueryHandler>();
 
         // Query handlers - Activity Logs
-        services.AddScoped<IQueryHandler<AuthQueryService.Application.ActivityLogs.Queries.GetUserActivityLogs.GetUserActivityLogsQuery, List<UserActivityLogDto>>, 
-            AuthQueryService.Application.ActivityLogs.Queries.GetUserActivityLogs.GetUserActivityLogsQueryHandler>();
-        services.AddScoped<IQueryHandler<AuthQueryService.Application.ActivityLogs.Queries.GetRecentActivityLogs.GetRecentActivityLogsQuery, List<UserActivityLogDto>>, 
-            AuthQueryService.Application.ActivityLogs.Queries.GetRecentActivityLogs.GetRecentActivityLogsQueryHandler>();
+        services.AddScoped<IQueryHandler<GetUserActivityLogsQuery, List<UserActivityLogDto>>, 
+            GetUserActivityLogsQueryHandler>();
+        services.AddScoped<IQueryHandler<GetRecentActivityLogsQuery, List<UserActivityLogDto>>,
+            GetRecentActivityLogsQueryHandler>();
 
 
         // ============================================

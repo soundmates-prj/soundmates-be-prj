@@ -1,6 +1,6 @@
 using System.Text.Json;
 using AuthQueryService.Domain.Entities.ReadModels;
-using AuthQueryService.Infrastructure.DAO.Interfaces;
+using AuthQueryService.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace AuthQueryService.Infrastructure.Messaging.EventHandlers.Handlers
@@ -9,8 +9,8 @@ namespace AuthQueryService.Infrastructure.Messaging.EventHandlers.Handlers
     {
         public override string EventType => "auth.user.created";
 
-        public UserCreatedEventHandler(IUserReadDAO dao, ILogger<UserCreatedEventHandler> logger) 
-            : base(dao, logger) { }
+        public UserCreatedEventHandler(IUserReadRepository repository, ILogger<UserCreatedEventHandler> logger) 
+            : base(repository, logger) { }
 
         protected override async Task HandleEventAsync(JsonElement root, CancellationToken cancellationToken)
         {
@@ -40,7 +40,7 @@ namespace AuthQueryService.Infrastructure.Messaging.EventHandlers.Handlers
                 UpdatedAt = DateTime.UtcNow
             };
 
-            await _dao.UpsertAsync(userModel);
+            await _repository.UpsertAsync(userModel);
             _logger.LogDebug("User created in MongoDB: {Username}", username);
         }
     }

@@ -1,5 +1,5 @@
 using System.Text.Json;
-using AuthQueryService.Infrastructure.DAO.Interfaces;
+using AuthQueryService.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace AuthQueryService.Infrastructure.Messaging.EventHandlers
@@ -9,14 +9,14 @@ namespace AuthQueryService.Infrastructure.Messaging.EventHandlers
     /// </summary>
     public abstract class UserEventHandlerBase : IUserEventHandler
     {
-        protected readonly IUserReadDAO _dao;
+        protected readonly IUserReadRepository _repository;
         protected readonly ILogger _logger;
 
         public abstract string EventType { get; }
 
-        protected UserEventHandlerBase(IUserReadDAO dao, ILogger logger)
+        protected UserEventHandlerBase(IUserReadRepository repository, ILogger logger)
         {
-            _dao = dao;
+            _repository = repository;
             _logger = logger;
         }
 

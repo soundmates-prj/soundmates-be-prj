@@ -1,19 +1,14 @@
-using System;
+using AuthService.Application.Abstractions.Messaging;
+using AuthService.Application.Configuration;
 using AuthService.Domain.Interfaces;
-using AuthService.Infrastructure.Dao;
-using AuthService.Infrastructure.Dao.Interfaces;
 using AuthService.Infrastructure.Data;
 using AuthService.Infrastructure.Jwt;
 using AuthService.Infrastructure.Messaging;
 using AuthService.Infrastructure.Repositories;
 using AuthService.Infrastructure.Services;
-using AuthService.Application.Configuration;
-using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using RabbitMQ.Client;
-using AuthService.Application.Abstractions.Messaging;
 
 namespace AuthService.Infrastructure;
 
@@ -28,18 +23,13 @@ public static class DependencyInjection
         // Unit of Work
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-        // DAOs (write side - PostgreSQL)
-        services.AddScoped<IAuthDao, AuthDao>();
-        services.AddScoped<IUserDao, UserDao>();
-        services.AddScoped<IRoleDao, RoleDao>();
-        services.AddScoped<IProfileDAO, ProfileDAO>();
-
-        // Repositories (write side)
+        // Repositories (direct DbContext access - DAO layer removed)
         services.AddScoped<IAuthRepository, AuthRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IProfileRepository, ProfileRepository>();
+        services.AddScoped<IOtpRepository, OtpRepository>();
 
         // JWT token generator
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
@@ -54,9 +44,6 @@ public static class DependencyInjection
         // App settings (Frontend URL, etc.)
         services.Configure<AppSettings>(configuration.GetSection("AppSettings"));
 
-        // OTP repository
-        services.AddScoped<IOtpRepository, OtpRepository>();
-
         // DateTime provider (infrastructure concern)
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
 
@@ -64,7 +51,7 @@ public static class DependencyInjection
         services.AddScoped<IOutbox, EfCoreOutbox>();
         services.AddHostedService<OutboxPublisherBackgroundService>();
 
-        // Remove IConnection singleton; register publisher directly.
+        // RabbitMQ message bus publisher
         services.AddSingleton<IMessageBusPublisher, RabbitMqPublisher>();
 
         return services;
