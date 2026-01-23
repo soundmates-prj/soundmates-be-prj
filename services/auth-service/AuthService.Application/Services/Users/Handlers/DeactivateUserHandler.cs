@@ -1,7 +1,7 @@
 using AuthService.Application.Abstractions.Messaging;
 using AuthService.Application.DTOs.Response;
-using AuthService.Application.Services.Common;
 using AuthService.Application.Services.Users.Commands;
+using AuthService.Domain.Exceptions;
 using AuthService.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 
@@ -10,39 +10,52 @@ namespace AuthService.Application.Services.Users.Handlers;
 /// <summary>
 /// Soft delete user account - Sets IsActive to false (recommended approach)
 /// This is different from hard DELETE which permanently removes the user
-/// Uses shared AccountStatusService to reduce code duplication
+/// Uses domain methods directly following Clean Architecture
 /// </summary>
 public sealed class DeactivateUserHandler : ICommandHandler<DeactivateUserCommand, bool>
 {
-    private readonly IAccountStatusService _accountStatusService;
+    private readonly IUserRepository _userRepository;
     private readonly IOutbox _outbox;
+    private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<DeactivateUserHandler> _logger;
 
     public DeactivateUserHandler(
-        IAccountStatusService accountStatusService,
+        IUserRepository userRepository,
         IOutbox outbox,
+        IDateTimeProvider dateTimeProvider,
         ILogger<DeactivateUserHandler> logger)
     {
-        _accountStatusService = accountStatusService;
+        _userRepository = userRepository;
         _outbox = outbox;
+        _dateTimeProvider = dateTimeProvider;
         _logger = logger;
     }
 
     public async Task<ApiResponse<bool>> Handle(DeactivateUserCommand command, CancellationToken cancellationToken)
     {
-        // Use shared service to deactivate account
-        var user = await _accountStatusService.DeactivateAccountAsync(command.UserId);
+        // Get user
+        var user = await _userRepository.GetByIdAsync(command.UserId);
         
         if (user is null)
         {
-            return ApiResponse<bool>.FailureResponse("User not found", 404);
+            throw new UserNotFoundException($"User with ID {command.UserId} not found");
         }
 
-        if (user.IsActive)
+        // Use domain method to deactivate
+        try
         {
-            // Service returned user but IsActive is still true (was already inactive)
-            return ApiResponse<bool>.FailureResponse("User account is already deactivated", 400);
+            user.Deactivate(_dateTimeProvider);
         }
+        catch (InvalidUserStateException ex)
+        {
+            // Already inactive
+            return ApiResponse<bool>.FailureResponse(ex.Message, ex.StatusCode);
+        }
+
+        await _userRepository.UpdateAsync(user);
+
+        // Reload user with role
+        user = await _userRepository.GetByIdAsync(user.Id);
 
         // Publish user deactivated event (semantic: this is a DEACTIVATION by user, not a ban)
         await _outbox.EnqueueAsync("auth.user.deactivated", new
@@ -55,7 +68,7 @@ public sealed class DeactivateUserHandler : ICommandHandler<DeactivateUserComman
             roleId = user.RoleId,
             roleName = user.Role?.Name,
             isActive = user.IsActive,
-            deactivatedAt = DateTime.UtcNow
+            deactivatedAt = _dateTimeProvider.UtcNow
         }, cancellationToken);
 
         _logger.LogInformation("User {UserId} account has been deactivated (soft delete)", user.Id);

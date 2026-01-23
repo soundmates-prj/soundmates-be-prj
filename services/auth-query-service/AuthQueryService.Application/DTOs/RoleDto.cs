@@ -1,22 +1,26 @@
-﻿using AuthQueryService.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using AuthQueryService.Domain.Entities.ReadModels;
 
 namespace AuthQueryService.Application.DTOs
 {
-    public class RoleDto
+    /// <summary>
+    /// Data Transfer Object for Role information
+    /// Maps from RoleReadModel to API response
+    /// </summary>
+    public sealed class RoleDto
     {
         public Guid Id { get; set; }
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public DateTime? CreatedAt { get; set; }
 
         public RoleDto() { }
-        public RoleDto(UserRole role)
+        
+        public RoleDto(RoleReadModel role)
         {
             Id = role.Id;
             Name = role.Name;
+            Description = role.Description;
+            CreatedAt = role.CreatedAt;
         }
     }
 }

@@ -1,6 +1,6 @@
 using AuthQueryService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
-using AuthQueryService.Application.ActivityLogs.Queries.GetUserActivityLogs;
-using AuthQueryService.Application.ActivityLogs.Queries.GetRecentActivityLogs;
+using AuthQueryService.Application.Services.ActivityLogs.Queries.GetUserActivityLogs;
+using AuthQueryService.Application.Services.ActivityLogs.Queries.GetRecentActivityLogs;
 using AuthQueryService.Application.DTOs;
 using AuthQueryService.Application.DTOs.Response;
 using Microsoft.AspNetCore.Authorization;

@@ -1,34 +1,48 @@
 using AuthService.Domain.Entities;
 using AuthService.Domain.Interfaces;
-using AuthService.Infrastructure.Dao.Interfaces;
-using System;
-using System.Threading.Tasks;
+using AuthService.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 
-namespace AuthService.Infrastructure.Repositories
+namespace AuthService.Infrastructure.Repositories;
+
+/// <summary>
+/// Profile repository implementation
+/// Direct access to DbContext through UnitOfWork (DAO layer removed)
+/// </summary>
+public class ProfileRepository : IProfileRepository
 {
-    public class ProfileRepository : IProfileRepository
+    private readonly IUnitOfWork _uow;
+    private readonly AuthDbContext _db;
+
+    public ProfileRepository(IUnitOfWork uow)
     {
-        private readonly IProfileDAO _profileDAO;
+        _uow = uow;
+        _db = (AuthDbContext)_uow.Context;
+    }
 
-        public ProfileRepository(IProfileDAO profileDAO)
-        {
-            _profileDAO = profileDAO;
-        }
+    public async Task<Profile?> GetByUserIdAsync(Guid userId)
+    {
+        return await _db.Profiles
+            .FirstOrDefaultAsync(p => p.UserId == userId);
+    }
 
-        public async Task<Profile?> GetByUserIdAsync(Guid userId)
-        {
-            return await _profileDAO.GetByUserIdAsync(userId);
-        }
+    public async Task<Profile> CreateAsync(Profile profile)
+    {
+        profile.Id = Guid.NewGuid();
+        profile.CreatedAt = DateTime.UtcNow;
+        profile.UpdatedAt = DateTime.UtcNow;
 
-        public async Task<Profile> CreateAsync(Profile profile)
-        {
-            return await _profileDAO.CreateAsync(profile);
-        }
+        _db.Profiles.Add(profile);
+        await _uow.SaveChangesAsync();
 
-        public async Task UpdateAsync(Profile profile)
-        {
-            await _profileDAO.UpdateAsync(profile);
-        }
+        return profile;
+    }
+
+    public async Task UpdateAsync(Profile profile)
+    {
+        profile.UpdatedAt = DateTime.UtcNow;
+        _db.Profiles.Update(profile);
+        await _uow.SaveChangesAsync();
     }
 }
 

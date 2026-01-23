@@ -1,16 +1,15 @@
-﻿using AuthQueryService.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using AuthQueryService.Domain.Entities.ReadModels;
 
 namespace AuthQueryService.Domain.Interfaces
 {
+    /// <summary>
+    /// Repository interface for read-only role queries
+    /// Part of Query Service - no mutations allowed
+    /// </summary>
     public interface IRoleRepository
     {
-        Task<UserRole?> GetByIdAsync(Guid id);
-        Task<UserRole?> GetByNameAsync(string name);
-        Task<List<UserRole>> GetAllAsync();
+        Task<RoleReadModel?> GetByIdAsync(Guid id);
+        Task<RoleReadModel?> GetByNameAsync(string name);
+        Task<List<RoleReadModel>> GetAllAsync();
     }
 }

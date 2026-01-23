@@ -1,7 +1,7 @@
 using AuthService.Application.Abstractions.Messaging;
 using AuthService.Application.DTOs.Response;
-using AuthService.Application.Services.Common;
 using AuthService.Application.Services.Users.Commands;
+using AuthService.Domain.Exceptions;
 using AuthService.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 
@@ -9,18 +9,18 @@ namespace AuthService.Application.Services.Users.Handlers;
 
 public sealed class BanUserHandler : ICommandHandler<BanUserCommand, bool>
 {
-    private readonly IAccountStatusService _accountStatusService;
+    private readonly IUserRepository _userRepository;
     private readonly IOutbox _outbox;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<BanUserHandler> _logger;
 
     public BanUserHandler(
-        IAccountStatusService accountStatusService,
+        IUserRepository userRepository,
         IOutbox outbox,
         IDateTimeProvider dateTimeProvider,
         ILogger<BanUserHandler> logger)
     {
-        _accountStatusService = accountStatusService;
+        _userRepository = userRepository;
         _outbox = outbox;
         _dateTimeProvider = dateTimeProvider;
         _logger = logger;
@@ -28,19 +28,29 @@ public sealed class BanUserHandler : ICommandHandler<BanUserCommand, bool>
 
     public async Task<ApiResponse<bool>> Handle(BanUserCommand command, CancellationToken cancellationToken)
     {
-        // Use shared service to deactivate account
-        var user = await _accountStatusService.DeactivateAccountAsync(command.UserId);
+        // Get user
+        var user = await _userRepository.GetByIdAsync(command.UserId);
         
         if (user is null)
         {
-            return ApiResponse<bool>.FailureResponse("User not found", 404);
+            throw new UserNotFoundException($"User with ID {command.UserId} not found");
         }
 
-        if (user.IsActive)
+        // Use domain method to deactivate (ban is same as deactivate in our domain)
+        try
         {
-            // Service returned user but IsActive is still true (was already inactive)
-            return ApiResponse<bool>.FailureResponse("User is already banned", 400);
+            user.Deactivate(_dateTimeProvider);
         }
+        catch (InvalidUserStateException ex)
+        {
+            // Already inactive/banned
+            return ApiResponse<bool>.FailureResponse("User is already banned", ex.StatusCode);
+        }
+
+        await _userRepository.UpdateAsync(user);
+
+        // Reload user with role
+        user = await _userRepository.GetByIdAsync(user.Id);
 
         // Publish user banned event (semantic: this is a BAN, not just deactivation)
         await _outbox.EnqueueAsync("auth.user.banned", new

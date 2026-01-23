@@ -9,6 +9,7 @@ using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Exceptions;
 using System.Net.Sockets;
 using AuthQueryService.Domain.Entities;
+using AuthQueryService.Domain.Entities.ReadModels;
 using MongoDB.Driver;
 
 namespace AuthQueryService.Infrastructure.Messaging
@@ -164,7 +165,7 @@ namespace AuthQueryService.Infrastructure.Messaging
 
                 await using var scope = _serviceProvider.CreateAsyncScope();
                 var db = scope.ServiceProvider.GetRequiredService<IMongoDatabase>();
-                var collection = db.GetCollection<UserRole>("roles_read");
+                var collection = db.GetCollection<RoleReadModel>("roles_read");
 
                 await HandleRoleEventAsync(eventType, json, collection, ct);
 
@@ -181,7 +182,7 @@ namespace AuthQueryService.Infrastructure.Messaging
         private async Task HandleRoleEventAsync(
             string eventType, 
             string json, 
-            IMongoCollection<UserRole> collection, 
+            IMongoCollection<RoleReadModel> collection, 
             CancellationToken ct)
         {
             using var doc = JsonDocument.Parse(UnwrapPayload(json));
@@ -193,8 +194,18 @@ namespace AuthQueryService.Infrastructure.Messaging
                 case "auth.role.updated":
                     var id = GetGuid(root, "id", "Id");
                     var name = GetString(root, "name", "Name");
+                    var description = GetString(root, "description", "Description", optional: true);
+                    var createdAt = root.TryGetProperty("createdAt", out var ca) || root.TryGetProperty("CreatedAt", out ca) 
+                        ? ca.GetDateTime() : (DateTime?)null;
 
-                    var role = new UserRole { Id = id, Name = name };
+                    var role = new RoleReadModel 
+                    { 
+                        Id = id, 
+                        Name = name,
+                        Description = description,
+                        CreatedAt = createdAt,
+                        UpdatedAt = DateTime.UtcNow
+                    };
                     await collection.ReplaceOneAsync(
                         r => r.Id == id, 
                         role, 
@@ -249,6 +260,19 @@ namespace AuthQueryService.Infrastructure.Messaging
                     return prop.GetString() ?? string.Empty;
             }
             throw new JsonException($"String not found. Tried: {string.Join(", ", names)}");
+        }
+
+        private string? GetString(JsonElement element, string name1, string name2, bool optional)
+        {
+            if (optional)
+            {
+                if (element.TryGetProperty(name1, out var prop) && prop.ValueKind == JsonValueKind.String)
+                    return prop.GetString();
+                if (element.TryGetProperty(name2, out var prop2) && prop2.ValueKind == JsonValueKind.String)
+                    return prop2.GetString();
+                return null;
+            }
+            return GetString(element, name1, name2);
         }
 
         public override async Task StopAsync(CancellationToken cancellationToken)

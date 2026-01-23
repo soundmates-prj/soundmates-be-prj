@@ -1,11 +1,11 @@
-﻿using AuthQueryService.Application.Abstractions.Messaging;
+using AuthQueryService.Application.Abstractions.Messaging;
 using AuthQueryService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
 using AuthQueryService.Application.DTOs;
 using AuthQueryService.Application.DTOs.Response;
-using AuthQueryService.Application.Users.Queries.GetUserById;
-using AuthQueryService.Application.Users.Queries.GetUserByUsername;
-using AuthQueryService.Application.Users.Queries.SearchUsers;
-using AuthQueryService.Application.Users.Queries.GetFullUserProfile;
+using AuthQueryService.Application.Services.Users.Queries.GetUserById;
+using AuthQueryService.Application.Services.Users.Queries.GetUserByUsername;
+using AuthQueryService.Application.Services.Users.Queries.SearchUsers;
+using AuthQueryService.Application.Services.Users.Queries.GetFullUserProfile;
 using AuthQueryService.Infrastructure.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

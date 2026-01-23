@@ -1,3 +1,5 @@
+using AuthService.Domain.Errors;
+
 namespace AuthService.Domain.Exceptions;
 
 /// <summary>
@@ -47,23 +49,46 @@ public sealed class InvalidUserStateException : DomainException
 }
 
 /// <summary>
-/// Error codes for user-related operations
-/// Centralized for consistency and easy maintenance
+/// Exception thrown when user is not found
 /// </summary>
-public static class UserErrorCodes
+public sealed class UserNotFoundException : DomainException
 {
-    // Validation errors (400)
-    public const string UsernameEmpty = "USER_USERNAME_EMPTY";
-    public const string EmailEmpty = "USER_EMAIL_EMPTY";
-    public const string EmailInvalid = "USER_EMAIL_INVALID";
-    public const string PasswordEmpty = "USER_PASSWORD_EMPTY";
-    public const string FirstNameEmpty = "USER_FIRSTNAME_EMPTY";
-    public const string LastNameEmpty = "USER_LASTNAME_EMPTY";
-    public const string TokenEmpty = "USER_TOKEN_EMPTY";
-
-    // State transition errors (409 Conflict)
-    public const string AlreadyActive = "USER_ALREADY_ACTIVE";
-    public const string AlreadyInactive = "USER_ALREADY_INACTIVE";
-    public const string CannotBanInactive = "USER_CANNOT_BAN_INACTIVE";
-    public const string EmailAlreadyVerified = "USER_EMAIL_ALREADY_VERIFIED";
+    public UserNotFoundException(string message, string errorCode = UserErrorCodes.UserNotFound)
+        : base(message, errorCode, 404)
+    {
+    }
 }
+
+/// <summary>
+/// Exception thrown when role validation fails
+/// </summary>
+public sealed class RoleValidationException : DomainException
+{
+    public RoleValidationException(string message, string errorCode)
+        : base(message, errorCode, 400)
+    {
+    }
+}
+
+/// <summary>
+/// Exception thrown when role state transition is invalid
+/// </summary>
+public sealed class InvalidRoleStateException : DomainException
+{
+    public InvalidRoleStateException(string message, string errorCode)
+        : base(message, errorCode, 409) // 409 Conflict
+    {
+    }
+}
+
+/// <summary>
+/// Exception thrown when role is not found
+/// </summary>
+public sealed class RoleNotFoundException : DomainException
+{
+    public RoleNotFoundException(string message, string errorCode = RoleErrorCodes.RoleNotFound)
+        : base(message, errorCode, 404)
+    {
+    }
+}
+

@@ -1,6 +1,6 @@
 using System.Text.Json;
 using AuthQueryService.Domain.Entities.ReadModels;
-using AuthQueryService.Infrastructure.DAO.Interfaces;
+using AuthQueryService.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace AuthQueryService.Infrastructure.Messaging.EventHandlers.ActivityHandlers
@@ -9,8 +9,8 @@ namespace AuthQueryService.Infrastructure.Messaging.EventHandlers.ActivityHandle
     {
         public override string EventType => "auth.user.login.activity";
 
-        public LoginActivityHandler(IUserActivityLogDAO dao, ILogger<LoginActivityHandler> logger) 
-            : base(dao, logger) { }
+        public LoginActivityHandler(IUserActivityLogRepository repository, ILogger<LoginActivityHandler> logger) 
+            : base(repository, logger) { }
 
         protected override async Task HandleEventAsync(JsonElement root, CancellationToken cancellationToken)
         {
@@ -47,7 +47,7 @@ namespace AuthQueryService.Infrastructure.Messaging.EventHandlers.ActivityHandle
             if (metadata.Count > 0)
                 log.Metadata = metadata;
 
-            await _dao.CreateAsync(log);
+            await _repository.CreateAsync(log);
             _logger.LogDebug("Logged login activity for user: {Username}", username);
         }
     }

@@ -8,7 +8,6 @@ using AuthService.Application.Services.Auth.Handlers;
 using AuthService.Application.Services.Common;
 using AuthService.Application.Services.Role.Commands;
 using AuthService.Application.Services.Role.Handlers;
-using AuthService.Application.Services.Role.Interfaces;
 using AuthService.Application.Services.Users.Commands;
 using AuthService.Application.Services.Users.Handlers;
 using Microsoft.Extensions.DependencyInjection;
@@ -44,10 +43,8 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<VerifyEmailCommand, UserDto>, VerifyEmailHandler>();
         services.AddScoped<ICommandHandler<ResendOtpCommand, bool>, ResendOtpHandler>();
         
-        // Application services
-        services.AddScoped<IRoleService, Services.RoleService>();
+        // Application services (only OtpService remains in Common - legitimate application service)
         services.AddScoped<IOtpService, OtpService>();
-        services.AddScoped<IAccountStatusService, AccountStatusService>();
 
         return services;
     }
