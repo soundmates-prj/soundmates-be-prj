@@ -3,6 +3,7 @@ using AuthService.Application.DTOs.Response;
 using AuthService.Application.Services.Auth.Commands;
 using AuthService.Application.Services.Common;
 using AuthService.Domain.Entities;
+using AuthService.Domain.Enums;
 using AuthService.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 

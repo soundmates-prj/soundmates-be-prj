@@ -3,10 +3,8 @@ using AuthService.Application.DTOs;
 using AuthService.Application.DTOs.Response;
 using AuthService.Application.Services.Auth.Commands;
 using AuthService.Domain.Entities;
+using AuthService.Domain.Enums;
 using AuthService.Domain.Interfaces;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace AuthService.Application.Services.Auth.Handlers
 {
@@ -57,7 +55,14 @@ namespace AuthService.Application.Services.Auth.Handlers
                 profile.Phone = command.Phone.Trim();
             
             if (command.Gender != null)
-                profile.Gender = command.Gender.Trim();
+            {
+                var genderValue = command.Gender.Trim();
+                // Validate against Gender enum (Male or Female only)
+                if (Enum.TryParse<Gender>(genderValue, true, out var gender))
+                {
+                    profile.Gender = gender.ToString(); // Store as string
+                }
+            }
             
             if (command.DateOfBirth.HasValue)
                 profile.DateOfBirth = command.DateOfBirth.Value;

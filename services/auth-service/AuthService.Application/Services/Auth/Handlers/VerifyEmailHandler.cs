@@ -1,9 +1,10 @@
+using AuthService.Application.Abstractions.Messaging;
 using AuthService.Application.DTOs;
 using AuthService.Application.DTOs.Response;
-using AuthService.Domain.Entities;
-using AuthService.Domain.Interfaces;
-using AuthService.Application.Abstractions.Messaging;
 using AuthService.Application.Services.Auth.Commands;
+using AuthService.Domain.Entities;
+using AuthService.Domain.Enums;
+using AuthService.Domain.Interfaces;
 
 namespace AuthService.Application.Services.Auth.Handlers;
 

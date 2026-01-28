@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="LiveSessionService.Api/LiveSessionService.Api.csproj" />
+  <Project Path="LiveSessionService.Application/LiveSessionService.Application.csproj" />
+  <Project Path="LiveSessionService.Domain/LiveSessionService.Domain.csproj" />
+  <Project Path="LiveSessionService.Infrastructure/LiveSessionService.Infrastructure.csproj" />
+</Solution>

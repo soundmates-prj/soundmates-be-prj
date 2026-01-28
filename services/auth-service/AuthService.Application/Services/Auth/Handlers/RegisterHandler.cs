@@ -1,17 +1,15 @@
+using AuthService.Application.Abstractions.Messaging;
+using AuthService.Application.Configuration;
 using AuthService.Application.DTOs;
 using AuthService.Application.DTOs.Response;
 using AuthService.Application.Services.Common;
-using AuthService.Application.Configuration;
 using AuthService.Domain.Entities;
+using AuthService.Domain.Enums;
 using AuthService.Domain.Exceptions;
 using AuthService.Domain.Interfaces;
 using AuthService.Domain.Rules;
-using AuthService.Application.Abstractions.Messaging;
-using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
+using Microsoft.Extensions.Options;
 
 namespace AuthService.Application.Services.Auth.Handlers;
 

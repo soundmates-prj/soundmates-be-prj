@@ -43,9 +43,7 @@ namespace AuthService.Infrastructure.Data
                     .Build();
 
                 var connectionString = ResolveConnectionString(config);
-                optionsBuilder.UseNpgsql(connectionString)
-                    .ConfigureWarnings(warnings => 
-                        warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+                optionsBuilder.UseNpgsql(connectionString);
             }
         }
 

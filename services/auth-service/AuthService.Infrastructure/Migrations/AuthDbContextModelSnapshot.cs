@@ -168,19 +168,19 @@ namespace AuthService.Infrastructure.Migrations
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("now() at time zone 'utc'");
 
-                    b.Property<DateTime?>("DateOfBirth")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("date_of_birth");
+                b.Property<DateTime?>("DateOfBirth")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("date_of_birth");
 
-                    b.Property<string>("Gender")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("gender");
+                b.Property<string>("Gender")
+                    .HasMaxLength(20)
+                    .HasColumnType("character varying(20)")
+                    .HasColumnName("gender");
 
-                    b.Property<string>("Location")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("location");
+                b.Property<string>("Location")
+                    .HasMaxLength(200)
+                    .HasColumnType("character varying(200)")
+                    .HasColumnName("location");
 
                     b.Property<string>("Phone")
                         .HasMaxLength(20)

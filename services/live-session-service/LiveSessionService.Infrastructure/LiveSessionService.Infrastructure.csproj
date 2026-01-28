@@ -6,10 +6,6 @@
 		<Nullable>enable</Nullable>
 	</PropertyGroup>
 
-	<ItemGroup>
-		<ProjectReference Include="..\AuthService.Application\AuthService.Application.csproj" />
-		<ProjectReference Include="..\AuthService.Domain\AuthService.Domain.csproj" />
-	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.1" />
@@ -26,10 +22,21 @@
 		<PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.1" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="10.0.1" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.1" />
+		<PackageReference Include="Microsoft.Extensions.Http" Version="10.0.1" />
 		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
-		<PackageReference Include="RabbitMQ.Client" Version="7.1.2" />
 		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.14.0" />
-		<PackageReference Include="Google.Apis.Auth" Version="1.68.0" />
+	</ItemGroup>
+	
+	<ItemGroup>
+		<Folder Include="Data\" />
+		<Folder Include="Migrations\" />
+		<Folder Include="Services\" />
+		<Folder Include="Repositories\" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\LiveSessionService.Application\LiveSessionService.Application.csproj" />
+		<ProjectReference Include="..\LiveSessionService.Domain\LiveSessionService.Domain.csproj" />
 	</ItemGroup>
 
 </Project>

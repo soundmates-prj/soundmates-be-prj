@@ -2,13 +2,10 @@ using AuthService.Application.Abstractions.Messaging;
 using AuthService.Application.DTOs.Response;
 using AuthService.Application.Services.Auth.Commands;
 using AuthService.Domain.Entities;
+using AuthService.Domain.Enums;
 using AuthService.Domain.Exceptions;
 using AuthService.Domain.Interfaces;
 using AuthService.Domain.Rules;
-using System;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace AuthService.Application.Services.Auth.Handlers
 {
