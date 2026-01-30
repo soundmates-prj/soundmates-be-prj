@@ -12,10 +12,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Folder Include="Interfaces\" />
-		<Folder Include="Errors\" />
-		<Folder Include="Exceptions\" />
-		<Folder Include="ValueObjects\" />
 		<Folder Include="Rules\" />
 	</ItemGroup>
 

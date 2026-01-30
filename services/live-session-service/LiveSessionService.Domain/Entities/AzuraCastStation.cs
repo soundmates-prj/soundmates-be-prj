@@ -4,7 +4,7 @@ using LiveSessionService.Domain.Enums;
 
 namespace LiveSessionService.Domain.Entities;
 
-public class AzuraCastStation
+public partial class AzuraCastStation
 {
     public Guid Id { get; set; }
     

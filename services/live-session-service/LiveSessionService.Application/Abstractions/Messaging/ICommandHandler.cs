@@ -1,15 +1,15 @@
-﻿using LiveSessionService.Application.Dtos.Response;
+﻿using LiveSessionService.Application.Features.Results;
 
 namespace LiveSessionService.Application.Abstractions.Messaging;
 
 public interface ICommandHandler<in TCommand>
     where TCommand : ICommand
 {
-    Task<ApiResponse<object>> Handle(TCommand command, CancellationToken cancellationToken);
+    Task<Result> Handle(TCommand command, CancellationToken cancellationToken);
 }
 
 public interface ICommandHandler<in TCommand, TResponse>
     where TCommand : ICommand<TResponse>
 {
-    Task<ApiResponse<TResponse>> Handle(TCommand command, CancellationToken cancellationToken);
+    Task<Result<TResponse>> Handle(TCommand command, CancellationToken cancellationToken);
 }

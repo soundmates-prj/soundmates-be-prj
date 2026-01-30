@@ -19,6 +19,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<Folder Include="Hubs\Base\" />
 		<Folder Include="Middlewares\" />
 	</ItemGroup>
 

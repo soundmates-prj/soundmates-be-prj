@@ -1,8 +1,9 @@
-using AuthService.Application.DTOs.Response;
+using AuthService.Api.Models.Responses;
 using AuthService.Application.Enums;
 using AuthService.Infrastructure;
 using AuthService.Application;
-using AuthService.Infrastructure.Messaging;
+using AuthService.Domain.Interfaces;
+using AuthService.Infrastructure.Services;
 using AuthService.Api.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
@@ -130,8 +131,6 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 builder.Services.AddEndpointsApiExplorer();
 // Lowercase URLs for apis
 builder.Services.AddRouting(options => options.LowercaseUrls = true);
-// Add RabbitMQ publisher (single registration)
-builder.Services.AddSingleton<IMessageBusPublisher, RabbitMqPublisher>();
 
 // Swagger + JWT security
 builder.Services.AddSwaggerGen(c =>
@@ -240,7 +239,7 @@ var app = builder.Build();
 // This MUST complete successfully before the app starts
 await using (var scope = app.Services.CreateAsyncScope())
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<AuthService.Infrastructure.Data.AuthDbContext>();
+    var dbContext = scope.ServiceProvider.GetRequiredService<AuthService.Infrastructure.Persistence.AuthDbContext>();
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
     logger.LogInformation("Starting database migration...");
@@ -367,16 +366,16 @@ static async Task SeedDefaultRolesAsync(AsyncServiceScope scope, ILogger logger)
             if (existingRole == null)
             {
                 logger.LogInformation("Creating default role: {RoleName}", roleName);
-                var createRoleCmd = new AuthService.Application.Services.Role.Commands.CreateRoleCommand { Name = roleName };
-                var result = await commandDispatcher.Send<AuthService.Application.Services.Role.Commands.CreateRoleCommand, Guid>(createRoleCmd, CancellationToken.None);
+                var createRoleCmd = new AuthService.Application.Features.Role.Commands.CreateRoleCommand { Name = roleName };
+                var result = await commandDispatcher.Send<AuthService.Application.Features.Role.Commands.CreateRoleCommand, Guid>(createRoleCmd, CancellationToken.None);
 
-                if (result.Success)
+                if (result.IsSuccess && result.Data != Guid.Empty)
                 {
-                    logger.LogInformation("Successfully created role: {RoleName}", roleName);
+                    logger.LogInformation("Successfully created role: {RoleName} with ID: {RoleId}", roleName, result.Data);
                 }
                 else
                 {
-                    logger.LogWarning("Failed to create role {RoleName}: {Error}", roleName, result.Message);
+                    logger.LogWarning("Failed to create role {RoleName}: {Error}", roleName, result.ErrorMessage ?? "Unknown error");
                 }
             }
             else

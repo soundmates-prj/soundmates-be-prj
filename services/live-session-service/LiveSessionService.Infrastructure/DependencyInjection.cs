@@ -1,10 +1,56 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using LiveSessionService.Application.Features.Common;
+using LiveSessionService.Domain.Interfaces;
+using LiveSessionService.Infrastructure.Persistence;
+using LiveSessionService.Infrastructure.Services;
+using LiveSessionService.Infrastructure.Repositories;
+using LiveSessionService.Infrastructure.Services.AzuraCast;
+using LiveSessionService.Infrastructure.Messaging;
+using LiveSessionService.Infrastructure.Messaging.Outbox;
+using AuthService.Infrastructure.Messaging;
 
-namespace LiveSessionService.Infrastructure
+namespace LiveSessionService.Infrastructure;
+
+public static class DependencyInjection
 {
-    internal class DependencyInjection
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
+        // Database - PostgreSQL
+        var connectionString = configuration.GetConnectionString("DefaultConnection")
+            ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found");
+
+        services.AddDbContext<LiveSessionDbContext>(options =>
+            options.UseNpgsql(connectionString, npgsqlOptions =>
+            {
+                npgsqlOptions.MigrationsAssembly(typeof(LiveSessionDbContext).Assembly.FullName);
+                npgsqlOptions.EnableRetryOnFailure(
+                    maxRetryCount: 3,
+                    maxRetryDelay: TimeSpan.FromSeconds(5),
+                    errorCodesToAdd: null);
+            }));
+
+        // DateTime Provider
+        services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
+
+        // Repositories
+        services.AddScoped<ILiveSessionRepository, LiveSessionRepository>();
+        services.AddScoped<INowPlayingHistoryRepository, NowPlayingHistoryRepository>();
+        services.AddScoped<IOutboxRepository, OutboxRepository>();
+
+        // External Services - AzuraCast
+        services.AddHttpClient<IAzuraCastService, AzuraCastService>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(10);
+        });
+
+        // Messaging - RabbitMQ
+        services.AddSingleton<IMessageBusPublisher, RabbitMqPublisher>();
+        services.AddHostedService<OutboxPublisherBackgroundService>();
+
+        return services;
     }
 }

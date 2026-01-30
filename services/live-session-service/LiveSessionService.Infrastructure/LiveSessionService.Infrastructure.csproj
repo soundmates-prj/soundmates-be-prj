@@ -24,14 +24,12 @@
 		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.1" />
 		<PackageReference Include="Microsoft.Extensions.Http" Version="10.0.1" />
 		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
+		<PackageReference Include="RabbitMQ.Client" Version="7.2.0" />
 		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.14.0" />
 	</ItemGroup>
 	
 	<ItemGroup>
-		<Folder Include="Data\" />
-		<Folder Include="Migrations\" />
-		<Folder Include="Services\" />
-		<Folder Include="Repositories\" />
+		<Folder Include="BackgroundJobs\" />
 	</ItemGroup>
 
 	<ItemGroup>

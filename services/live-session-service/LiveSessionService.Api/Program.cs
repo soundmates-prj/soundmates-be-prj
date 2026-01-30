@@ -1,3 +1,4 @@
+using LiveSessionService.Application;
 using LiveSessionService.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -7,7 +8,11 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Add Infrastructure services (includes AzuraCast)
+// Add Application Layer
+builder.Services.AddApplication();
+
+// Add Infrastructure Layer
+builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 

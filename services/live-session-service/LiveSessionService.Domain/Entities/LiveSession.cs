@@ -4,7 +4,7 @@ using LiveSessionService.Domain.Enums;
 
 namespace LiveSessionService.Domain.Entities;
 
-public class LiveSession
+public partial class LiveSession
 {
     public Guid Id { get; set; }
     

@@ -1,4 +1,4 @@
-using AuthService.Application.DTOs.Response;
+using AuthService.Api.Models.Responses;
 using AuthService.Application.Enums;
 using AuthService.Application.Exceptions;
 using System.Net;

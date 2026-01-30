@@ -2,7 +2,7 @@ using System;
 
 namespace LiveSessionService.Domain.Entities;
 
-public class NowPlayingHistory
+public partial class NowPlayingHistory
 {
     public Guid Id { get; set; }
     
