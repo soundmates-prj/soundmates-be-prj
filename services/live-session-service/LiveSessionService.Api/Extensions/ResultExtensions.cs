@@ -1,5 +1,5 @@
-﻿using LiveSessionService.Application.Dtos.Response;
-using LiveSessionService.Application.Features.Results;
+﻿using LiveSessionService.Application.Features.Results;
+using LiveSessionService.Api.Models.Responses;
 
 namespace LiveSessionService.Api.Extensions;
 
@@ -8,7 +8,7 @@ namespace LiveSessionService.Api.Extensions;
 /// This is where we bridge Application layer to API layer
 /// </summary>
 public static class ResultExtensions
-    {
+{
     /// <summary>
     /// Convert Result{T} to ApiResponse{T}
     /// </summary>

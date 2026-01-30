@@ -1,6 +1,8 @@
+﻿using LiveSessionService.Application.Abstractions;
 using LiveSessionService.Application.Abstractions.Messaging;
-using LiveSessionService.Application.Features.Common;
+using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Features.Results;
+using LiveSessionService.Application.Features.Results.NowPlaying;
 using LiveSessionService.Application.Mappings;
 using LiveSessionService.Domain.Entities;
 using LiveSessionService.Domain.Exceptions;
@@ -17,12 +19,15 @@ namespace LiveSessionService.Application.Features.NowPlaying.Commands.SyncNowPla
 /// 2. Create/update NowPlayingHistory entity
 /// 3. Save to database
 /// 4. Enqueue outbox message for event publishing
+/// 
+/// NOTE: Chỉ handle business errors (DomainException)
+/// System errors (Exception) để middleware xử lý
 /// </summary>
 public sealed class SyncNowPlayingHandler : ICommandHandler<SyncNowPlayingCommand, NowPlayingResult>
 {
     private readonly ILiveSessionRepository _sessionRepository;
     private readonly INowPlayingHistoryRepository _nowPlayingRepository;
-    private readonly IAzuraCastService _azuraCastService;
+    private readonly IAzuraCastClient _azuraCastClient;
     private readonly IOutboxRepository _outbox;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<SyncNowPlayingHandler> _logger;
@@ -30,14 +35,14 @@ public sealed class SyncNowPlayingHandler : ICommandHandler<SyncNowPlayingComman
     public SyncNowPlayingHandler(
         ILiveSessionRepository sessionRepository,
         INowPlayingHistoryRepository nowPlayingRepository,
-        IAzuraCastService azuraCastService,
+        IAzuraCastClient azuraCastClient,
         IOutboxRepository outbox,
         IDateTimeProvider dateTimeProvider,
         ILogger<SyncNowPlayingHandler> logger)
     {
         _sessionRepository = sessionRepository;
         _nowPlayingRepository = nowPlayingRepository;
-        _azuraCastService = azuraCastService;
+        _azuraCastClient = azuraCastClient;
         _outbox = outbox;
         _dateTimeProvider = dateTimeProvider;
         _logger = logger;
@@ -47,6 +52,8 @@ public sealed class SyncNowPlayingHandler : ICommandHandler<SyncNowPlayingComman
         SyncNowPlayingCommand command,
         CancellationToken cancellationToken)
     {
+        // Chỉ catch DomainException (business errors)
+        // System errors throw lên để middleware handle
         try
         {
             _logger.LogInformation("Syncing now playing for session {SessionId}", command.SessionId);
@@ -55,13 +62,13 @@ public sealed class SyncNowPlayingHandler : ICommandHandler<SyncNowPlayingComman
             var session = await _sessionRepository.GetByIdWithStationAsync(command.SessionId, cancellationToken);
             if (session == null)
             {
-                return Result<NowPlayingResult>.Failure("Session not found", 404);
+                return Result<NowPlayingResult>.Failure("Session not found", ErrorCode.NotFound);
             }
 
             // 2. Validate session is active
             if (!session.IsActive())
             {
-                return Result<NowPlayingResult>.Failure("Session is not active", 400);
+                return Result<NowPlayingResult>.Failure("Session is not active", ErrorCode.BadRequest);
             }
 
             // 3. Validate station exists
@@ -69,7 +76,7 @@ public sealed class SyncNowPlayingHandler : ICommandHandler<SyncNowPlayingComman
             {
                 return Result<NowPlayingResult>.Failure(
                     "Session does not have an AzuraCast station configured",
-                    400);
+                    ErrorCode.BadRequest);
             }
 
             var station = session.AzuraCastStation;
@@ -77,21 +84,14 @@ public sealed class SyncNowPlayingHandler : ICommandHandler<SyncNowPlayingComman
             // 4. Validate station is enabled
             if (!station.IsEnabled)
             {
-                return Result<NowPlayingResult>.Failure("AzuraCast station is disabled", 400);
-            }
-
-            // 5. Validate API configuration
-            if (string.IsNullOrWhiteSpace(station.ApiBaseUrl))
-            {
                 return Result<NowPlayingResult>.Failure(
-                    "AzuraCast station API base URL is not configured",
-                    400);
+                    "AzuraCast station is disabled", 
+                    ErrorCode.BadRequest);
             }
 
-            // 6. Fetch from AzuraCast API (using ExternalStationId which is integer)
-            var nowPlayingData = await _azuraCastService.GetNowPlayingAsync(
-                station.ApiBaseUrl,
-                station.ExternalStationId, // This is int (1, 2, 3...)
+            // 5. Fetch from AzuraCast API
+            var nowPlayingData = await _azuraCastClient.GetNowPlayingAsync(
+                station.ExternalStationId, 
                 cancellationToken);
 
             if (nowPlayingData?.NowPlaying?.Song == null)
@@ -99,10 +99,10 @@ public sealed class SyncNowPlayingHandler : ICommandHandler<SyncNowPlayingComman
                 _logger.LogWarning("No now playing data from AzuraCast for session {SessionId}", command.SessionId);
                 return Result<NowPlayingResult>.Failure(
                     "No now playing data available from AzuraCast",
-                    404);
+                    ErrorCode.NotFound);
             }
 
-            // 7. Get previous now playing to check if song changed
+            // 6. Get previous now playing to check if song changed
             var previousNowPlaying = await _nowPlayingRepository.GetLatestBySessionIdAsync(
                 command.SessionId,
                 cancellationToken);
@@ -110,7 +110,7 @@ public sealed class SyncNowPlayingHandler : ICommandHandler<SyncNowPlayingComman
             var currentSong = nowPlayingData.NowPlaying.Song;
             var currentShId = nowPlayingData.NowPlaying.ShId;
 
-            // 8. Check if this is a new song
+            // 7. Check if this is a new song
             bool isNewSong = previousNowPlaying == null ||
                              (currentShId.HasValue && previousNowPlaying.AzuraCastSongHistoryId != currentShId.Value);
 
@@ -174,25 +174,20 @@ public sealed class SyncNowPlayingHandler : ICommandHandler<SyncNowPlayingComman
                 await _nowPlayingRepository.UpdateAsync(nowPlayingHistory, cancellationToken);
             }
 
-            // 9. Update station sync status
+            // 8. Update station sync status
             station.MarkSyncSuccessful(_dateTimeProvider);
 
-            // 10. Map to Result using mapping extension
+            // 9. Map to Result
             var result = nowPlayingHistory.ToNowPlayingResult(session, _dateTimeProvider);
 
             return Result<NowPlayingResult>.Success(result);
         }
         catch (DomainException ex)
         {
+            // Business logic errors - convert to Result
             _logger.LogWarning(ex, "Domain validation failed for session {SessionId}", command.SessionId);
-            return Result<NowPlayingResult>.Failure(ex.Message, ex.StatusCode);
+            return Result<NowPlayingResult>.Failure(ex.Message, (ErrorCode)ex.StatusCode);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to sync now playing for session {SessionId}", command.SessionId);
-            return Result<NowPlayingResult>.Failure(
-                "An error occurred while syncing now playing data",
-                500);
-        }
+        // System errors (Exception) throw lên để GlobalExceptionMiddleware handle
     }
 }

@@ -1,12 +1,13 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using LiveSessionService.Application.Features.Common;
+using LiveSessionService.Application.Abstractions;
+using LiveSessionService.Application.Features.Common.AzuraCast;
 using LiveSessionService.Domain.Interfaces;
 using LiveSessionService.Infrastructure.Persistence;
 using LiveSessionService.Infrastructure.Services;
 using LiveSessionService.Infrastructure.Repositories;
-using LiveSessionService.Infrastructure.Services.AzuraCast;
+using LiveSessionService.Infrastructure.ExternalServices.AzuraCast;
 using LiveSessionService.Infrastructure.Messaging;
 using LiveSessionService.Infrastructure.Messaging.Outbox;
 using AuthService.Infrastructure.Messaging;
@@ -42,8 +43,13 @@ public static class DependencyInjection
         services.AddScoped<IOutboxRepository, OutboxRepository>();
 
         // External Services - AzuraCast
-        services.AddHttpClient<IAzuraCastService, AzuraCastService>(client =>
+        // BaseUrl config qua HttpClient DI (Clean Architecture compliant)
+        var azuraCastBaseUrl = configuration["AzuraCast:BaseUrl"] 
+            ?? throw new InvalidOperationException("AzuraCast:BaseUrl not configured");
+        
+        services.AddHttpClient<IAzuraCastClient, AzuraCastClient>(client =>
         {
+            client.BaseAddress = new Uri(azuraCastBaseUrl);
             client.Timeout = TimeSpan.FromSeconds(10);
         });
 

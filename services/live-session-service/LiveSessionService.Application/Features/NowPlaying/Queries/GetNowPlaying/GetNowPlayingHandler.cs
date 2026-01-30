@@ -1,5 +1,7 @@
 using LiveSessionService.Application.Abstractions.Messaging;
+using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Features.Results;
+using LiveSessionService.Application.Features.Results.NowPlaying;
 using LiveSessionService.Application.Mappings;
 using LiveSessionService.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
@@ -33,40 +35,30 @@ public sealed class GetNowPlayingHandler : IQueryHandler<GetNowPlayingQuery, Now
         GetNowPlayingQuery query,
         CancellationToken cancellationToken)
     {
-        try
+        _logger.LogInformation("Getting now playing for session {SessionId}", query.SessionId);
+
+        // 1. Get session
+        var session = await _sessionRepository.GetByIdAsync(query.SessionId, cancellationToken);
+        if (session == null)
         {
-            _logger.LogInformation("Getting now playing for session {SessionId}", query.SessionId);
-
-            // 1. Get session
-            var session = await _sessionRepository.GetByIdAsync(query.SessionId, cancellationToken);
-            if (session == null)
-            {
-                return Result<NowPlayingResult>.Failure("Session not found", 404);
-            }
-
-            // 2. Get latest now playing
-            var nowPlaying = await _nowPlayingRepository.GetLatestBySessionIdAsync(
-                query.SessionId,
-                cancellationToken);
-
-            if (nowPlaying == null)
-            {
-                return Result<NowPlayingResult>.Failure(
-                    "No now playing data available for this session",
-                    404);
-            }
-
-            // 3. Map to Result using mapping extension
-            var result = nowPlaying.ToNowPlayingResult(session, _dateTimeProvider);
-
-            return Result<NowPlayingResult>.Success(result);
+            return Result<NowPlayingResult>.Failure("Session not found", ErrorCode.NotFound);
         }
-        catch (Exception ex)
+
+        // 2. Get latest now playing
+        var nowPlaying = await _nowPlayingRepository.GetLatestBySessionIdAsync(
+            query.SessionId,
+            cancellationToken);
+
+        if (nowPlaying == null)
         {
-            _logger.LogError(ex, "Failed to get now playing for session {SessionId}", query.SessionId);
             return Result<NowPlayingResult>.Failure(
-                "An error occurred while retrieving now playing data",
-                500);
+                "No now playing data available for this session",
+                ErrorCode.NotFound);
         }
+
+        // 3. Map to Result using mapping extension
+        var result = nowPlaying.ToNowPlayingResult(session, _dateTimeProvider);
+
+        return Result<NowPlayingResult>.Success(result);
     }
 }

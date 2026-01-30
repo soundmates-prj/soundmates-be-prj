@@ -1,3 +1,5 @@
+using LiveSessionService.Application.Enums;
+
 namespace LiveSessionService.Application.Features.Results;
 
 /// <summary>
@@ -9,9 +11,9 @@ public class Result
     public bool IsSuccess { get; }
     public bool IsFailure => !IsSuccess;
     public string? ErrorMessage { get; }
-    public int? ErrorCode { get; }
+    public ErrorCode? ErrorCode { get; }
 
-    protected Result(bool isSuccess, string? errorMessage = null, int? errorCode = null)
+    protected Result(bool isSuccess, string? errorMessage = null, ErrorCode? errorCode = null)
     {
         IsSuccess = isSuccess;
         ErrorMessage = errorMessage;
@@ -19,7 +21,8 @@ public class Result
     }
 
     public static Result Success() => new(true);
-    public static Result Failure(string errorMessage, int? errorCode = null) => new(false, errorMessage, errorCode);
+    public static Result Failure(string errorMessage, ErrorCode errorCode) 
+        => new(false, errorMessage, errorCode);
 }
 
 /// <summary>
@@ -29,12 +32,13 @@ public class Result<T> : Result
 {
     public T? Data { get; }
 
-    private Result(bool isSuccess, T? data, string? errorMessage = null, int? errorCode = null)
+    private Result(bool isSuccess, T? data, string? errorMessage = null, ErrorCode? errorCode = null)
         : base(isSuccess, errorMessage, errorCode)
     {
         Data = data;
     }
 
     public static Result<T> Success(T data) => new(true, data);
-    public static Result<T> Failure(string errorMessage, int? errorCode = null) => new(false, default, errorMessage, errorCode);
+    public static Result<T> Failure(string errorMessage, ErrorCode errorCode) 
+        => new(false, default, errorMessage, errorCode);
 }

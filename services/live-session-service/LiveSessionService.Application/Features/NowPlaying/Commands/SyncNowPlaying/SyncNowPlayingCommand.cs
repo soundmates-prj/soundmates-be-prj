@@ -1,5 +1,5 @@
 using LiveSessionService.Application.Abstractions.Messaging;
-using LiveSessionService.Application.Features.Results;
+using LiveSessionService.Application.Features.Results.NowPlaying;
 
 namespace LiveSessionService.Application.Features.NowPlaying.Commands.SyncNowPlaying;
 

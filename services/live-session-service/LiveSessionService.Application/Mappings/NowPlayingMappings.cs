@@ -1,4 +1,4 @@
-using LiveSessionService.Application.Features.Results;
+using LiveSessionService.Application.Features.Results.NowPlaying;
 using LiveSessionService.Domain.Entities;
 using LiveSessionService.Domain.Interfaces;
 
