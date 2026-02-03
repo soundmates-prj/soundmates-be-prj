@@ -1,6 +1,6 @@
 using AuthService.Domain.Entities;
 using AuthService.Domain.Interfaces;
-using AuthService.Infrastructure.Data;
+using AuthService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Linq;

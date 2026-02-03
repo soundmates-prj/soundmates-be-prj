@@ -1,7 +1,7 @@
-﻿using AuthService.Application.Enums;
+using AuthService.Application.Enums;
 using AuthService.Domain.Entities;
 using AuthService.Domain.Interfaces;
-using AuthService.Infrastructure.Data;
+using AuthService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace AuthService.Infrastructure.Repositories;

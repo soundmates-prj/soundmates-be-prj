@@ -1,0 +1,32 @@
+@LiveSessionService.Api_HostAddress = http://localhost:5116
+
+### VARIABLES
+@sessionId = 00000000-0000-0000-0000-000000000000
+
+###############################################################
+# NOW PLAYING API TESTS
+###############################################################
+
+### Get Now Playing for a Session
+GET {{LiveSessionService.Api_HostAddress}}/api/now-playing/{{sessionId}}
+Accept: application/json
+
+###
+
+### Force Sync Now Playing from AzuraCast
+POST {{LiveSessionService.Api_HostAddress}}/api/now-playing/{{sessionId}}/sync
+Accept: application/json
+
+###
+
+### Get Now Playing History (Default Limit: 50)
+GET {{LiveSessionService.Api_HostAddress}}/api/now-playing/{{sessionId}}/history
+Accept: application/json
+
+###
+
+### Get Now Playing History (Custom Limit)
+GET {{LiveSessionService.Api_HostAddress}}/api/now-playing/{{sessionId}}/history?limit=10
+Accept: application/json
+
+###

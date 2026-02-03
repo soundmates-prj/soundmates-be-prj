@@ -1,10 +1,11 @@
-using AuthService.Application.Abstractions.Messaging;
 using AuthService.Application.Configuration;
+using AuthService.Application.Features.Common;
 using AuthService.Domain.Interfaces;
-using AuthService.Infrastructure.Data;
-using AuthService.Infrastructure.Jwt;
-using AuthService.Infrastructure.Messaging;
+using AuthService.Infrastructure.Messaging.MessageBus;
+using AuthService.Infrastructure.Messaging.Outbox;
+using AuthService.Infrastructure.Persistence;
 using AuthService.Infrastructure.Repositories;
+using AuthService.Infrastructure.Security.Jwt;
 using AuthService.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -30,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IProfileRepository, ProfileRepository>();
         services.AddScoped<IOtpRepository, OtpRepository>();
+        services.AddScoped<IOutboxRepository, OutboxRepository>();
 
         // JWT token generator
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
@@ -47,12 +49,15 @@ public static class DependencyInjection
         // DateTime provider (infrastructure concern)
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
 
-        // Outbox + background publisher
-        services.AddScoped<IOutbox, EfCoreOutbox>();
-        services.AddHostedService<OutboxPublisherBackgroundService>();
+        // Application services (implemented in infrastructure)
+        services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
+        services.AddScoped<IOtpService, OtpService>();
 
-        // RabbitMQ message bus publisher
+        // Message Bus Publisher (RabbitMQ)
         services.AddSingleton<IMessageBusPublisher, RabbitMqPublisher>();
+
+        // Outbox Background Publisher Service
+        services.AddHostedService<OutboxPublisherBackgroundService>();
 
         return services;
     }
