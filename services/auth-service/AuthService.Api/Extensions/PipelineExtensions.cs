@@ -3,7 +3,7 @@ using AuthService.Api.Models.Responses;
 using AuthService.Application.Enums;
 using System.Text.Json;
 
-namespace AuthService.Api.Bootstrap;
+namespace AuthService.Api.Extensions;
 
 /// <summary>
 /// Extension methods for HTTP request pipeline configuration

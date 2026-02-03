@@ -10,6 +10,14 @@ namespace LiveSessionService.Application.Abstractions;
 public interface IAzuraCastClient
 {
     /// <summary>
+    /// Gets list of all stations from AzuraCast
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of stations</returns>
+    Task<List<AzuraCastStationListData>> GetStationsAsync(
+        CancellationToken cancellationToken = default);
+    
+    /// <summary>
     /// Gets now playing information for a station
     /// BaseUrl ???c config trong Infrastructure qua HttpClient DI
     /// </summary>

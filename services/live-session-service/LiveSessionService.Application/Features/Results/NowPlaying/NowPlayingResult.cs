@@ -6,7 +6,7 @@ namespace LiveSessionService.Application.Features.Results.NowPlaying;
 /// </summary>
 public sealed class NowPlayingResult
 {
-    public Guid Id { get; init; }
+    public int Id { get; init; }
     public Guid SessionId { get; init; }
     public string SessionName { get; init; } = null!;
     public SongResult CurrentSong { get; init; } = null!;

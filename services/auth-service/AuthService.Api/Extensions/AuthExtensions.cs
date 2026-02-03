@@ -8,7 +8,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 
-namespace AuthService.Api.Bootstrap;
+namespace AuthService.Api.Extensions;
 
 /// <summary>
 /// Extension methods for authentication and authorization configuration

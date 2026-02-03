@@ -23,6 +23,51 @@ public sealed class AzuraCastClient : IAzuraCastClient
         _logger = logger;
     }
 
+    public async Task<List<AzuraCastStationListData>> GetStationsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            const string endpoint = "api/stations";
+            _logger.LogInformation("Fetching stations list from AzuraCast");
+
+            // Call API - deserialize to internal API model
+            var apiResponse = await _httpClient.GetFromJsonAsync<List<AzuraCastApiStationListResponse>>(
+                endpoint,
+                cancellationToken);
+
+            if (apiResponse == null || apiResponse.Count == 0)
+            {
+                _logger.LogWarning("Received empty or null response from AzuraCast stations API");
+                return new List<AzuraCastStationListData>();
+            }
+
+            // Map internal API model to Application model
+            var applicationModels = apiResponse
+                .Select(station => station.ToApplicationModel())
+                .ToList();
+
+            _logger.LogInformation(
+                "Successfully fetched {Count} stations from AzuraCast",
+                applicationModels.Count);
+
+            return applicationModels;
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, 
+                "HTTP error fetching stations from AzuraCast: {Message}", 
+                ex.Message);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, 
+                "Error fetching stations from AzuraCast");
+            throw;
+        }
+    }
+
     public async Task<AzuraCastNowPlayingData?> GetNowPlayingAsync(
         int stationId,
         CancellationToken cancellationToken = default)

@@ -116,7 +116,7 @@ namespace AuthService.Api.Controllers
                 {
                     401 => Unauthorized(ApiResponse<AuthResult>.FailureResponse(result.ErrorMessage ?? "Unauthorized", 401)),
                     _ => BadRequest(ApiResponse<AuthResult>.FailureResponse(result.ErrorMessage ?? "Login failed", result.ErrorCode ?? 400))
-                };
+                };  
             }
 
             return Ok(ApiResponse<AuthResult>.SuccessResponse(result.Data!, result.ErrorMessage ?? "Google login successful"));

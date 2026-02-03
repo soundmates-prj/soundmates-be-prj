@@ -7,6 +7,7 @@ namespace LiveSessionService.Api.Models.Requests;
 /// </summary>
 public class GetNowPlayingRequest
 {
+    // Id from AzuraCast SectionId
     [Required]
-    public Guid SessionId { get; set; }
+    public int Id { get; set; }
 }

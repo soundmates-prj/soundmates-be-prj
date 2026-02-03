@@ -2,7 +2,7 @@ using AuthService.Api.Models.Responses;
 using AuthService.Application.Enums;
 using Microsoft.AspNetCore.Mvc;
 
-namespace AuthService.Api.Bootstrap;
+namespace AuthService.Api.Extensions;
 
 /// <summary>
 /// Extension methods for Web API configuration

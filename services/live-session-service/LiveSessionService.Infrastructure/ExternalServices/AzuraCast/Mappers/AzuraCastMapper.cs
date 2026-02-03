@@ -10,6 +10,43 @@ namespace LiveSessionService.Infrastructure.ExternalServices.AzuraCast.Mappers;
 internal static class AzuraCastMapper
 {
     /// <summary>
+    /// Convert API station list response to Application model
+    /// </summary>
+    public static AzuraCastStationListData ToApplicationModel(this AzuraCastApiStationListResponse apiStation)
+    {
+        return new AzuraCastStationListData
+        {
+            Id = apiStation.Id,
+            Name = apiStation.Name ?? "Unknown",
+            Shortcode = apiStation.Shortcode,
+            Description = apiStation.Description,
+            ListenUrl = apiStation.ListenUrl,
+            PublicPlayerUrl = apiStation.PublicPlayerUrl,
+            IsPublic = apiStation.IsPublic,
+            Mounts = apiStation.Mounts?
+                .Select(m => m.ToApplicationModel())
+                .ToList(),
+            HlsEnabled = apiStation.HlsEnabled,
+            HlsUrl = apiStation.HlsUrl
+        };
+    }
+
+    private static AzuraCastMountData ToApplicationModel(this AzuraCastApiMount apiMount)
+    {
+        return new AzuraCastMountData
+        {
+            Id = apiMount.Id,
+            Name = apiMount.Name,
+            Url = apiMount.Url,
+            Bitrate = apiMount.Bitrate,
+            Format = apiMount.Format,
+            Listeners = apiMount.Listeners?.ToApplicationModel(),
+            Path = apiMount.Path,
+            IsDefault = apiMount.IsDefault
+        };
+    }
+    
+    /// <summary>
     /// Convert API response to Application model
     /// </summary>
     public static AzuraCastNowPlayingData? ToApplicationModel(this AzuraCastApiResponse? apiResponse)

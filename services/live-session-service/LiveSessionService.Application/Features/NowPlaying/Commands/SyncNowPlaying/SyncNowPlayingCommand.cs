@@ -7,4 +7,4 @@ namespace LiveSessionService.Application.Features.NowPlaying.Commands.SyncNowPla
 /// Command to sync now playing data from AzuraCast
 /// Can be triggered manually or by background service
 /// </summary>
-public sealed record SyncNowPlayingCommand(Guid SessionId) : ICommand<NowPlayingResult>;
+public sealed record SyncNowPlayingCommand(int SessionId) : ICommand<NowPlayingResult>;

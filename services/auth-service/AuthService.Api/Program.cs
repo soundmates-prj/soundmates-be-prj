@@ -1,9 +1,9 @@
-using AuthService.Api.Bootstrap;
+using AuthService.Api.Extensions;
 
 // ============================================================
-// CLEAN BOOTSTRAP ARCHITECTURE
+// CLEAN ARCHITECTURE - COMPOSITION ROOT
 // Program.cs acts as Composition Root - orchestration only
-// All implementation details are in Bootstrap extension methods
+// All implementation details are in Extensions folder
 // ============================================================
 
 var builder = WebApplication.CreateBuilder(args);

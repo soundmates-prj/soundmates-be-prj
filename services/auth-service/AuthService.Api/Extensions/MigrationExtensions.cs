@@ -1,7 +1,7 @@
 using AuthService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace AuthService.Api.Bootstrap;
+namespace AuthService.Api.Extensions;
 
 /// <summary>
 /// Extension methods for database migration and seeding

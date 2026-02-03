@@ -23,7 +23,7 @@ public static class ResultExtensions
 
         return ApiResponse<T>.FailureResponse(
             result.ErrorMessage ?? "An error occurred",
-            result.ErrorCode);
+            (int?)result.ErrorCode);
     }
 
     /// <summary>
@@ -38,7 +38,7 @@ public static class ResultExtensions
 
         return ApiResponse<bool>.FailureResponse(
             result.ErrorMessage ?? "An error occurred",
-            result.ErrorCode);
+            (int?)result.ErrorCode);
     }
 }
 

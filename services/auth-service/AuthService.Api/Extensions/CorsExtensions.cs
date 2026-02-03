@@ -1,4 +1,4 @@
-namespace AuthService.Api.Bootstrap;
+namespace AuthService.Api.Extensions;
 
 /// <summary>
 /// Extension methods for CORS policy configuration
