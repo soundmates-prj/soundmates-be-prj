@@ -1,4 +1,4 @@
-using LiveSessionService.Application.Enums;
+Ôªøusing LiveSessionService.Application.Enums;
 using LiveSessionService.Api.Models.Responses;
 using System.Net;
 using System.Text.Json;
@@ -7,7 +7,7 @@ namespace LiveSessionService.Api.Middleware;
 
 /// <summary>
 /// Global exception handler middleware
-/// Catches unhandled exceptions v‡ convert th‡nh API response chu?n
+/// Catches unhandled exceptions v√† convert th√†nh API response chu?n
 /// </summary>
 public sealed class GlobalExceptionMiddleware
 {
@@ -50,7 +50,7 @@ public sealed class GlobalExceptionMiddleware
             errorCode: (int)ErrorCode.InternalServerError
         );
 
-        // Trong Development, cÛ th? include stack trace
+        // In Development, can include stack trace
         if (_env.IsDevelopment())
         {
             var detailedResponse = new
@@ -72,7 +72,7 @@ public sealed class GlobalExceptionMiddleware
             return;
         }
 
-        // Production - khÙng expose details
+        // Production - kh√¥ng expose details
         var productionJson = JsonSerializer.Serialize(response, new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
@@ -83,7 +83,7 @@ public sealed class GlobalExceptionMiddleware
 }
 
 /// <summary>
-/// Extension method ?? register middleware d? h?n
+/// Extension method middleware for register GlobalExceptionMiddleware
 /// </summary>
 public static class GlobalExceptionMiddlewareExtensions
 {

@@ -40,6 +40,7 @@ public static class DependencyInjection
         // Repositories
         services.AddScoped<ILiveSessionRepository, LiveSessionRepository>();
         services.AddScoped<INowPlayingHistoryRepository, NowPlayingHistoryRepository>();
+        services.AddScoped<IAzuraCastStationRepository, AzuraCastStationRepository>();
         services.AddScoped<IOutboxRepository, OutboxRepository>();
 
         // External Services - AzuraCast

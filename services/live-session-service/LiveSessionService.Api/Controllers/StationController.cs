@@ -1,6 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 using LiveSessionService.Application.Abstractions;
+using LiveSessionService.Application.Abstractions.Messaging;
 using LiveSessionService.Application.Features.Common.AzuraCast.Models;
+using LiveSessionService.Application.Features.Results;
+using LiveSessionService.Application.Features.Results.Stations;
+using LiveSessionService.Application.Features.Stations.Commands.SyncStations;
+using LiveSessionService.Application.Features.Stations.Queries.GetAllStations;
 using LiveSessionService.Api.Models.Responses;
 
 namespace LiveSessionService.Api.Controllers;
@@ -14,21 +19,65 @@ namespace LiveSessionService.Api.Controllers;
 public class StationController : ControllerBase
 {
     private readonly IAzuraCastClient _azuraCastClient;
+    private readonly ICommandHandler<SyncStationsCommand, SyncStationsResult> _syncStationsHandler;
+    private readonly IQueryHandler<GetAllStationsQuery, List<StationResult>> _getAllStationsHandler;
     private readonly ILogger<StationController> _logger;
 
     public StationController(
         IAzuraCastClient azuraCastClient,
+        ICommandHandler<SyncStationsCommand, SyncStationsResult> syncStationsHandler,
+        IQueryHandler<GetAllStationsQuery, List<StationResult>> getAllStationsHandler,
         ILogger<StationController> logger)
     {
         _azuraCastClient = azuraCastClient;
+        _syncStationsHandler = syncStationsHandler;
+        _getAllStationsHandler = getAllStationsHandler;
         _logger = logger;
     }
 
     /// <summary>
-    /// Get all stations from AzuraCast
+    /// Get all stations from local database
     /// </summary>
     /// <param name="ct">Cancellation token</param>
-    /// <returns>List of available stations</returns>
+    /// <returns>List of stations in local database</returns>
+    [HttpGet("local")]
+    [ProducesResponseType(typeof(ApiResponse<List<StationResult>>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<List<StationResult>>), 500)]
+    public async Task<IActionResult> GetLocalStations(CancellationToken ct)
+    {
+        try
+        {
+            _logger.LogInformation("Getting stations from local database");
+            
+            var query = new GetAllStationsQuery();
+            var result = await _getAllStationsHandler.Handle(query, ct);
+
+            if (!result.IsSuccess)
+            {
+                return StatusCode(500, ApiResponse<List<StationResult>>.FailureResponse(
+                    result.ErrorMessage ?? "Failed to retrieve stations",
+                    500));
+            }
+            
+            return Ok(ApiResponse<List<StationResult>>.SuccessResponse(
+                result.Data!, 
+                "Stations retrieved successfully from local database"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting stations from local database");
+            
+            return StatusCode(500, ApiResponse<List<StationResult>>.FailureResponse(
+                "Failed to retrieve stations from local database",
+                500));
+        }
+    }
+
+    /// <summary>
+    /// Get all stations from AzuraCast (real-time data)
+    /// </summary>
+    /// <param name="ct">Cancellation token</param>
+    /// <returns>List of available stations from AzuraCast</returns>
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<List<AzuraCastStationListData>>), 200)]
     [ProducesResponseType(typeof(ApiResponse<List<AzuraCastStationListData>>), 500)]
@@ -50,6 +99,50 @@ public class StationController : ControllerBase
             
             return StatusCode(500, ApiResponse<List<AzuraCastStationListData>>.FailureResponse(
                 "Failed to retrieve stations from AzuraCast",
+                500));
+        }
+    }
+
+    /// <summary>
+    /// Sync all stations from AzuraCast to local database
+    /// This will create new stations or update existing ones
+    /// </summary>
+    /// <param name="ct">Cancellation token</param>
+    /// <returns>Sync statistics</returns>
+    [HttpPost("sync")]
+    [ProducesResponseType(typeof(ApiResponse<SyncStationsResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<SyncStationsResult>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<SyncStationsResult>), 500)]
+    public async Task<IActionResult> SyncStations(CancellationToken ct)
+    {
+        try
+        {
+            _logger.LogInformation("Starting station sync from AzuraCast");
+            
+            var command = new SyncStationsCommand();
+            var result = await _syncStationsHandler.Handle(command, ct);
+
+            if (!result.IsSuccess)
+            {
+                var statusCode = result.ErrorCode == Application.Enums.ErrorCode.BadRequest ? 400 : 500;
+                return StatusCode(statusCode, ApiResponse<SyncStationsResult>.FailureResponse(
+                    result.ErrorMessage ?? "Failed to sync stations",
+                    statusCode));
+            }
+            
+            var data = result.Data!;
+            var message = $"Sync completed. Created: {data.CreatedStations}, Updated: {data.UpdatedStations}, Failed: {data.FailedStations}";
+            
+            return Ok(ApiResponse<SyncStationsResult>.SuccessResponse(
+                data, 
+                message));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error syncing stations from AzuraCast");
+            
+            return StatusCode(500, ApiResponse<SyncStationsResult>.FailureResponse(
+                "Failed to sync stations from AzuraCast",
                 500));
         }
     }
