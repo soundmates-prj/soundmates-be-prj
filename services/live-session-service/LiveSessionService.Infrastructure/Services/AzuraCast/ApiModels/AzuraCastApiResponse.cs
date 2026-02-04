@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace LiveSessionService.Infrastructure.ExternalServices.AzuraCast.ApiModels;
+namespace LiveSessionService.Infrastructure.Services.AzuraCast.ApiModels;
 
 /// <summary>
 /// Internal API response model - matches AzuraCast JSON structure
@@ -98,3 +98,76 @@ internal sealed class AzuraCastApiListeners
     [JsonPropertyName("unique")]
     public int Unique { get; set; }
 }
+
+/// <summary>
+/// Station list response from /api/stations endpoint
+/// </summary>
+internal sealed class AzuraCastApiStationListResponse
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+
+    [JsonPropertyName("shortcode")]
+    public string? ShortCode { get; set; }
+
+    [JsonPropertyName("description")]
+    public string? Description { get; set; }
+
+    [JsonPropertyName("is_enabled")]
+    public bool IsEnabled { get; set; }
+
+    [JsonPropertyName("listen_url")]
+    public string? ListenUrl { get; set; }
+
+    [JsonPropertyName("public_player_url")]
+    public string? PublicPlayerUrl { get; set; }
+
+    [JsonPropertyName("is_public")]
+    public bool IsPublic { get; set; }
+
+    [JsonPropertyName("hls_enabled")]
+    public bool HlsEnabled { get; set; }
+
+    [JsonPropertyName("hls_url")]
+    public string? HlsUrl { get; set; }
+
+    [JsonPropertyName("listeners")]
+    public AzuraCastApiListeners? Listeners { get; set; }
+
+    [JsonPropertyName("mounts")]
+    public List<AzuraCastApiMount>? Mounts { get; set; }
+}
+
+/// <summary>
+/// Mount point information
+/// </summary>
+internal sealed class AzuraCastApiMount
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+
+    [JsonPropertyName("url")]
+    public string? Url { get; set; }
+
+    [JsonPropertyName("bitrate")]
+    public int? Bitrate { get; set; }
+
+    [JsonPropertyName("format")]
+    public string? Format { get; set; }
+
+    [JsonPropertyName("path")]
+    public string? Path { get; set; }
+
+    [JsonPropertyName("is_default")]
+    public bool IsDefault { get; set; }
+
+    [JsonPropertyName("listeners")]
+    public AzuraCastApiListeners? Listeners { get; set; }
+}
+

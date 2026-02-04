@@ -1,188 +1,132 @@
 using Microsoft.AspNetCore.Mvc;
-using LiveSessionService.Application.Abstractions;
-using LiveSessionService.Application.Abstractions.Messaging;
-using LiveSessionService.Application.Features.Common.AzuraCast.Models;
-using LiveSessionService.Application.Features.Results;
+using LiveSessionService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
+using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Features.Results.Stations;
 using LiveSessionService.Application.Features.Stations.Commands.SyncStations;
 using LiveSessionService.Application.Features.Stations.Queries.GetAllStations;
 using LiveSessionService.Api.Models.Responses;
+using LiveSessionService.Api.Models.Requests.Stations;
+using LiveSessionService.Api.Extensions;
 
 namespace LiveSessionService.Api.Controllers;
 
 /// <summary>
-/// API endpoints for AzuraCast station management
+/// API endpoints for station management
+/// All stations are synced from AzuraCast to local database
 /// </summary>
 [ApiController]
-[Route("api/v1/stations")]
+[Route("api/v1/[controller]")]
 [Produces("application/json")]
 public class StationController : ControllerBase
 {
-    private readonly IAzuraCastClient _azuraCastClient;
-    private readonly ICommandHandler<SyncStationsCommand, SyncStationsResult> _syncStationsHandler;
-    private readonly IQueryHandler<GetAllStationsQuery, List<StationResult>> _getAllStationsHandler;
-    private readonly ILogger<StationController> _logger;
+    private readonly ICommandDispatcher _commands;
+    private readonly IQueryDispatcher _queries;
 
-    public StationController(
-        IAzuraCastClient azuraCastClient,
-        ICommandHandler<SyncStationsCommand, SyncStationsResult> syncStationsHandler,
-        IQueryHandler<GetAllStationsQuery, List<StationResult>> getAllStationsHandler,
-        ILogger<StationController> logger)
+    public StationController(ICommandDispatcher commands, IQueryDispatcher queries)
     {
-        _azuraCastClient = azuraCastClient;
-        _syncStationsHandler = syncStationsHandler;
-        _getAllStationsHandler = getAllStationsHandler;
-        _logger = logger;
+        _commands = commands;
+        _queries = queries;
     }
 
     /// <summary>
     /// Get all stations from local database
     /// </summary>
-    /// <param name="ct">Cancellation token</param>
-    /// <returns>List of stations in local database</returns>
-    [HttpGet("local")]
+    /// <response code="200">Returns list of stations</response>
+    /// <response code="500">Internal server error</response>
+    [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<List<StationResult>>), 200)]
-    [ProducesResponseType(typeof(ApiResponse<List<StationResult>>), 500)]
-    public async Task<IActionResult> GetLocalStations(CancellationToken ct)
+    [ProducesResponseType(typeof(ApiResponse<object>), 500)]
+    public async Task<IActionResult> GetStations(CancellationToken ct)
     {
-        try
-        {
-            _logger.LogInformation("Getting stations from local database");
-            
-            var query = new GetAllStationsQuery();
-            var result = await _getAllStationsHandler.Handle(query, ct);
+        var query = new GetAllStationsQuery();
+        var result = await _queries.Send<GetAllStationsQuery, List<StationResult>>(query, ct);
 
-            if (!result.IsSuccess)
-            {
-                return StatusCode(500, ApiResponse<List<StationResult>>.FailureResponse(
-                    result.ErrorMessage ?? "Failed to retrieve stations",
-                    500));
-            }
-            
-            return Ok(ApiResponse<List<StationResult>>.SuccessResponse(
-                result.Data!, 
-                "Stations retrieved successfully from local database"));
-        }
-        catch (Exception ex)
+        if (!result.IsSuccess)
         {
-            _logger.LogError(ex, "Error getting stations from local database");
-            
-            return StatusCode(500, ApiResponse<List<StationResult>>.FailureResponse(
-                "Failed to retrieve stations from local database",
-                500));
+            return StatusCode(
+                (int)(result.ErrorCode ?? ErrorCode.InternalServerError),
+                result.ToApiResponse());
         }
+
+        // check data counts
+        var count = result.Data!.Count;
+        var message = count == 0
+            ? "No stations found. Please run POST /api/v1/station/sync to sync from AzuraCast."
+            : $"Retrieved {count} station(s)";
+
+        return Ok(ApiResponse<List<StationResult>>.SuccessResponse(result.Data!, message));
     }
 
     /// <summary>
-    /// Get all stations from AzuraCast (real-time data)
+    /// Create a new station (TODO: Push to AzuraCast)
     /// </summary>
-    /// <param name="ct">Cancellation token</param>
-    /// <returns>List of available stations from AzuraCast</returns>
-    [HttpGet]
-    [ProducesResponseType(typeof(ApiResponse<List<AzuraCastStationListData>>), 200)]
-    [ProducesResponseType(typeof(ApiResponse<List<AzuraCastStationListData>>), 500)]
-    public async Task<IActionResult> GetStations(CancellationToken ct)
+    /// <remarks>
+    /// Currently creates station locally only.
+    /// Future: Will also create station in AzuraCast.
+    /// </remarks>
+    /// <response code="201">Station created successfully</response>
+    /// <response code="400">Invalid input</response>
+    [HttpPost]
+    [ProducesResponseType(typeof(ApiResponse<StationResult>), 201)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    public async Task<IActionResult> CreateStation(
+        [FromBody] CreateStationRequest request,
+        CancellationToken ct)
     {
-        try
+        if (!ModelState.IsValid)
         {
-            _logger.LogInformation("Getting stations from AzuraCast");
-            
-            var stations = await _azuraCastClient.GetStationsAsync(ct);
-            
-            return Ok(ApiResponse<List<AzuraCastStationListData>>.SuccessResponse(
-                stations, 
-                "Stations retrieved successfully"));
+            return BadRequest(ApiResponse<object>.FailureResponse(
+                "Invalid input",
+                (int)ErrorCode.BadRequest));
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting stations from AzuraCast");
-            
-            return StatusCode(500, ApiResponse<List<AzuraCastStationListData>>.FailureResponse(
-                "Failed to retrieve stations from AzuraCast",
-                500));
-        }
+
+        return StatusCode(501, ApiResponse<object>.FailureResponse(
+            "Create station feature coming soon. Currently use sync to get stations from AzuraCast.",
+            501));
     }
 
     /// <summary>
     /// Sync all stations from AzuraCast to local database
-    /// This will create new stations or update existing ones
     /// </summary>
-    /// <param name="ct">Cancellation token</param>
-    /// <returns>Sync statistics</returns>
+    /// <remarks>
+    /// This endpoint fetches all stations from AzuraCast and syncs them to local database.
+    /// 
+    /// Common errors:
+    /// - 401: Invalid API key ? Check appsettings.json "AzuraCast:ApiKey"
+    /// - 404: No stations found ? Add stations in AzuraCast admin panel
+    /// - 503: Cannot connect ? Verify "AzuraCast:BaseUrl" and ensure AzuraCast is running
+    /// </remarks>
+    /// <response code="200">Sync completed with statistics</response>
+    /// <response code="401">Authentication failed - invalid API key</response>
+    /// <response code="404">No stations found in AzuraCast</response>
+    /// <response code="503">Cannot connect to AzuraCast</response>
     [HttpPost("sync")]
     [ProducesResponseType(typeof(ApiResponse<SyncStationsResult>), 200)]
-    [ProducesResponseType(typeof(ApiResponse<SyncStationsResult>), 400)]
-    [ProducesResponseType(typeof(ApiResponse<SyncStationsResult>), 500)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 503)]
     public async Task<IActionResult> SyncStations(CancellationToken ct)
     {
-        try
-        {
-            _logger.LogInformation("Starting station sync from AzuraCast");
-            
-            var command = new SyncStationsCommand();
-            var result = await _syncStationsHandler.Handle(command, ct);
+        var command = new SyncStationsCommand();
+        var result = await _commands.Send<SyncStationsCommand, SyncStationsResult>(command, ct);
 
-            if (!result.IsSuccess)
-            {
-                var statusCode = result.ErrorCode == Application.Enums.ErrorCode.BadRequest ? 400 : 500;
-                return StatusCode(statusCode, ApiResponse<SyncStationsResult>.FailureResponse(
-                    result.ErrorMessage ?? "Failed to sync stations",
-                    statusCode));
-            }
-            
-            var data = result.Data!;
-            var message = $"Sync completed. Created: {data.CreatedStations}, Updated: {data.UpdatedStations}, Failed: {data.FailedStations}";
-            
-            return Ok(ApiResponse<SyncStationsResult>.SuccessResponse(
-                data, 
-                message));
-        }
-        catch (Exception ex)
+        if (!result.IsSuccess)
         {
-            _logger.LogError(ex, "Error syncing stations from AzuraCast");
-            
-            return StatusCode(500, ApiResponse<SyncStationsResult>.FailureResponse(
-                "Failed to sync stations from AzuraCast",
-                500));
+            return result.ErrorCode switch
+            {
+                ErrorCode.Unauthorized => Unauthorized(result.ToApiResponse()),
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.ServiceUnavailable => StatusCode(503, result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
         }
-    }
 
-    /// <summary>
-    /// Get a specific station by ID from AzuraCast
-    /// </summary>
-    /// <param name="stationId">The AzuraCast station ID (integer)</param>
-    /// <param name="ct">Cancellation token</param>
-    /// <returns>Station details with current now playing information</returns>
-    [HttpGet("{stationId:int}")]
-    [ProducesResponseType(typeof(ApiResponse<AzuraCastNowPlayingData>), 200)]
-    [ProducesResponseType(typeof(ApiResponse<AzuraCastNowPlayingData>), 404)]
-    [ProducesResponseType(typeof(ApiResponse<AzuraCastNowPlayingData>), 500)]
-    public async Task<IActionResult> GetStation(int stationId, CancellationToken ct)
-    {
-        try
-        {
-            _logger.LogInformation("Getting station {StationId} from AzuraCast", stationId);
-            
-            var nowPlaying = await _azuraCastClient.GetNowPlayingAsync(stationId, ct);
-            
-            if (nowPlaying == null)
-            {
-                return NotFound(ApiResponse<AzuraCastNowPlayingData>.FailureResponse(
-                    $"Station with ID {stationId} not found",
-                    404));
-            }
-            
-            return Ok(ApiResponse<AzuraCastNowPlayingData>.SuccessResponse(
-                nowPlaying, 
-                "Station retrieved successfully"));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting station {StationId} from AzuraCast", stationId);
-            
-            return StatusCode(500, ApiResponse<AzuraCastNowPlayingData>.FailureResponse(
-                "Failed to retrieve station from AzuraCast",
-                500));
-        }
+        // check data counts
+        var data = result.Data!;
+        var message = data.FailedStations > 0
+            ? $"Sync completed with warnings: {data.CreatedStations} created, {data.UpdatedStations} updated, {data.FailedStations} failed. Check 'errors' field for details."
+            : $"Sync completed successfully: {data.CreatedStations} created, {data.UpdatedStations} updated";
+
+        return Ok(ApiResponse<SyncStationsResult>.SuccessResponse(data, message));
     }
 }

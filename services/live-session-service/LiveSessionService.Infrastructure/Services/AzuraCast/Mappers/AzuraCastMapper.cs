@@ -1,7 +1,7 @@
 using LiveSessionService.Application.Features.Common.AzuraCast.Models;
-using LiveSessionService.Infrastructure.ExternalServices.AzuraCast.ApiModels;
+using LiveSessionService.Infrastructure.Services.AzuraCast.ApiModels;
 
-namespace LiveSessionService.Infrastructure.ExternalServices.AzuraCast.Mappers;
+namespace LiveSessionService.Infrastructure.Services.AzuraCast.Mappers;
 
 /// <summary>
 /// Maps internal API models to Application models
@@ -18,7 +18,7 @@ internal static class AzuraCastMapper
         {
             Id = apiStation.Id,
             Name = apiStation.Name ?? "Unknown",
-            Shortcode = apiStation.Shortcode,
+            Shortcode = apiStation.ShortCode,
             Description = apiStation.Description,
             ListenUrl = apiStation.ListenUrl,
             PublicPlayerUrl = apiStation.PublicPlayerUrl,
@@ -40,7 +40,11 @@ internal static class AzuraCastMapper
             Url = apiMount.Url,
             Bitrate = apiMount.Bitrate,
             Format = apiMount.Format,
-            Listeners = apiMount.Listeners?.ToApplicationModel(),
+            Listeners = apiMount.Listeners != null ? new AzuraCastListenersData
+            {
+                Current = apiMount.Listeners.Current,
+                Unique = apiMount.Listeners.Unique
+            } : null,
             Path = apiMount.Path,
             IsDefault = apiMount.IsDefault
         };

@@ -1,3 +1,5 @@
+using LiveSessionService.Application.Enums;
+
 namespace LiveSessionService.Api.Models.Responses;
 
 /// <summary>
@@ -6,24 +8,17 @@ namespace LiveSessionService.Api.Models.Responses;
 /// </summary>
 public class ApiResponse<T>
 {
-    public bool Success { get; init; }
-    public string? Message { get; init; }
-    public T? Data { get; init; }
-    public int? ErrorCode { get; init; }
+    public bool Success { get; set; }
+    public string? Message { get; set; }
+    public T? Data { get; set; }
+    public int? ErrorCode { get; set; }
 
     public static ApiResponse<T> SuccessResponse(T data, string? message = null)
-        => new()
-        {
-            Success = true,
-            Data = data,
-            Message = message
-        };
+        => new ApiResponse<T> { Success = true, Data = data, Message = message };
 
     public static ApiResponse<T> FailureResponse(string message, int? errorCode = null)
-        => new()
-        {
-            Success = false,
-            Message = message,
-            ErrorCode = errorCode
-        };
+        => new ApiResponse<T> { Success = false, Message = message, ErrorCode = errorCode };
+
+    public static ApiResponse<T> Error(ApiStatusCode apiCode, string message)
+        => new ApiResponse<T> { Success = false, Message = message, ErrorCode = (int)apiCode };
 }

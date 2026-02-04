@@ -23,12 +23,12 @@ public sealed class GetAllStationsHandler : IQueryHandler<GetAllStationsQuery, L
         _logger = logger;
     }
 
-    public async Task<Result<List<StationResult>>> Handle(
-        GetAllStationsQuery query,
-        CancellationToken cancellationToken)
+    public async Task<Result<List<StationResult>>> Handle(GetAllStationsQuery query,CancellationToken cancellationToken)
     {
         try
         {
+
+            // Query het tu database cua minh de lay tat ca cac station
             _logger.LogInformation("Getting all stations from database");
 
             var stations = await _stationRepository.GetAllEnabledAsync(cancellationToken);

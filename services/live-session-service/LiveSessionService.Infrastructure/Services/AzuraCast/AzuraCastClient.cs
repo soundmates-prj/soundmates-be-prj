@@ -1,11 +1,11 @@
 using System.Net.Http.Json;
 using LiveSessionService.Application.Abstractions;
 using LiveSessionService.Application.Features.Common.AzuraCast.Models;
-using LiveSessionService.Infrastructure.ExternalServices.AzuraCast.ApiModels;
-using LiveSessionService.Infrastructure.ExternalServices.AzuraCast.Mappers;
+using LiveSessionService.Infrastructure.Services.AzuraCast.ApiModels;
+using LiveSessionService.Infrastructure.Services.AzuraCast.Mappers;
 using Microsoft.Extensions.Logging;
 
-namespace LiveSessionService.Infrastructure.ExternalServices.AzuraCast;
+namespace LiveSessionService.Infrastructure.Services.AzuraCast;
 
 /// <summary>
 /// HTTP client for AzuraCast API
