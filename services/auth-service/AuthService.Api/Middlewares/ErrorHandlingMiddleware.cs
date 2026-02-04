@@ -36,7 +36,7 @@ public class ErrorHandlingMiddleware
 
         var statusCode = HttpStatusCode.InternalServerError;
         var apiStatusCode = ApiStatusCode.HB50001;
-        var message = "An unexpected error occurred";
+        var message = "An unexpected error occurred in SoundMates System";
 
         switch (exception)
         {

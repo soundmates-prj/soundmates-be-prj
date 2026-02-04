@@ -201,7 +201,7 @@ namespace AuthService.Application.Features.Auth.Handlers
                 occurredAtUtc = DateTime.UtcNow
             }, cancellationToken);
 
-            return Result<AuthResult>.Success(authResult, "Google login successful");
+            return Result<AuthResult>.Success(authResult, "Google login successfully!");
         }
     }
 }

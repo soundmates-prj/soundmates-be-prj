@@ -16,6 +16,7 @@ namespace AuthService.Api.Controllers
     [Route("api/v1/[controller]")]
     public class AuthController : ControllerBase
     {
+        // khoi tao dispatcher
         private readonly ICommandDispatcher _commands;
 
         public AuthController(ICommandDispatcher commands)
