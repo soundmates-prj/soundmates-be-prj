@@ -7,7 +7,7 @@ using LiveSessionService.Domain.Interfaces;
 using LiveSessionService.Infrastructure.Persistence;
 using LiveSessionService.Infrastructure.Services;
 using LiveSessionService.Infrastructure.Repositories;
-using LiveSessionService.Infrastructure.ExternalServices.AzuraCast;
+using LiveSessionService.Infrastructure.Services.AzuraCast;
 using LiveSessionService.Infrastructure.Messaging;
 using LiveSessionService.Infrastructure.Messaging.Outbox;
 using AuthService.Infrastructure.Messaging;

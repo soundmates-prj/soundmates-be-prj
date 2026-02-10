@@ -1,5 +1,5 @@
 using LiveSessionService.Application.Abstractions.Messaging;
-using LiveSessionService.Application.Features.Results;
+using LiveSessionService.Application.Features.Results.Stations;
 
 namespace LiveSessionService.Application.Features.Stations.Commands.SyncStations;
 

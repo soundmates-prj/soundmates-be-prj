@@ -43,6 +43,14 @@ public sealed class LiveSessionRepository : ILiveSessionRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<List<LiveSession>> GetAllWithStationsAsync(CancellationToken cancellationToken = default)
+    {
+        return await _context.LiveSessions
+            .Include(x => x.AzuraCastStation)
+            .OrderByDescending(x => x.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task AddAsync(LiveSession session, CancellationToken cancellationToken = default)
     {
         await _context.LiveSessions.AddAsync(session, cancellationToken);

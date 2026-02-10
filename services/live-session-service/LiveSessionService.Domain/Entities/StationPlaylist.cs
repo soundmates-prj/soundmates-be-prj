@@ -38,19 +38,3 @@ public class StationPlaylist
     
     public virtual ICollection<PlaylistMedia> Media { get; set; } = new List<PlaylistMedia>();
 }
-
-public enum PlaylistType
-{
-    Default = 0,
-    Scheduled = 1,
-    OncePerHour = 2,
-    OncePerDay = 3,
-    Advanced = 4,
-    Jingle = 5
-}
-
-public enum PlaylistSource
-{
-    Songs = 0,
-    RemoteUrl = 1
-}

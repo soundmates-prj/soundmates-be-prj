@@ -1,13 +1,17 @@
 ﻿using LiveSessionService.Application;
 using LiveSessionService.Infrastructure;
-using LiveSessionService.Api.Middleware;
+using LiveSessionService.Api.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+// Add Web API (Controllers, JSON, Validation, Routing)
+builder.AddWebApi();
+
+// Add Swagger with JWT
+builder.AddSwaggerWithJwt();
+
+// Add CORS Policy
+builder.AddCorsPolicy();
 
 // Add Application Layer
 builder.Services.AddApplication();
@@ -17,20 +21,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 
-// Global Exception Handler - đặt đầu tiên để catch tất cả exceptions
-app.UseGlobalExceptionHandler();
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
-app.UseHttpsRedirection();
-
-app.UseAuthorization();
-
-app.MapControllers();
+// Configure HTTP Pipeline
+app.UseHttpPipeline();
 
 app.Run();

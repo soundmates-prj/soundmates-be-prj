@@ -182,4 +182,55 @@ public partial class AzuraCastStation
         ApiBaseUrl = apiBaseUrl?.Trim().TrimEnd('/');
         UpdatedAt = dateTimeProvider.UtcNow;
     }
+
+    /// <summary>
+    /// Updates station name only
+    /// Used during sync when only name changed
+    /// </summary>
+    public void UpdateStationName(string stationName, IDateTimeProvider dateTimeProvider)
+    {
+        if (string.IsNullOrWhiteSpace(stationName))
+            throw new AzuraCastStationValidationException(
+                "Station name cannot be empty",
+                AzuraCastStationErrorCodes.StationNameEmpty);
+
+        var trimmedName = stationName.Trim();
+        if (trimmedName.Length > MaxStationNameLength)
+            throw new AzuraCastStationValidationException(
+                $"Station name cannot exceed {MaxStationNameLength} characters",
+                AzuraCastStationErrorCodes.StationNameTooLong);
+
+        StationName = trimmedName;
+        UpdatedAt = dateTimeProvider.UtcNow;
+    }
+
+    /// <summary>
+    /// Updates stream URL only
+    /// Used during sync when only URL changed
+    /// </summary>
+    public void UpdateStreamUrl(string streamUrl, IDateTimeProvider dateTimeProvider)
+    {
+        if (string.IsNullOrWhiteSpace(streamUrl))
+            throw new AzuraCastStationValidationException(
+                "Stream URL cannot be empty",
+                AzuraCastStationErrorCodes.StreamUrlEmpty);
+
+        StreamUrl = streamUrl.Trim();
+        UpdatedAt = dateTimeProvider.UtcNow;
+    }
+
+    /// <summary>
+    /// Updates description only
+    /// Used during sync when only description changed
+    /// </summary>
+    public void UpdateDescription(string? description, IDateTimeProvider dateTimeProvider)
+    {
+        if (description != null && description.Length > MaxDescriptionLength)
+            throw new AzuraCastStationValidationException(
+                $"Description cannot exceed {MaxDescriptionLength} characters",
+                AzuraCastStationErrorCodes.StationNameTooLong);
+
+        Description = description?.Trim();
+        UpdatedAt = dateTimeProvider.UtcNow;
+    }
 }

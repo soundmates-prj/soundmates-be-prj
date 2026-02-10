@@ -2,7 +2,7 @@ namespace AuthService.Application.Results;
 
 /// <summary>
 /// Result for authentication operations (Login, Register, Google Login, etc.)
-/// Contains user info + auth tokens
+/// Contains user info + auth tokens (tokens can be null for unverified users)
 /// </summary>
 public sealed class AuthResult
 {
@@ -14,7 +14,7 @@ public sealed class AuthResult
     public Guid? RoleId { get; init; }
     public string? RoleName { get; init; }
     public bool IsActive { get; init; }
-    public string AccessToken { get; init; } = null!;
-    public string RefreshToken { get; init; } = null!;
+    public string? AccessToken { get; init; }
+    public string? RefreshToken { get; init; }
     public DateTime? CreatedAt { get; init; }
 }

@@ -16,6 +16,7 @@ public static class LiveSessionErrorCodes
     public const string StationRequired = "SESSION_STATION_REQUIRED";
 
     // State transition errors (409 Conflict)
+    public const string SessionAlreadyActive = "SESSION_ALREADY_ACTIVE";
     public const string SessionAlreadyStarted = "SESSION_ALREADY_STARTED";
     public const string SessionAlreadyEnded = "SESSION_ALREADY_ENDED";
     public const string SessionNotActive = "SESSION_NOT_ACTIVE";
