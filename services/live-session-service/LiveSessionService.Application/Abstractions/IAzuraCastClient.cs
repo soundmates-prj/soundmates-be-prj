@@ -34,6 +34,7 @@ public interface IAzuraCastClient
         int stationId,
         Stream fileStream,
         string fileName,
+        string contentType,
         string title,
         string artist,
         string? album,

@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.IO;
 using LiveSessionService.Application.Abstractions;
 using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Exceptions;
@@ -13,7 +14,7 @@ namespace LiveSessionService.Infrastructure.Services.AzuraCast;
 /// <summary>
 /// HTTP client for AzuraCast API
 /// BaseUrl ???c config qua HttpClient DI
-/// Ch? lo vi?c call API v‡ map response
+/// Ch? lo vi?c call API vù map response
 /// </summary>
 public sealed class AzuraCastClient : IAzuraCastClient
 {
@@ -138,9 +139,9 @@ public sealed class AzuraCastClient : IAzuraCastClient
             weight = 3
         };
 
-        var response = await _httpClient.PostAsJsonAsync(
+        using var response = await _httpClient.PostAsJsonAsync(
             $"api/station/{stationId}/playlists", body, cancellationToken);
-        EnsureAzuraCastSuccess(response, $"create playlist on station {stationId}");
+        await EnsureAzuraCastSuccessAsync(response, $"create playlist on station {stationId}", cancellationToken);
 
         var result = await response.Content
             .ReadFromJsonAsync<AzuraCastApiPlaylistResponse>(cancellationToken);
@@ -158,18 +159,31 @@ public sealed class AzuraCastClient : IAzuraCastClient
         int stationId,
         Stream fileStream,
         string fileName,
+        string contentType,
         string title,
         string artist,
         string? album,
         CancellationToken cancellationToken = default)
     {
-        using var content    = new MultipartFormDataContent();
-        using var fileContent = new StreamContent(fileStream);
-        content.Add(fileContent, "file", fileName);
+        // AzuraCast "Upload a new file" endpoint expects JSON with base64 content:
+        // { path: "...", file: "..." } (see Api_UploadFile in AzuraCast OpenAPI spec).
+        if (fileStream.CanSeek)
+            fileStream.Position = 0;
 
-        var response = await _httpClient.PostAsync(
-            $"api/station/{stationId}/files", content, cancellationToken);
-        EnsureAzuraCastSuccess(response, $"upload media to station {stationId}");
+        await using var ms = new MemoryStream();
+        await fileStream.CopyToAsync(ms, cancellationToken);
+        var bytes = ms.ToArray();
+
+        var safeFileName = Path.GetFileName(fileName);
+        var body = new
+        {
+            path = safeFileName,
+            file = Convert.ToBase64String(bytes)
+        };
+
+        using var response = await _httpClient.PostAsJsonAsync(
+            $"api/station/{stationId}/files", body, cancellationToken);
+        await EnsureAzuraCastSuccessAsync(response, $"upload media to station {stationId}", cancellationToken);
 
         var result = await response.Content
             .ReadFromJsonAsync<AzuraCastApiFileResponse>(cancellationToken);
@@ -199,9 +213,9 @@ public sealed class AzuraCastClient : IAzuraCastClient
     {
         var body = new { playlists = new[] { playlistId } };
 
-        var response = await _httpClient.PutAsJsonAsync(
+        using var response = await _httpClient.PutAsJsonAsync(
             $"api/station/{stationId}/file/{fileUniqueId}", body, cancellationToken);
-        EnsureAzuraCastSuccess(response, $"assign file to playlist on station {stationId}");
+        await EnsureAzuraCastSuccessAsync(response, $"assign file to playlist on station {stationId}", cancellationToken);
 
         _logger.LogInformation(
             "Assigned file {UniqueId} to playlist {PlaylistId} on station {StationId}",
@@ -212,22 +226,68 @@ public sealed class AzuraCastClient : IAzuraCastClient
     // Helpers
     // ---------------------------------------------------------------------------
 
-    private static void EnsureAzuraCastSuccess(HttpResponseMessage response, string operation)
+    private async Task EnsureAzuraCastSuccessAsync(
+        HttpResponseMessage response,
+        string operation,
+        CancellationToken cancellationToken)
     {
         if (response.IsSuccessStatusCode) return;
+
+        var status = response.StatusCode;
+        var requestUrl =
+            response.RequestMessage?.RequestUri?.ToString()
+            ?? _httpClient.BaseAddress?.ToString()
+            ?? "(unknown url)";
+
+        string? body = null;
+        try
+        {
+            body = await response.Content.ReadAsStringAsync(cancellationToken);
+        }
+        catch
+        {
+            // ignore read failures
+        }
 
         if (response.StatusCode == HttpStatusCode.Forbidden)
             throw new AzuraCastException(
                 $"AzuraCast rejected '{operation}' with 403 Forbidden. " +
                 "The configured API key lacks the required role. " +
-                "Go to AzuraCast Admin ? API Keys and grant 'Manage Stations' + 'Manage Station Media' permissions.",
+                "Go to AzuraCast Admin ? API Keys and grant 'Manage Stations' + 'Manage Station Media' permissions." +
+                (string.IsNullOrWhiteSpace(body) ? string.Empty : $" Response: {TruncateForError(body)}"),
                 ErrorCode.Forbidden);
 
         if (response.StatusCode == HttpStatusCode.Unauthorized)
             throw new AzuraCastException(
-                "AzuraCast returned 401 Unauthorized. Check that AzuraCast:ApiKey in appsettings is correct.",
+                "AzuraCast returned 401 Unauthorized. Check that AzuraCast:ApiKey in appsettings is correct." +
+                (string.IsNullOrWhiteSpace(body) ? string.Empty : $" Response: {TruncateForError(body)}"),
                 ErrorCode.Unauthorized);
 
-        response.EnsureSuccessStatusCode();
+        var mapped = status switch
+        {
+            HttpStatusCode.BadRequest => ErrorCode.BadRequest,
+            HttpStatusCode.NotFound => ErrorCode.NotFound,
+            HttpStatusCode.UnprocessableEntity => ErrorCode.UnprocessableEntity,
+            HttpStatusCode.ServiceUnavailable => ErrorCode.ServiceUnavailable,
+            _ when (int)status >= 500 => ErrorCode.InternalServerError,
+            _ => ErrorCode.BadRequest
+        };
+
+        _logger.LogError(
+            "AzuraCast non-success response. Operation={Operation} Status={StatusCode} Url={Url} Body={Body}",
+            operation, (int)status, requestUrl, body);
+
+        var message =
+            $"AzuraCast request failed during '{operation}' ({(int)status} {status}). " +
+            $"Url: {requestUrl}." +
+            (string.IsNullOrWhiteSpace(body) ? string.Empty : $" Response: {TruncateForError(body)}");
+
+        throw new AzuraCastException(message, mapped);
+    }
+
+    private static string TruncateForError(string value, int maxLen = 2000)
+    {
+        value = value.Trim();
+        return value.Length <= maxLen ? value : value.Substring(0, maxLen) + "...";
     }
 }

@@ -13,7 +13,13 @@ public static class JwtExtensions
     {
         var jwtSection = builder.Configuration.GetSection("Jwt");
         var secretKey  = jwtSection["Key"]
-            ?? throw new InvalidOperationException("Jwt:Key is not configured in appsettings.");
+            ?? throw new InvalidOperationException("Jwt:Key is not configured.");
+
+        if (secretKey.StartsWith("${"))
+            throw new InvalidOperationException(
+                "Jwt:Key is still a placeholder. " +
+                "Set Jwt__Key in your .env file or as an environment variable.");
+
         var issuer   = jwtSection["Issuer"];
         var audience = jwtSection["Audience"];
 

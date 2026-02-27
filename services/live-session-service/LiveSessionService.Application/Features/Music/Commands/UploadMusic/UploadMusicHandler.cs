@@ -45,6 +45,7 @@ public sealed class UploadMusicHandler
             station.ExternalStationId,
             command.FileStream,
             command.FileName,
+            command.ContentType,
             command.Title,
             command.Artist,
             command.Album,

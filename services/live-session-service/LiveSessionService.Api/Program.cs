@@ -2,9 +2,17 @@
 using LiveSessionService.Infrastructure;
 using LiveSessionService.Api.Extensions;
 
-// Load .env into environment variables before the configuration is built.
-// In production, real env vars are used instead (DotNetEnv silently skips if file is missing).
-DotNetEnv.Env.TraversePath().Load();
+// Load .env — search from the API project directory, then CWD, then the binary output dir.
+// In production, skip the file and rely on real environment variables.
+var envCandidates = new[]
+{
+    Path.Combine(AppContext.BaseDirectory, "../../..", ".env"),  // bin/Debug/net10.0 -> project root
+    Path.Combine(Directory.GetCurrentDirectory(), ".env"),        // CWD (dotnet run from project dir)
+    Path.Combine(AppContext.BaseDirectory, ".env"),               // published output dir
+};
+var envFile = envCandidates.FirstOrDefault(File.Exists);
+if (envFile is not null)
+    DotNetEnv.Env.Load(envFile);
 
 var builder = WebApplication.CreateBuilder(args);
 

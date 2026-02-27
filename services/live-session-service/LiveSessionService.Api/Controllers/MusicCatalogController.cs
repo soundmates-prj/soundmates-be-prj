@@ -112,7 +112,17 @@ public class MusicCatalogController : ControllerBase
         await ms.DisposeAsync();
 
         if (!result.IsSuccess)
-            return BadRequest(result.ToApiResponse());
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.Unauthorized => Unauthorized(result.ToApiResponse()),
+                ErrorCode.Forbidden => StatusCode(403, result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                ErrorCode.UnprocessableEntity => StatusCode(422, result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
 
         return StatusCode(201, result.ToApiResponse());
     }
