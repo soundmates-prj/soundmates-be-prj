@@ -1,3 +1,4 @@
+using LiveSessionService.Api.BackgroundServices;
 using LiveSessionService.Api.Models.Responses;
 using LiveSessionService.Application.Enums;
 using Microsoft.AspNetCore.Mvc;
@@ -19,6 +20,10 @@ public static class WebApiExtensions
                 options.JsonSerializerOptions.ReferenceHandler =
                     System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
             });
+
+        // SignalR — real-time now-playing push
+        builder.Services.AddSignalR();
+        builder.Services.AddHostedService<NowPlayingBroadcastService>();
 
         // Handle model validation errors (400) with ApiResponse format
         builder.Services.Configure<ApiBehaviorOptions>(options =>

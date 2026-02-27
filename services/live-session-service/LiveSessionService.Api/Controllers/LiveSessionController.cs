@@ -3,13 +3,11 @@ using LiveSessionService.Application.Abstractions.Messaging.Dispatcher.Interface
 using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Features.Results;
 using LiveSessionService.Application.Features.Results.LiveSessions;
-using LiveSessionService.Application.Features.Results.NowPlaying;
 using LiveSessionService.Application.Features.LiveSessions.Commands.CreateLiveSession;
 using LiveSessionService.Application.Features.LiveSessions.Commands.StartSession;
 using LiveSessionService.Application.Features.LiveSessions.Commands.StopSession;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSession;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetAllLiveSessions;
-using LiveSessionService.Application.Features.NowPlaying.Queries.GetNowPlaying;
 using LiveSessionService.Api.Models.Responses;
 using LiveSessionService.Api.Models.Requests.LiveSessions;
 using LiveSessionService.Api.Extensions;
@@ -178,29 +176,6 @@ public class LiveSessionController : ControllerBase
     }
 
     /// <summary>
-    /// Get current now playing for a live session
-    /// </summary>
-    [HttpGet("{id:guid}/now-playing")]
-    [ProducesResponseType(typeof(ApiResponse<NowPlayingResult>), 200)]
-    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
-    public async Task<IActionResult> GetNowPlaying(Guid id, CancellationToken ct)
-    {
-        var query = new GetNowPlayingQuery(id);
-        var result = await _queries.Send<GetNowPlayingQuery, NowPlayingResult>(query, ct);
-
-        if (!result.IsSuccess)
-        {
-            return result.ErrorCode switch
-            {
-                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
-                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
-            };
-        }
-
-        return Ok(ApiResponse<NowPlayingResult>.SuccessResponse(result.Data!, "Success"));
-    }
-
-    /// <summary>
     /// Get listener statistics for a live session
     /// </summary>
     [HttpGet("{id:guid}/listeners")]
@@ -208,7 +183,6 @@ public class LiveSessionController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
     public async Task<IActionResult> GetListeners(Guid id, CancellationToken ct)
     {
-        // Get session
         var sessionQuery = new GetLiveSessionQuery(id);
         var sessionResult = await _queries.Send<GetLiveSessionQuery, LiveSessionResult>(sessionQuery, ct);
 
@@ -219,14 +193,10 @@ public class LiveSessionController : ControllerBase
                 (int)ErrorCode.NotFound));
         }
 
-        // Get now playing
-        var nowPlayingQuery = new GetNowPlayingQuery(id);
-        var nowPlayingResult = await _queries.Send<GetNowPlayingQuery, NowPlayingResult>(nowPlayingQuery, ct);
-
         var listenerStats = new ListenerStatsResult
         {
             SessionId = id,
-            CurrentListeners = nowPlayingResult.IsSuccess ? nowPlayingResult.Data!.ListenerCount : 0,
+            CurrentListeners = 0,
             PeakListeners = sessionResult.Data!.PeakListeners,
             TotalListeners = sessionResult.Data.TotalListeners
         };

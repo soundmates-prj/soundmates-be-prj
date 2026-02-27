@@ -1,3 +1,4 @@
+using LiveSessionService.Api.Hubs;
 using LiveSessionService.Api.Middleware;
 using LiveSessionService.Api.Models.Responses;
 using System.Text.Json;
@@ -49,6 +50,7 @@ public static class PipelineExtensions
         app.UseAuthentication();
         app.UseAuthorization();
         app.MapControllers();
+        app.MapHub<NowPlayingHub>("/hubs/now-playing");
 
         return app;
     }

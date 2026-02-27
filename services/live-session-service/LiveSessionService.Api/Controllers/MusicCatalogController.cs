@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using LiveSessionService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
 using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Features.Results.Music;
@@ -6,6 +7,8 @@ using LiveSessionService.Application.Features.Music.Commands.UploadMusic;
 using LiveSessionService.Api.Models.Responses;
 using LiveSessionService.Api.Models.Requests.Music;
 using LiveSessionService.Api.Extensions;
+using LiveSessionService.Api.Helpers;
+using System.Security.Claims;
 
 namespace LiveSessionService.Api.Controllers;
 
@@ -16,6 +19,7 @@ namespace LiveSessionService.Api.Controllers;
 [ApiController]
 [Route("api/v1/[controller]")]
 [Produces("application/json")]
+[Authorize]
 public class MusicCatalogController : ControllerBase
 {
     private readonly ICommandDispatcher _commands;
@@ -58,7 +62,7 @@ public class MusicCatalogController : ControllerBase
         // Validate file type
         var allowedExtensions = new[] { ".mp3", ".flac", ".wav", ".ogg" };
         var extension = Path.GetExtension(request.File.FileName).ToLower();
-        
+
         if (!allowedExtensions.Contains(extension))
         {
             return BadRequest(ApiResponse<object>.FailureResponse(
@@ -66,11 +70,51 @@ public class MusicCatalogController : ControllerBase
                 (int)ErrorCode.BadRequest));
         }
 
-        _logger.LogWarning("UploadMusic handler not yet implemented");
-        
-        return StatusCode(501, ApiResponse<object>.FailureResponse(
-            "Music upload feature coming soon",
-            501));
+        // Copy to MemoryStream — IFormFile stream is not guaranteed to be seekable
+        var ms = new MemoryStream();
+        await request.File.CopyToAsync(ms, ct);
+        ms.Position = 0;
+
+        // Auto-extract ID3/Vorbis tags from file so users don't have to fill them manually
+        string? tagTitle = null, tagArtist = null, tagAlbum = null;
+        try
+        {
+            var abstraction = new TagLibStreamAbstraction(ms, request.File.FileName);
+            using var tagFile = TagLib.File.Create(abstraction);
+            tagTitle  = string.IsNullOrWhiteSpace(tagFile.Tag.Title)  ? null : tagFile.Tag.Title.Trim();
+            tagArtist = tagFile.Tag.Performers?.Length > 0
+                ? string.Join(", ", tagFile.Tag.Performers).Trim()
+                : null;
+            tagAlbum  = string.IsNullOrWhiteSpace(tagFile.Tag.Album)  ? null : tagFile.Tag.Album.Trim();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not read tags from {FileName} — using request values or fallbacks",
+                request.File.FileName);
+        }
+
+        ms.Position = 0;
+
+        // Priority: request field > file tag > fallback
+        var title  = (!string.IsNullOrWhiteSpace(request.Title)  ? request.Title  : tagTitle)
+                     ?? Path.GetFileNameWithoutExtension(request.File.FileName);
+        var artist = (!string.IsNullOrWhiteSpace(request.Artist) ? request.Artist : tagArtist)
+                     ?? "Unknown Artist";
+        var album  = !string.IsNullOrWhiteSpace(request.Album)   ? request.Album  : tagAlbum;
+
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? throw new InvalidOperationException("User ID claim missing from token"));
+
+        var result = await _commands.Send<UploadMusicCommand, MusicResult>(
+            new UploadMusicCommand(request.StationId, userId, title, artist, album,
+                ms, request.File.FileName, request.File.ContentType), ct);
+
+        await ms.DisposeAsync();
+
+        if (!result.IsSuccess)
+            return BadRequest(result.ToApiResponse());
+
+        return StatusCode(201, result.ToApiResponse());
     }
 
     /// <summary>

@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 using LiveSessionService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
 using LiveSessionService.Application.Enums;
+using LiveSessionService.Application.Features.Results.NowPlaying;
 using LiveSessionService.Application.Features.Results.Stations;
 using LiveSessionService.Application.Features.Stations.Commands.SyncStations;
 using LiveSessionService.Application.Features.Stations.Queries.GetAllStations;
+using LiveSessionService.Application.Features.Stations.Queries.GetStationNowPlaying;
 using LiveSessionService.Api.Models.Responses;
 using LiveSessionService.Api.Models.Requests.Stations;
 using LiveSessionService.Api.Extensions;
@@ -83,6 +85,30 @@ public class StationController : ControllerBase
         return StatusCode(501, ApiResponse<object>.FailureResponse(
             "Create station feature coming soon. Currently use sync to get stations from AzuraCast.",
             501));
+    }
+
+    /// <summary>
+    /// Get live now playing data from AzuraCast for a station
+    /// </summary>
+    /// <param name="id">Station local Guid (from GET /station)</param>
+    [HttpGet("{id:guid}/now-playing")]
+    [ProducesResponseType(typeof(ApiResponse<StationNowPlayingResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> GetNowPlaying(Guid id, CancellationToken ct)
+    {
+        var query = new GetStationNowPlayingQuery(id);
+        var result = await _queries.Send<GetStationNowPlayingQuery, StationNowPlayingResult>(query, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(ApiResponse<StationNowPlayingResult>.SuccessResponse(result.Data!, "Success"));
     }
 
     /// <summary>

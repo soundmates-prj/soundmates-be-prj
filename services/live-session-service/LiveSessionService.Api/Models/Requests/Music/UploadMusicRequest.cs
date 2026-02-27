@@ -10,14 +10,15 @@ public sealed class UploadMusicRequest
     [Required(ErrorMessage = "Station ID is required")]
     public Guid StationId { get; set; }
 
-    [Required(ErrorMessage = "Title is required")]
-    [StringLength(200, MinimumLength = 1)]
-    public string Title { get; set; } = null!;
+    /// <summary>Leave empty to auto-detect from file tags.</summary>
+    [StringLength(200)]
+    public string? Title { get; set; }
 
-    [Required(ErrorMessage = "Artist is required")]
-    [StringLength(200, MinimumLength = 1)]
-    public string Artist { get; set; } = null!;
+    /// <summary>Leave empty to auto-detect from file tags.</summary>
+    [StringLength(200)]
+    public string? Artist { get; set; }
 
+    /// <summary>Leave empty to auto-detect from file tags.</summary>
     [StringLength(200)]
     public string? Album { get; set; }
 

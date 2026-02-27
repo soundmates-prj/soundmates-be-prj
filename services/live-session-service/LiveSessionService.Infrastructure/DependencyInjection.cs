@@ -41,17 +41,22 @@ public static class DependencyInjection
         services.AddScoped<ILiveSessionRepository, LiveSessionRepository>();
         services.AddScoped<INowPlayingHistoryRepository, NowPlayingHistoryRepository>();
         services.AddScoped<IAzuraCastStationRepository, AzuraCastStationRepository>();
+        services.AddScoped<IStationPlaylistRepository, StationPlaylistRepository>();
+        services.AddScoped<IMediaFileRepository, MediaFileRepository>();
         services.AddScoped<IOutboxRepository, OutboxRepository>();
 
         // External Services - AzuraCast
         // BaseUrl config qua HttpClient DI (Clean Architecture compliant)
         var azuraCastBaseUrl = configuration["AzuraCast:BaseUrl"] 
             ?? throw new InvalidOperationException("AzuraCast:BaseUrl not configured");
-        
+        var azuraCastApiKey = configuration["AzuraCast:ApiKey"];
+
         services.AddHttpClient<IAzuraCastClient, AzuraCastClient>(client =>
         {
-            client.BaseAddress = new Uri(azuraCastBaseUrl);
-            client.Timeout = TimeSpan.FromSeconds(10);
+            client.BaseAddress = new Uri(azuraCastBaseUrl.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(120);
+            if (!string.IsNullOrEmpty(azuraCastApiKey))
+                client.DefaultRequestHeaders.Add("X-API-Key", azuraCastApiKey);
         });
 
         // Messaging - RabbitMQ

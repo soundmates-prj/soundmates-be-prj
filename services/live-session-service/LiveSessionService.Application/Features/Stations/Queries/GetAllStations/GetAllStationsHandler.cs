@@ -44,7 +44,18 @@ public sealed class GetAllStationsHandler : IQueryHandler<GetAllStationsQuery, L
                 PublicPlayerUrl = s.PublicPlayerUrl,
                 IsEnabled = s.IsEnabled,
                 LastSyncedAt = s.LastSyncedAt,
-                SyncStatus = s.SyncStatus.ToString()
+                SyncStatus = s.SyncStatus.ToString(),
+                Mounts = s.Mounts.Select(m => new MountResult
+                {
+                    ExternalMountId = m.ExternalMountId,
+                    MountName = m.MountName,
+                    MountPath = m.MountPath,
+                    MountUrl = m.MountUrl,
+                    IsDefault = m.IsDefault,
+                    Bitrate = m.Bitrate,
+                    Format = m.Format,
+                    CurrentListeners = m.CurrentListeners
+                }).ToList()
             }).ToList();
 
             _logger.LogInformation("Found {Count} stations in database", results.Count);
