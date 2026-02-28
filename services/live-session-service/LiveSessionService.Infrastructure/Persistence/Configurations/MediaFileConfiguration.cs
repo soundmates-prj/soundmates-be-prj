@@ -12,6 +12,9 @@ public class MediaFileConfiguration : IEntityTypeConfiguration<MediaFile>
 
         builder.HasKey(x => x.Id);
 
+        builder.Property(x => x.StationId)
+            .IsRequired();
+
         builder.Property(x => x.Title)
             .IsRequired()
             .HasMaxLength(300);

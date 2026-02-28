@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using LiveSessionService.Application.Abstractions.Messaging;
 using LiveSessionService.Application.Abstractions.Messaging.Dispatcher;
 using LiveSessionService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
@@ -14,6 +14,8 @@ using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSessio
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetAllLiveSessions;
 using LiveSessionService.Application.Features.Results;
 using LiveSessionService.Application.Features.Stations.Queries.GetStationNowPlaying;
+using LiveSessionService.Application.Features.Music.Queries.GetAllMediaFiles;
+using LiveSessionService.Application.Features.Music.Queries.GetMediaFilesByStation;
 using LiveSessionService.Application.Features.Results.NowPlaying;
 using LiveSessionService.Application.Features.Results.Stations;
 using LiveSessionService.Application.Features.Results.LiveSessions;
@@ -58,6 +60,10 @@ public static class DependencyInjection
 
         // Register Music Command Handlers
         services.AddScoped<ICommandHandler<UploadMusicCommand, MusicResult>, UploadMusicHandler>();
+
+        // Register Music Query Handlers
+        services.AddScoped<IQueryHandler<GetAllMediaFilesQuery, List<MusicResult>>, GetAllMediaFilesHandler>();
+        services.AddScoped<IQueryHandler<GetMediaFilesByStationQuery, List<MusicResult>>, GetMediaFilesByStationHandler>();
 
         // Register LiveSession Query Handlers
         services.AddScoped<IQueryHandler<GetLiveSessionQuery, LiveSessionResult>, GetLiveSessionHandler>();

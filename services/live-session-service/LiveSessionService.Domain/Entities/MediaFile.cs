@@ -8,6 +8,11 @@ public class MediaFile
 {
     public Guid Id { get; set; }
 
+    /// <summary>
+    /// Station that this media file belongs to in our catalog.
+    /// </summary>
+    public Guid StationId { get; set; }
+
     public string Title { get; set; } = null!;
 
     public string? Artist { get; set; }

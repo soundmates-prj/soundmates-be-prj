@@ -10,18 +10,26 @@ public static class ConfigurationExtensions
 {
     public static WebApplicationBuilder AddEnvironmentConfig(this WebApplicationBuilder builder)
     {
-        // Load .env file from solution root (parent directory)
+        // Load .env — prefer API project directory, then CWD, then output dir.
+        // In production, rely on real environment variables.
         try
         {
-            var envPath = Path.Combine(Directory.GetCurrentDirectory(), "..", ".env");
-            if (File.Exists(envPath))
+            var envCandidates = new[]
             {
-                Env.Load(envPath);
-            }
-            else
+                // bin/Debug/<tfm> -> AuthService.Api
+                Path.Combine(AppContext.BaseDirectory, "../../..", ".env"),
+                // CWD (dotnet run from project dir)
+                Path.Combine(Directory.GetCurrentDirectory(), ".env"),
+                // Back-compat: one directory up (older layout)
+                Path.Combine(Directory.GetCurrentDirectory(), "..", ".env"),
+                // Published output dir
+                Path.Combine(AppContext.BaseDirectory, ".env"),
+            };
+
+            var envFile = envCandidates.FirstOrDefault(File.Exists);
+            if (envFile is not null)
             {
-                // Try current directory
-                Env.Load();
+                Env.Load(envFile);
             }
         }
         catch (Exception)

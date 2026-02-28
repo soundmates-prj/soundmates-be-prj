@@ -12,7 +12,22 @@ var envCandidates = new[]
 };
 var envFile = envCandidates.FirstOrDefault(File.Exists);
 if (envFile is not null)
+{
+    Console.WriteLine($"[INFO] Loading .env from: {envFile}");
     DotNetEnv.Env.Load(envFile);
+    
+    // Debug: Print loaded environment variables
+    Console.WriteLine("[DEBUG] Environment Variables:");
+    Console.WriteLine($"  POSTGRES_HOST: {Environment.GetEnvironmentVariable("POSTGRES_HOST") ?? "(not set)"}");
+    Console.WriteLine($"  POSTGRES_DATABASE: {Environment.GetEnvironmentVariable("POSTGRES_DATABASE") ?? "(not set)"}");
+    Console.WriteLine($"  AZURACAST_BASE_URL: {Environment.GetEnvironmentVariable("AZURACAST_BASE_URL") ?? "(not set)"}");
+    Console.WriteLine($"  JWT_KEY: {(string.IsNullOrEmpty(Environment.GetEnvironmentVariable("JWT_KEY")) ? "(not set)" : "***SET***")}");
+    Console.WriteLine($"  RABBITMQ_HOST: {Environment.GetEnvironmentVariable("RABBITMQ_HOST") ?? "(not set)"}");
+}
+else
+{
+    Console.WriteLine("[WARNING] No .env file found. Relying on appsettings.json or environment variables.");
+}
 
 var builder = WebApplication.CreateBuilder(args);
 

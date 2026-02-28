@@ -60,16 +60,17 @@ public sealed class UploadMusicHandler
         var extension = Path.GetExtension(command.FileName).TrimStart('.').ToLowerInvariant();
         var mediaFile = new MediaFile
         {
-            Id              = Guid.NewGuid(),
-            Title           = media.Title,
-            Artist          = media.Artist,
-            Album           = media.Album,
-            DurationSeconds = media.DurationSeconds,
-            FilePath        = media.UniqueId,   // AzuraCast unique_id
-            FileType        = extension,
-            FileSizeBytes   = command.FileStream.Length,
+            Id               = Guid.NewGuid(),
+            StationId        = station.Id,
+            Title            = media.Title,
+            Artist           = media.Artist,
+            Album            = media.Album,
+            DurationSeconds  = media.DurationSeconds,
+            FilePath         = media.UniqueId,   // AzuraCast unique_id
+            FileType         = extension,
+            FileSizeBytes    = command.FileStream.Length,
             UploadedByUserId = command.UploadedByUserId,
-            UploadedAt      = _dateTime.UtcNow
+            UploadedAt       = _dateTime.UtcNow
         };
 
         await _mediaFileRepo.AddAsync(mediaFile, cancellationToken);

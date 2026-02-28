@@ -4,6 +4,8 @@ using LiveSessionService.Application.Abstractions.Messaging.Dispatcher.Interface
 using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Features.Results.Music;
 using LiveSessionService.Application.Features.Music.Commands.UploadMusic;
+using LiveSessionService.Application.Features.Music.Queries.GetAllMediaFiles;
+using LiveSessionService.Application.Features.Music.Queries.GetMediaFilesByStation;
 using LiveSessionService.Api.Models.Responses;
 using LiveSessionService.Api.Models.Requests.Music;
 using LiveSessionService.Api.Extensions;
@@ -34,6 +36,32 @@ public class MusicCatalogController : ControllerBase
         _commands = commands;
         _queries = queries;
         this._logger = _logger;
+    }
+
+    /// <summary>
+    /// Get all media files in music catalog
+    /// </summary>
+    [HttpGet]
+    [ProducesResponseType(typeof(ApiResponse<List<MusicResult>>), 200)]
+    public async Task<IActionResult> GetAllMusic(CancellationToken ct)
+    {
+        var result = await _queries.Send<GetAllMediaFilesQuery, List<MusicResult>>(
+            new GetAllMediaFilesQuery(), ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.Unauthorized => Unauthorized(result.ToApiResponse()),
+                ErrorCode.Forbidden => StatusCode(403, result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                ErrorCode.UnprocessableEntity => StatusCode(422, result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(result.ToApiResponse());
     }
 
     /// <summary>
@@ -134,11 +162,28 @@ public class MusicCatalogController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<List<MusicResult>>), 200)]
     public async Task<IActionResult> GetStationMusic(Guid stationId, CancellationToken ct)
     {
-        _logger.LogWarning("GetStationMusic not yet implemented");
+        _logger.LogInformation("GetStationMusic: API called with StationId={StationId}", stationId);
         
-        return Ok(ApiResponse<List<MusicResult>>.SuccessResponse(
-            new List<MusicResult>(),
-            "Feature coming soon"));
+        var result = await _queries.Send<GetMediaFilesByStationQuery, List<MusicResult>>(
+            new GetMediaFilesByStationQuery(stationId), ct);
+
+        _logger.LogInformation("GetStationMusic: Query completed. IsSuccess={IsSuccess}, ResultCount={Count}, ErrorCode={ErrorCode}",
+            result.IsSuccess, result.Data?.Count ?? 0, result.ErrorCode);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.Unauthorized => Unauthorized(result.ToApiResponse()),
+                ErrorCode.Forbidden => StatusCode(403, result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                ErrorCode.UnprocessableEntity => StatusCode(422, result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(result.ToApiResponse());
     }
 
     /// <summary>
@@ -154,5 +199,47 @@ public class MusicCatalogController : ControllerBase
         return StatusCode(501, ApiResponse<object>.FailureResponse(
             "Delete music feature coming soon",
             501));
+    }
+
+    /// <summary>
+    /// DEBUG: Get database statistics for troubleshooting
+    /// </summary>
+    [HttpGet("debug/stats")]
+    [ProducesResponseType(typeof(ApiResponse<object>), 200)]
+    public async Task<IActionResult> GetDebugStats(CancellationToken ct)
+    {
+        try
+        {
+            var allMusic = await _queries.Send<GetAllMediaFilesQuery, List<MusicResult>>(
+                new GetAllMediaFilesQuery(), ct);
+
+            var mediaFilesList = allMusic.Data?.Select(m => new
+            {
+                m.Id,
+                m.StationId,
+                m.Title,
+                m.Artist,
+                m.FileUrl
+            }).ToList();
+
+            var stats = new
+            {
+                TotalMediaFiles = allMusic.Data?.Count ?? 0,
+                StationIds = allMusic.Data?
+                    .Select(m => m.StationId)
+                    .Distinct()
+                    .ToList() ?? new List<Guid>(),
+                MediaFiles = (object?)(mediaFilesList) ?? new List<object>()
+            };
+
+            return Ok(ApiResponse<object>.SuccessResponse(stats));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting debug stats");
+            return StatusCode(500, ApiResponse<object>.FailureResponse(
+                $"Error: {ex.Message}",
+                500));
+        }
     }
 }

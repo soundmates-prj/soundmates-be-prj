@@ -21,8 +21,32 @@ public static class DependencyInjection
         IConfiguration configuration)
     {
         // Database - PostgreSQL
-        var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found");
+        // PRIORITY: Environment variables FIRST (Docker), then config (local)
+        var postgresHost = Environment.GetEnvironmentVariable("POSTGRES_HOST");
+        
+        string connectionString;
+        
+        if (!string.IsNullOrEmpty(postgresHost))
+        {
+            // Build from environment variables (Docker/Production)
+            var port = Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? "5432";
+            var database = Environment.GetEnvironmentVariable("POSTGRES_DATABASE") ?? "live_session_db";
+            var username = Environment.GetEnvironmentVariable("POSTGRES_USERNAME") ?? "postgres";
+            var password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "postgres";
+            
+            connectionString = $"Host={postgresHost};Port={port};Database={database};Username={username};Password={password}";
+            
+            Console.WriteLine($"[DEBUG] Built connection string from ENVIRONMENT VARIABLES:");
+            Console.WriteLine($"  Host={postgresHost}, Port={port}, Database={database}, Username={username}");
+        }
+        else
+        {
+            // Fallback to appsettings.json (Local development)
+            connectionString = configuration.GetConnectionString("DefaultConnection")
+                ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found and no POSTGRES_HOST env var");
+            
+            Console.WriteLine($"[DEBUG] Using connection string from appsettings.json (POSTGRES_HOST not set)");
+        }
 
         services.AddDbContext<LiveSessionDbContext>(options =>
             options.UseNpgsql(connectionString, npgsqlOptions =>
@@ -46,10 +70,13 @@ public static class DependencyInjection
         services.AddScoped<IOutboxRepository, OutboxRepository>();
 
         // External Services - AzuraCast
-        // BaseUrl config qua HttpClient DI (Clean Architecture compliant)
-        var azuraCastBaseUrl = configuration["AzuraCast:BaseUrl"] 
-            ?? throw new InvalidOperationException("AzuraCast:BaseUrl not configured");
-        var azuraCastApiKey = configuration["AzuraCast:ApiKey"];
+        // Read from environment variables (Docker) or config
+        var azuraCastBaseUrl = Environment.GetEnvironmentVariable("AZURACAST_BASE_URL")
+            ?? configuration["AzuraCast:BaseUrl"]
+            ?? throw new InvalidOperationException("AZURACAST_BASE_URL not configured");
+        
+        var azuraCastApiKey = Environment.GetEnvironmentVariable("AZURACAST_API_KEY")
+            ?? configuration["AzuraCast:ApiKey"];
 
         services.AddHttpClient<IAzuraCastClient, AzuraCastClient>(client =>
         {

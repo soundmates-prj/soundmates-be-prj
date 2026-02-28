@@ -2,23 +2,43 @@ using Microsoft.EntityFrameworkCore;
 using LiveSessionService.Domain.Entities;
 using LiveSessionService.Domain.Interfaces;
 using LiveSessionService.Infrastructure.Persistence;
+using Microsoft.Extensions.Logging;
 
 namespace LiveSessionService.Infrastructure.Repositories;
 
 public sealed class AzuraCastStationRepository : IAzuraCastStationRepository
 {
     private readonly LiveSessionDbContext _context;
+    private readonly ILogger<AzuraCastStationRepository> _logger;
 
-    public AzuraCastStationRepository(LiveSessionDbContext context)
+    public AzuraCastStationRepository(LiveSessionDbContext context, ILogger<AzuraCastStationRepository> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
     public async Task<AzuraCastStation?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await _context.AzuraCastStations
+        _logger.LogInformation("AzuraCastStationRepository: Querying for station with Id={Id}", id);
+        
+        var allStations = await _context.AzuraCastStations.AsNoTracking().ToListAsync(cancellationToken);
+        _logger.LogInformation("AzuraCastStationRepository: Total stations in database: {Count}", allStations.Count);
+        
+        if (allStations.Any())
+        {
+            var stationIds = allStations.Select(s => s.Id).ToList();
+            _logger.LogInformation("AzuraCastStationRepository: StationIds in database: {StationIds}", 
+                string.Join(", ", stationIds));
+        }
+        
+        var station = await _context.AzuraCastStations
             .Include(x => x.Mounts)
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        
+        _logger.LogInformation("AzuraCastStationRepository: Station found={Found} for Id={Id}", 
+            station != null, id);
+        
+        return station;
     }
 
     public async Task<AzuraCastStation?> GetByExternalIdAsync(int externalStationId, CancellationToken cancellationToken = default)
