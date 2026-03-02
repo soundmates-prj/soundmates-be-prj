@@ -181,6 +181,17 @@ public sealed class AzuraCastClient : IAzuraCastClient
             file = Convert.ToBase64String(bytes)
         };
 
+        // Diagnostic: confirm X-API-Key header is present before sending
+        bool hasApiKey = _httpClient.DefaultRequestHeaders.Contains("X-API-Key");
+        string keyPreview = hasApiKey
+            ? _httpClient.DefaultRequestHeaders.GetValues("X-API-Key").FirstOrDefault() is { } k && k.Length > 8
+                ? k[..4] + "****" + k[^4..]
+                : "****"
+            : "(MISSING — API key was not loaded at startup)";
+        _logger.LogInformation(
+            "UploadMediaAsync ? station {StationId} | X-API-Key header: {KeyPreview} | URL: {BaseAddress}api/station/{StationId}/files",
+            stationId, keyPreview, _httpClient.BaseAddress, stationId);
+
         using var response = await _httpClient.PostAsJsonAsync(
             $"api/station/{stationId}/files", body, cancellationToken);
         await EnsureAzuraCastSuccessAsync(response, $"upload media to station {stationId}", cancellationToken);
@@ -250,12 +261,24 @@ public sealed class AzuraCastClient : IAzuraCastClient
         }
 
         if (response.StatusCode == HttpStatusCode.Forbidden)
+        {
+            // AzuraCast returns 403 for two distinct reasons:
+            // - NotLoggedInException : API key is missing or not recognised
+            // - ForbiddenException   : API key is valid but lacks the required permission
+            bool isNotLoggedIn = !string.IsNullOrWhiteSpace(body) &&
+                body.Contains("NotLoggedInException", StringComparison.OrdinalIgnoreCase);
+
+            string reason = isNotLoggedIn
+                ? $"AzuraCast rejected '{operation}' with 403 — API key not recognised (NotLoggedInException). " +
+                  "The X-API-Key header was either missing or the key does not exist in AzuraCast. " +
+                  "Check that AzuraCast__ApiKey in your .env matches an API key in AzuraCast Admin ? API Keys."
+                : $"AzuraCast rejected '{operation}' with 403 Forbidden — the API key lacks the required role. " +
+                  "Go to AzuraCast Admin ? API Keys and grant 'Manage Stations' + 'Manage Station Media' permissions.";
+
             throw new AzuraCastException(
-                $"AzuraCast rejected '{operation}' with 403 Forbidden. " +
-                "The configured API key lacks the required role. " +
-                "Go to AzuraCast Admin ? API Keys and grant 'Manage Stations' + 'Manage Station Media' permissions." +
-                (string.IsNullOrWhiteSpace(body) ? string.Empty : $" Response: {TruncateForError(body)}"),
+                reason + (string.IsNullOrWhiteSpace(body) ? string.Empty : $" Response: {TruncateForError(body)}"),
                 ErrorCode.Forbidden);
+        }
 
         if (response.StatusCode == HttpStatusCode.Unauthorized)
             throw new AzuraCastException(

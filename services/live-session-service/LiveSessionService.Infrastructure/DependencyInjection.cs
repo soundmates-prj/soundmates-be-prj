@@ -78,11 +78,28 @@ public static class DependencyInjection
         var azuraCastApiKey = Environment.GetEnvironmentVariable("AZURACAST_API_KEY")
             ?? configuration["AzuraCast:ApiKey"];
 
+        // Debug: verify API key is loaded (mask the secret part)
+        if (string.IsNullOrWhiteSpace(azuraCastApiKey))
+        {
+            Console.WriteLine("[WARNING] AzuraCast API key is NOT configured. " +
+                "Set AzuraCast__ApiKey in .env or AZURACAST_API_KEY as an environment variable. " +
+                "All authenticated AzuraCast endpoints will return 403 NotLoggedInException.");
+        }
+        else
+        {
+            var masked = azuraCastApiKey.Length > 8
+                ? azuraCastApiKey[..4] + "****" + azuraCastApiKey[^4..]
+                : "****";
+            Console.WriteLine($"[DEBUG] AzuraCast API key loaded: {masked} (length={azuraCastApiKey.Length})");
+        }
+
+        Console.WriteLine($"[DEBUG] AzuraCast BaseUrl: {azuraCastBaseUrl}");
+
         services.AddHttpClient<IAzuraCastClient, AzuraCastClient>(client =>
         {
             client.BaseAddress = new Uri(azuraCastBaseUrl.TrimEnd('/') + "/");
             client.Timeout = TimeSpan.FromSeconds(120);
-            if (!string.IsNullOrEmpty(azuraCastApiKey))
+            if (!string.IsNullOrWhiteSpace(azuraCastApiKey))
                 client.DefaultRequestHeaders.Add("X-API-Key", azuraCastApiKey);
         });
 
