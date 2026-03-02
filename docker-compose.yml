@@ -66,7 +66,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
-      - POSTGRES_HOST=${POSTGRES_HOST:-postgres}
+      - POSTGRES_HOST=postgres
       - POSTGRES_PORT=${POSTGRES_PORT:-5432}
       - POSTGRES_DATABASE=${POSTGRES_DATABASE:-auth_db}
       - POSTGRES_USERNAME=${POSTGRES_USERNAME:-postgres}
@@ -108,7 +108,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
-      - POSTGRES_HOST=${POSTGRES_HOST:-postgres}
+      - POSTGRES_HOST=postgres
       - POSTGRES_PORT=${POSTGRES_PORT:-5432}
       - POSTGRES_DATABASE=${POSTGRES_DATABASE:-auth_db}
       - POSTGRES_USERNAME=${POSTGRES_USERNAME:-postgres}
@@ -135,6 +135,41 @@ services:
       - soundmates-network
     restart: unless-stopped
 
+  # Live Session Service
+  live-session-service:
+    build:
+      context: ./services/live-session-service
+      dockerfile: LiveSessionService.Api/Dockerfile
+    container_name: soundmates-live-session-service
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_DATABASE=${LIVE_SESSION_POSTGRES_DATABASE:-livesession_db}
+      - POSTGRES_USERNAME=${POSTGRES_USERNAME:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
+      - RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
+      - RABBITMQ_USERNAME=${RABBITMQ_USERNAME:-guest}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-guest}
+      - RABBITMQ_VIRTUALHOST=${RABBITMQ_VIRTUALHOST:-/}
+      - JWT_KEY=${JWT_KEY}
+      - JWT_ISSUER=${JWT_ISSUER:-Soundmates.Auth}
+      - JWT_AUDIENCE=${JWT_AUDIENCE:-Soundmates.Users}
+      - AZURACAST_BASE_URL=${AZURACAST_BASE_URL:-http://azuracast:8080}
+      - AZURACAST_API_KEY=${AZURACAST_API_KEY}
+    ports:
+      - "8003:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - soundmates-network
+    restart: unless-stopped
+
   # API Gateway
   api-gateway:
     build:
@@ -149,6 +184,7 @@ services:
     depends_on:
       - auth-service
       - auth-query-service
+      - live-session-service
     networks:
       - soundmates-network
     restart: unless-stopped

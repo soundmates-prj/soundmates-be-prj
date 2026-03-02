@@ -21,6 +21,7 @@ public class LiveSessionDbContext : DbContext
     public DbSet<PlaylistMedia> PlaylistMedias => Set<PlaylistMedia>();
     public DbSet<StationMount> StationMounts => Set<StationMount>();
     public DbSet<ListenerStatistics> ListenerStatistics => Set<ListenerStatistics>();
+    public DbSet<MediaFile> MediaFiles => Set<MediaFile>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

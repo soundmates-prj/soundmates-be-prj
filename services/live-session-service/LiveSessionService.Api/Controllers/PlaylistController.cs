@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using LiveSessionService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
 using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Features.Results.Playlists;
 using LiveSessionService.Application.Features.Playlists.Commands.CreatePlaylist;
+using LiveSessionService.Application.Features.Playlists.Commands.AddMediaToPlaylist;
 using LiveSessionService.Api.Models.Responses;
 using LiveSessionService.Api.Extensions;
 using LiveSessionService.Api.Models.Requests.Playlist;
@@ -16,6 +18,7 @@ namespace LiveSessionService.Api.Controllers;
 [ApiController]
 [Route("api/v1/[controller]")]
 [Produces("application/json")]
+[Authorize]
 public class PlaylistController : ControllerBase
 {
     private readonly ICommandDispatcher _commands;
@@ -49,11 +52,13 @@ public class PlaylistController : ControllerBase
                 (int)ErrorCode.BadRequest));
         }
 
-        // implementations here....
+        var result = await _commands.Send<CreatePlaylistCommand, PlaylistResult>(
+            new CreatePlaylistCommand(request.StationId, request.PlaylistName, request.Description, request.IsAutoPlay), ct);
 
-        return StatusCode(501, ApiResponse<object>.FailureResponse(
-            "Playlist creation feature coming soon",
-            501));
+        if (!result.IsSuccess)
+            return BadRequest(result.ToApiResponse());
+
+        return StatusCode(201, result.ToApiResponse());
     }
 
     /// <summary>
@@ -81,11 +86,17 @@ public class PlaylistController : ControllerBase
         [FromBody] AddTracksRequest request,
         CancellationToken ct)
     {
-        _logger.LogWarning("AddTracksToPlaylist not yet implemented");
+        var results = new List<PlaylistMediaResult>();
 
-        return StatusCode(501, ApiResponse<object>.FailureResponse(
-            "Add tracks feature coming soon",
-            501));
+        foreach (var musicId in request.MusicIds)
+        {
+            var r = await _commands.Send<AddMediaToPlaylistCommand, PlaylistMediaResult>(new AddMediaToPlaylistCommand(playlistId, musicId), ct);
+            if (!r.IsSuccess)
+                return BadRequest(r.ToApiResponse());
+            results.Add(r.Data!);
+        }
+
+        return Ok(ApiResponse<List<PlaylistMediaResult>>.SuccessResponse(results, "Tracks added to playlist"));
     }
 
     /// <summary>

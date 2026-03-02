@@ -112,7 +112,7 @@ public sealed class SyncNowPlayingHandler : ICommandHandler<SyncNowPlayingComman
 
             // 7. Check if this is a new song
             bool isNewSong = previousNowPlaying == null ||
-                             (currentShId.HasValue && previousNowPlaying.AzuraCastSongHistoryId != currentShId.Value);
+                             previousNowPlaying.AzuraCastSongHistoryId != currentShId;
 
             NowPlayingHistory nowPlayingHistory;
 
@@ -126,7 +126,7 @@ public sealed class SyncNowPlayingHandler : ICommandHandler<SyncNowPlayingComman
                 }
 
                 // Create new now playing entry
-                var playedAtTimestamp = nowPlayingData.NowPlaying.PlayedAt ?? 0;
+                var playedAtTimestamp = nowPlayingData.NowPlaying.PlayedAt;
                 var playedAt = DateTimeOffset.FromUnixTimeSeconds(playedAtTimestamp).UtcDateTime;
 
                 nowPlayingHistory = NowPlayingHistory.Create(
@@ -135,9 +135,9 @@ public sealed class SyncNowPlayingHandler : ICommandHandler<SyncNowPlayingComman
                     songArtist: currentSong.Artist,
                     songAlbum: currentSong.Album,
                     songArtUrl: currentSong.Art,
-                    durationSeconds: (int)(nowPlayingData.NowPlaying.Duration ?? 0),
+                    durationSeconds: (int)nowPlayingData.NowPlaying.Duration,
                     playedAt: playedAt,
-                    listenerCount: nowPlayingData.NowPlaying.Listeners ?? 0,
+                    listenerCount: nowPlayingData.Listeners?.Current ?? 0,
                     azuraCastSongHistoryId: currentShId,
                     isRequest: false,
                     requestedByUserId: null,
@@ -169,7 +169,7 @@ public sealed class SyncNowPlayingHandler : ICommandHandler<SyncNowPlayingComman
             {
                 // Update listener count for existing song
                 nowPlayingHistory = previousNowPlaying!;
-                var currentListeners = nowPlayingData.NowPlaying.Listeners ?? 0;
+                var currentListeners = nowPlayingData.Listeners?.Current ?? 0;
                 nowPlayingHistory.UpdateListenerPeak(currentListeners);
                 await _nowPlayingRepository.UpdateAsync(nowPlayingHistory, cancellationToken);
             }

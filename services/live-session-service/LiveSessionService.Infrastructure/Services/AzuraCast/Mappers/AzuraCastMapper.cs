@@ -3,140 +3,114 @@ using LiveSessionService.Infrastructure.Services.AzuraCast.ApiModels;
 
 namespace LiveSessionService.Infrastructure.Services.AzuraCast.Mappers;
 
-/// <summary>
-/// Maps internal API models to Application models
-/// Tách mapping ra ?? AzuraCastClient g?n gàng
-/// </summary>
 internal static class AzuraCastMapper
 {
-    /// <summary>
-    /// Convert API station list response to Application model
-    /// </summary>
-    public static AzuraCastStationListData ToApplicationModel(this AzuraCastApiStationListResponse apiStation)
-    {
-        return new AzuraCastStationListData
-        {
-            Id = apiStation.Id,
-            Name = apiStation.Name ?? "Unknown",
-            Shortcode = apiStation.ShortCode,
-            Description = apiStation.Description,
-            ListenUrl = apiStation.ListenUrl,
-            PublicPlayerUrl = apiStation.PublicPlayerUrl,
-            IsPublic = apiStation.IsPublic,
-            Mounts = apiStation.Mounts?
-                .Select(m => m.ToApplicationModel())
-                .ToList(),
-            HlsEnabled = apiStation.HlsEnabled,
-            HlsUrl = apiStation.HlsUrl
-        };
-    }
+    // ?? Station list (/api/stations) ??????????????????????????????????????????
 
-    private static AzuraCastMountData ToApplicationModel(this AzuraCastApiMount apiMount)
-    {
-        return new AzuraCastMountData
+    public static AzuraCastStationListData ToApplicationModel(this AzuraCastApiStationListResponse api)
+        => new()
         {
-            Id = apiMount.Id,
-            Name = apiMount.Name,
-            Url = apiMount.Url,
-            Bitrate = apiMount.Bitrate,
-            Format = apiMount.Format,
-            Listeners = apiMount.Listeners != null ? new AzuraCastListenersData
-            {
-                Current = apiMount.Listeners.Current,
-                Unique = apiMount.Listeners.Unique
-            } : null,
-            Path = apiMount.Path,
-            IsDefault = apiMount.IsDefault
+            Id = api.Id,
+            Name = api.Name ?? "Unknown",
+            Shortcode = api.ShortCode,
+            Description = api.Description,
+            ListenUrl = api.ListenUrl,
+            PublicPlayerUrl = api.PublicPlayerUrl,
+            IsPublic = api.IsPublic,
+            HlsEnabled = api.HlsEnabled,
+            HlsUrl = api.HlsUrl,
+            Mounts = api.Mounts?.Select(m => m.ToApplicationModel()).ToList()
         };
-    }
-    
-    /// <summary>
-    /// Convert API response to Application model
-    /// </summary>
-    public static AzuraCastNowPlayingData? ToApplicationModel(this AzuraCastApiResponse? apiResponse)
-    {
-        if (apiResponse == null)
-            return null;
 
-        return new AzuraCastNowPlayingData
+    // ?? Now Playing (/api/nowplaying/{id}) ????????????????????????????????????
+
+    public static AzuraCastNowPlayingData? ToApplicationModel(this AzuraCastApiResponse? api)
+    {
+        if (api == null) return null;
+        return new()
         {
-            Station = apiResponse.Station?.ToApplicationModel(),
-            NowPlaying = apiResponse.NowPlaying?.ToApplicationModel(),
-            SongHistory = apiResponse.SongHistory?
+            Station   = api.Station?.ToApplicationModel(),
+            Listeners = api.Listeners?.ToApplicationModel(),
+            NowPlaying = api.NowPlaying?.ToApplicationModel(),
+            PlayingNext = api.PlayingNext?.ToApplicationModel(),
+            SongHistory = api.SongHistory?
                 .Select(h => h.ToApplicationModel())
-                .Where(h => h != null)
-                .Cast<AzuraCastSongHistoryData>()
-                .ToList()
+                .ToList(),
+            IsOnline = api.IsOnline,
+            IsLive = api.Live?.IsLive ?? false,
+            StreamerName = string.IsNullOrWhiteSpace(api.Live?.StreamerName)
+                ? null : api.Live.StreamerName
         };
     }
 
-    private static AzuraCastStationData? ToApplicationModel(this AzuraCastApiStation? apiStation)
-    {
-        if (apiStation == null)
-            return null;
+    // ?? Private helpers ???????????????????????????????????????????????????????
 
-        return new AzuraCastStationData
+    private static AzuraCastStationData ToApplicationModel(this AzuraCastApiStation api)
+        => new()
         {
-            Id = apiStation.Id,
-            Name = apiStation.Name ?? "Unknown",
-            ShortCode = apiStation.ShortCode,
-            Listeners = apiStation.Listeners?.ToApplicationModel()
+            Id = api.Id,
+            Name = api.Name ?? "Unknown",
+            ShortCode = api.ShortCode,
+            Description = api.Description,
+            ListenUrl = api.ListenUrl,
+            PublicPlayerUrl = api.PublicPlayerUrl,
+            IsPublic = api.IsPublic,
+            HlsEnabled = api.HlsEnabled,
+            HlsUrl = api.HlsUrl,
+            Mounts = api.Mounts?.Select(m => m.ToApplicationModel()).ToList()
         };
-    }
 
-    private static AzuraCastCurrentSongData? ToApplicationModel(this AzuraCastApiNowPlaying? apiNowPlaying)
-    {
-        if (apiNowPlaying == null)
-            return null;
-
-        return new AzuraCastCurrentSongData
+    private static AzuraCastCurrentSongData ToApplicationModel(this AzuraCastApiNowPlaying api)
+        => new()
         {
-            ShId = apiNowPlaying.ShId,
-            Song = apiNowPlaying.Song?.ToApplicationModel(),
-            PlayedAt = apiNowPlaying.PlayedAt,
-            Duration = apiNowPlaying.Duration,
-            Listeners = apiNowPlaying.Listeners
+            ShId      = api.ShId,
+            Song      = api.Song?.ToApplicationModel(),
+            PlayedAt  = (long)api.PlayedAt,
+            Duration  = (long)api.Duration,
+            Elapsed   = (long)api.Elapsed,
+            Remaining = (long)api.Remaining,
+            IsRequest = api.IsRequest
         };
-    }
 
-    private static AzuraCastSongData? ToApplicationModel(this AzuraCastApiSong? apiSong)
-    {
-        if (apiSong == null)
-            return null;
-
-        return new AzuraCastSongData
+    private static AzuraCastSongHistoryData ToApplicationModel(this AzuraCastApiSongHistory api)
+        => new()
         {
-            Id = apiSong.Id,
-            Text = apiSong.Text,
-            Artist = apiSong.Artist,
-            Title = apiSong.Title,
-            Album = apiSong.Album,
-            Art = apiSong.Art
+            ShId = api.ShId,
+            PlayedAt = api.PlayedAt,
+            Song = api.Song?.ToApplicationModel()
         };
-    }
 
-    private static AzuraCastSongHistoryData? ToApplicationModel(this AzuraCastApiSongHistory? apiHistory)
-    {
-        if (apiHistory == null)
-            return null;
-
-        return new AzuraCastSongHistoryData
+    private static AzuraCastSongData ToApplicationModel(this AzuraCastApiSong api)
+        => new()
         {
-            ShId = apiHistory.ShId,
-            PlayedAt = apiHistory.PlayedAt,
-            Song = apiHistory.Song?.ToApplicationModel()
+            Id = api.Id,
+            Text = api.Text,
+            Title = api.Title,
+            Artist = api.Artist,
+            Album = api.Album,
+            Genre = api.Genre,
+            Art = api.Art,
+            Lyrics = api.Lyrics
         };
-    }
 
-    private static AzuraCastListenersData? ToApplicationModel(this AzuraCastApiListeners? apiListeners)
-    {
-        if (apiListeners == null)
-            return null;
-
-        return new AzuraCastListenersData
+    private static AzuraCastMountData ToApplicationModel(this AzuraCastApiMount api)
+        => new()
         {
-            Current = apiListeners.Current,
-            Unique = apiListeners.Unique
+            Id = api.Id,
+            Name = api.Name,
+            Url = api.Url,
+            Bitrate = api.Bitrate,
+            Format = api.Format,
+            Path = api.Path,
+            IsDefault = api.IsDefault,
+            Listeners = api.Listeners?.ToApplicationModel()
         };
-    }
+
+    private static AzuraCastListenersData ToApplicationModel(this AzuraCastApiListeners api)
+        => new()
+        {
+            Total = api.Total,
+            Unique = api.Unique,
+            Current = api.Current
+        };
 }

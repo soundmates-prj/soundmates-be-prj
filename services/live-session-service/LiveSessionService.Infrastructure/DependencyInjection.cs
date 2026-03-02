@@ -21,8 +21,32 @@ public static class DependencyInjection
         IConfiguration configuration)
     {
         // Database - PostgreSQL
-        var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found");
+        // PRIORITY: Environment variables FIRST (Docker), then config (local)
+        var postgresHost = Environment.GetEnvironmentVariable("POSTGRES_HOST");
+        
+        string connectionString;
+        
+        if (!string.IsNullOrEmpty(postgresHost))
+        {
+            // Build from environment variables (Docker/Production)
+            var port = Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? "5432";
+            var database = Environment.GetEnvironmentVariable("POSTGRES_DATABASE") ?? "live_session_db";
+            var username = Environment.GetEnvironmentVariable("POSTGRES_USERNAME") ?? "postgres";
+            var password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "postgres";
+            
+            connectionString = $"Host={postgresHost};Port={port};Database={database};Username={username};Password={password}";
+            
+            Console.WriteLine($"[DEBUG] Built connection string from ENVIRONMENT VARIABLES:");
+            Console.WriteLine($"  Host={postgresHost}, Port={port}, Database={database}, Username={username}");
+        }
+        else
+        {
+            // Fallback to appsettings.json (Local development)
+            connectionString = configuration.GetConnectionString("DefaultConnection")
+                ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found and no POSTGRES_HOST env var");
+            
+            Console.WriteLine($"[DEBUG] Using connection string from appsettings.json (POSTGRES_HOST not set)");
+        }
 
         services.AddDbContext<LiveSessionDbContext>(options =>
             options.UseNpgsql(connectionString, npgsqlOptions =>
@@ -41,17 +65,42 @@ public static class DependencyInjection
         services.AddScoped<ILiveSessionRepository, LiveSessionRepository>();
         services.AddScoped<INowPlayingHistoryRepository, NowPlayingHistoryRepository>();
         services.AddScoped<IAzuraCastStationRepository, AzuraCastStationRepository>();
+        services.AddScoped<IStationPlaylistRepository, StationPlaylistRepository>();
+        services.AddScoped<IMediaFileRepository, MediaFileRepository>();
         services.AddScoped<IOutboxRepository, OutboxRepository>();
 
         // External Services - AzuraCast
-        // BaseUrl config qua HttpClient DI (Clean Architecture compliant)
-        var azuraCastBaseUrl = configuration["AzuraCast:BaseUrl"] 
-            ?? throw new InvalidOperationException("AzuraCast:BaseUrl not configured");
+        // Read from environment variables (Docker) or config
+        var azuraCastBaseUrl = Environment.GetEnvironmentVariable("AZURACAST_BASE_URL")
+            ?? configuration["AzuraCast:BaseUrl"]
+            ?? throw new InvalidOperationException("AZURACAST_BASE_URL not configured");
         
+        var azuraCastApiKey = Environment.GetEnvironmentVariable("AZURACAST_API_KEY")
+            ?? configuration["AzuraCast:ApiKey"];
+
+        // Debug: verify API key is loaded (mask the secret part)
+        if (string.IsNullOrWhiteSpace(azuraCastApiKey))
+        {
+            Console.WriteLine("[WARNING] AzuraCast API key is NOT configured. " +
+                "Set AzuraCast__ApiKey in .env or AZURACAST_API_KEY as an environment variable. " +
+                "All authenticated AzuraCast endpoints will return 403 NotLoggedInException.");
+        }
+        else
+        {
+            var masked = azuraCastApiKey.Length > 8
+                ? azuraCastApiKey[..4] + "****" + azuraCastApiKey[^4..]
+                : "****";
+            Console.WriteLine($"[DEBUG] AzuraCast API key loaded: {masked} (length={azuraCastApiKey.Length})");
+        }
+
+        Console.WriteLine($"[DEBUG] AzuraCast BaseUrl: {azuraCastBaseUrl}");
+
         services.AddHttpClient<IAzuraCastClient, AzuraCastClient>(client =>
         {
-            client.BaseAddress = new Uri(azuraCastBaseUrl);
-            client.Timeout = TimeSpan.FromSeconds(10);
+            client.BaseAddress = new Uri(azuraCastBaseUrl.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(120);
+            if (!string.IsNullOrWhiteSpace(azuraCastApiKey))
+                client.DefaultRequestHeaders.Add("X-API-Key", azuraCastApiKey);
         });
 
         // Messaging - RabbitMQ

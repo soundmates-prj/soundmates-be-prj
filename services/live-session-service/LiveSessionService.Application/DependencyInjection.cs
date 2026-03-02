@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using LiveSessionService.Application.Abstractions.Messaging;
 using LiveSessionService.Application.Abstractions.Messaging.Dispatcher;
 using LiveSessionService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
@@ -13,9 +13,17 @@ using LiveSessionService.Application.Features.LiveSessions.Commands.StopSession;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSession;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetAllLiveSessions;
 using LiveSessionService.Application.Features.Results;
+using LiveSessionService.Application.Features.Stations.Queries.GetStationNowPlaying;
+using LiveSessionService.Application.Features.Music.Queries.GetAllMediaFiles;
+using LiveSessionService.Application.Features.Music.Queries.GetMediaFilesByStation;
 using LiveSessionService.Application.Features.Results.NowPlaying;
 using LiveSessionService.Application.Features.Results.Stations;
 using LiveSessionService.Application.Features.Results.LiveSessions;
+using LiveSessionService.Application.Features.Music.Commands.UploadMusic;
+using LiveSessionService.Application.Features.Playlists.Commands.CreatePlaylist;
+using LiveSessionService.Application.Features.Playlists.Commands.AddMediaToPlaylist;
+using LiveSessionService.Application.Features.Results.Music;
+using LiveSessionService.Application.Features.Results.Playlists;
 
 namespace LiveSessionService.Application;
 
@@ -44,6 +52,18 @@ public static class DependencyInjection
 
         // Register Station Query Handlers
         services.AddScoped<IQueryHandler<GetAllStationsQuery, List<StationResult>>, GetAllStationsHandler>();
+        services.AddScoped<IQueryHandler<GetStationNowPlayingQuery, StationNowPlayingResult>, GetStationNowPlayingHandler>();
+
+        // Register Playlist Command Handlers
+        services.AddScoped<ICommandHandler<CreatePlaylistCommand, PlaylistResult>, CreatePlaylistHandler>();
+        services.AddScoped<ICommandHandler<AddMediaToPlaylistCommand, PlaylistMediaResult>, AddMediaToPlaylistHandler>();
+
+        // Register Music Command Handlers
+        services.AddScoped<ICommandHandler<UploadMusicCommand, MusicResult>, UploadMusicHandler>();
+
+        // Register Music Query Handlers
+        services.AddScoped<IQueryHandler<GetAllMediaFilesQuery, List<MusicResult>>, GetAllMediaFilesHandler>();
+        services.AddScoped<IQueryHandler<GetMediaFilesByStationQuery, List<MusicResult>>, GetMediaFilesByStationHandler>();
 
         // Register LiveSession Query Handlers
         services.AddScoped<IQueryHandler<GetLiveSessionQuery, LiveSessionResult>, GetLiveSessionHandler>();

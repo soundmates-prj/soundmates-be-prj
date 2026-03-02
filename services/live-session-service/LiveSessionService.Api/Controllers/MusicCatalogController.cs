@@ -1,11 +1,16 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using LiveSessionService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
 using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Features.Results.Music;
 using LiveSessionService.Application.Features.Music.Commands.UploadMusic;
+using LiveSessionService.Application.Features.Music.Queries.GetAllMediaFiles;
+using LiveSessionService.Application.Features.Music.Queries.GetMediaFilesByStation;
 using LiveSessionService.Api.Models.Responses;
 using LiveSessionService.Api.Models.Requests.Music;
 using LiveSessionService.Api.Extensions;
+using LiveSessionService.Api.Helpers;
+using System.Security.Claims;
 
 namespace LiveSessionService.Api.Controllers;
 
@@ -16,6 +21,7 @@ namespace LiveSessionService.Api.Controllers;
 [ApiController]
 [Route("api/v1/[controller]")]
 [Produces("application/json")]
+[Authorize]
 public class MusicCatalogController : ControllerBase
 {
     private readonly ICommandDispatcher _commands;
@@ -30,6 +36,32 @@ public class MusicCatalogController : ControllerBase
         _commands = commands;
         _queries = queries;
         this._logger = _logger;
+    }
+
+    /// <summary>
+    /// Get all media files in music catalog
+    /// </summary>
+    [HttpGet]
+    [ProducesResponseType(typeof(ApiResponse<List<MusicResult>>), 200)]
+    public async Task<IActionResult> GetAllMusic(CancellationToken ct)
+    {
+        var result = await _queries.Send<GetAllMediaFilesQuery, List<MusicResult>>(
+            new GetAllMediaFilesQuery(), ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.Unauthorized => Unauthorized(result.ToApiResponse()),
+                ErrorCode.Forbidden => StatusCode(403, result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                ErrorCode.UnprocessableEntity => StatusCode(422, result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(result.ToApiResponse());
     }
 
     /// <summary>
@@ -58,7 +90,7 @@ public class MusicCatalogController : ControllerBase
         // Validate file type
         var allowedExtensions = new[] { ".mp3", ".flac", ".wav", ".ogg" };
         var extension = Path.GetExtension(request.File.FileName).ToLower();
-        
+
         if (!allowedExtensions.Contains(extension))
         {
             return BadRequest(ApiResponse<object>.FailureResponse(
@@ -66,11 +98,61 @@ public class MusicCatalogController : ControllerBase
                 (int)ErrorCode.BadRequest));
         }
 
-        _logger.LogWarning("UploadMusic handler not yet implemented");
-        
-        return StatusCode(501, ApiResponse<object>.FailureResponse(
-            "Music upload feature coming soon",
-            501));
+        // Copy to MemoryStream — IFormFile stream is not guaranteed to be seekable
+        var ms = new MemoryStream();
+        await request.File.CopyToAsync(ms, ct);
+        ms.Position = 0;
+
+        // Auto-extract ID3/Vorbis tags from file so users don't have to fill them manually
+        string? tagTitle = null, tagArtist = null, tagAlbum = null;
+        try
+        {
+            var abstraction = new TagLibStreamAbstraction(ms, request.File.FileName);
+            using var tagFile = TagLib.File.Create(abstraction);
+            tagTitle  = string.IsNullOrWhiteSpace(tagFile.Tag.Title)  ? null : tagFile.Tag.Title.Trim();
+            tagArtist = tagFile.Tag.Performers?.Length > 0
+                ? string.Join(", ", tagFile.Tag.Performers).Trim()
+                : null;
+            tagAlbum  = string.IsNullOrWhiteSpace(tagFile.Tag.Album)  ? null : tagFile.Tag.Album.Trim();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not read tags from {FileName} — using request values or fallbacks",
+                request.File.FileName);
+        }
+
+        ms.Position = 0;
+
+        // Priority: request field > file tag > fallback
+        var title  = (!string.IsNullOrWhiteSpace(request.Title)  ? request.Title  : tagTitle)
+                     ?? Path.GetFileNameWithoutExtension(request.File.FileName);
+        var artist = (!string.IsNullOrWhiteSpace(request.Artist) ? request.Artist : tagArtist)
+                     ?? "Unknown Artist";
+        var album  = !string.IsNullOrWhiteSpace(request.Album)   ? request.Album  : tagAlbum;
+
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? throw new InvalidOperationException("User ID claim missing from token"));
+
+        var result = await _commands.Send<UploadMusicCommand, MusicResult>(
+            new UploadMusicCommand(request.StationId, userId, title, artist, album,
+                ms, request.File.FileName, request.File.ContentType), ct);
+
+        await ms.DisposeAsync();
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.Unauthorized => Unauthorized(result.ToApiResponse()),
+                ErrorCode.Forbidden => StatusCode(403, result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                ErrorCode.UnprocessableEntity => StatusCode(422, result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return StatusCode(201, result.ToApiResponse());
     }
 
     /// <summary>
@@ -80,11 +162,28 @@ public class MusicCatalogController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<List<MusicResult>>), 200)]
     public async Task<IActionResult> GetStationMusic(Guid stationId, CancellationToken ct)
     {
-        _logger.LogWarning("GetStationMusic not yet implemented");
+        _logger.LogInformation("GetStationMusic: API called with StationId={StationId}", stationId);
         
-        return Ok(ApiResponse<List<MusicResult>>.SuccessResponse(
-            new List<MusicResult>(),
-            "Feature coming soon"));
+        var result = await _queries.Send<GetMediaFilesByStationQuery, List<MusicResult>>(
+            new GetMediaFilesByStationQuery(stationId), ct);
+
+        _logger.LogInformation("GetStationMusic: Query completed. IsSuccess={IsSuccess}, ResultCount={Count}, ErrorCode={ErrorCode}",
+            result.IsSuccess, result.Data?.Count ?? 0, result.ErrorCode);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.Unauthorized => Unauthorized(result.ToApiResponse()),
+                ErrorCode.Forbidden => StatusCode(403, result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                ErrorCode.UnprocessableEntity => StatusCode(422, result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(result.ToApiResponse());
     }
 
     /// <summary>
@@ -100,5 +199,47 @@ public class MusicCatalogController : ControllerBase
         return StatusCode(501, ApiResponse<object>.FailureResponse(
             "Delete music feature coming soon",
             501));
+    }
+
+    /// <summary>
+    /// DEBUG: Get database statistics for troubleshooting
+    /// </summary>
+    [HttpGet("debug/stats")]
+    [ProducesResponseType(typeof(ApiResponse<object>), 200)]
+    public async Task<IActionResult> GetDebugStats(CancellationToken ct)
+    {
+        try
+        {
+            var allMusic = await _queries.Send<GetAllMediaFilesQuery, List<MusicResult>>(
+                new GetAllMediaFilesQuery(), ct);
+
+            var mediaFilesList = allMusic.Data?.Select(m => new
+            {
+                m.Id,
+                m.StationId,
+                m.Title,
+                m.Artist,
+                m.FileUrl
+            }).ToList();
+
+            var stats = new
+            {
+                TotalMediaFiles = allMusic.Data?.Count ?? 0,
+                StationIds = allMusic.Data?
+                    .Select(m => m.StationId)
+                    .Distinct()
+                    .ToList() ?? new List<Guid>(),
+                MediaFiles = (object?)(mediaFilesList) ?? new List<object>()
+            };
+
+            return Ok(ApiResponse<object>.SuccessResponse(stats));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting debug stats");
+            return StatusCode(500, ApiResponse<object>.FailureResponse(
+                $"Error: {ex.Message}",
+                500));
+        }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using LiveSessionService.Application.Enums;
+using LiveSessionService.Application.Exceptions;
 using LiveSessionService.Api.Models.Responses;
 using System.Net;
 using System.Text.Json;
@@ -41,6 +42,17 @@ public sealed class GlobalExceptionMiddleware
     private async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
         context.Response.ContentType = "application/json";
+
+        // AzuraCast-specific errors carry their own HTTP status code
+        if (exception is AzuraCastException azEx)
+        {
+            context.Response.StatusCode = (int)azEx.ErrorCode;
+            var azResponse = ApiResponse<object>.FailureResponse(azEx.Message, (int)azEx.ErrorCode);
+            await context.Response.WriteAsync(JsonSerializer.Serialize(azResponse,
+                new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
+            return;
+        }
+
         context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
 
         var response = ApiResponse<object>.FailureResponse(

@@ -81,9 +81,35 @@ public sealed class SyncStationsHandler : ICommandHandler<SyncStationsCommand, S
                             apiBaseUrl: null,
                             dateTimeProvider: _dateTimeProvider);
 
+                        newStation.StationShortcode = station.Shortcode;
+                        newStation.PublicPlayerUrl = station.PublicPlayerUrl;
+
                         await _stationRepository.AddAsync(newStation, cancellationToken);
+
+                        // Sync mounts
+                        if (station.Mounts?.Count > 0)
+                        {
+                            var now = _dateTimeProvider.UtcNow;
+                            var mounts = station.Mounts.Select(m => new StationMount
+                            {
+                                Id = Guid.NewGuid(),
+                                AzuraCastStationId = newStation.Id,
+                                ExternalMountId = m.Id,
+                                MountName = m.Name ?? m.Path ?? "/stream",
+                                MountPath = m.Path ?? "/stream",
+                                MountUrl = m.Url,
+                                IsDefault = m.IsDefault,
+                                Bitrate = m.Bitrate,
+                                Format = m.Format,
+                                CurrentListeners = m.Listeners?.Current,
+                                UniqueListeners = m.Listeners?.Unique,
+                                IsEnabled = true,
+                                CreatedAt = now
+                            });
+                            await _stationRepository.SyncMountsAsync(newStation.Id, mounts, cancellationToken);
+                        }
+
                         result.CreatedStations++;
-                        
                         _logger.LogInformation(
                             "Created station: {StationName} (External ID: {ExternalId})",
                             station.Name, station.Id);
@@ -115,6 +141,18 @@ public sealed class SyncStationsHandler : ICommandHandler<SyncStationsCommand, S
                             hasChanges = true;
                         }
 
+                        // Update shortcode and publicPlayerUrl
+                        if (existing.StationShortcode != station.Shortcode)
+                        {
+                            existing.StationShortcode = station.Shortcode;
+                            hasChanges = true;
+                        }
+                        if (existing.PublicPlayerUrl != station.PublicPlayerUrl)
+                        {
+                            existing.PublicPlayerUrl = station.PublicPlayerUrl;
+                            hasChanges = true;
+                        }
+
                         // Mark sync successful
                         existing.MarkSyncSuccessful(_dateTimeProvider);
 
@@ -122,19 +160,40 @@ public sealed class SyncStationsHandler : ICommandHandler<SyncStationsCommand, S
                         {
                             await _stationRepository.UpdateAsync(existing, cancellationToken);
                             result.UpdatedStations++;
-                            
                             _logger.LogInformation(
                                 "Updated station: {StationName} (External ID: {ExternalId})",
                                 station.Name, station.Id);
                         }
                         else
                         {
-                            // No changes, just update sync timestamp
                             await _stationRepository.UpdateAsync(existing, cancellationToken);
-                            
                             _logger.LogDebug(
                                 "No changes for station: {StationName} (External ID: {ExternalId})",
                                 station.Name, station.Id);
+                        }
+
+                        // Sync mounts
+                        if (station.Mounts?.Count > 0)
+                        {
+                            var now = _dateTimeProvider.UtcNow;
+                            var mounts = station.Mounts.Select(m => new StationMount
+                            {
+                                Id = Guid.NewGuid(),
+                                AzuraCastStationId = existing.Id,
+                                ExternalMountId = m.Id,
+                                MountName = m.Name ?? m.Path ?? "/stream",
+                                MountPath = m.Path ?? "/stream",
+                                MountUrl = m.Url,
+                                IsDefault = m.IsDefault,
+                                Bitrate = m.Bitrate,
+                                Format = m.Format,
+                                CurrentListeners = m.Listeners?.Current,
+                                UniqueListeners = m.Listeners?.Unique,
+                                IsEnabled = true,
+                                CreatedAt = now,
+                                UpdatedAt = now
+                            });
+                            await _stationRepository.SyncMountsAsync(existing.Id, mounts, cancellationToken);
                         }
                     }
                 }

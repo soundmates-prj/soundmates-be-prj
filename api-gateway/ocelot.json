@@ -72,7 +72,7 @@
 
     // === ROLE COMMANDS ===
     {
-      "DownstreamPathTemplate": "/api/v1/role/{everything}",
+      "DownstreamPathTemplate": "/api/v1/roles/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
@@ -86,7 +86,7 @@
 
     // === ROLE QUERIES ===
     {
-      "DownstreamPathTemplate": "/api/v1/role/{everything}",
+      "DownstreamPathTemplate": "/api/v1/roles/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
@@ -99,7 +99,7 @@
     },
     // === ROLE QUERIES (friendly path) ===
     {
-      "DownstreamPathTemplate": "/api/v1/role",
+      "DownstreamPathTemplate": "/api/v1/roles",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
@@ -111,7 +111,7 @@
       "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
     },
     {
-      "DownstreamPathTemplate": "/api/v1/role/{everything}",
+      "DownstreamPathTemplate": "/api/v1/roles/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
@@ -121,6 +121,110 @@
       ],
       "UpstreamPathTemplate": "/api/v1/role/{everything}",
       "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+    },
+
+    // === ROLE QUERIES (plural path) ===
+    {
+      "DownstreamPathTemplate": "/api/v1/roles",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "auth-query-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/roles",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/roles/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "auth-query-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/roles/{everything}",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+    },
+
+    // === ROLE COMMANDS (plural path) ===
+    {
+      "DownstreamPathTemplate": "/api/v1/roles/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "auth-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/command/roles/{everything}",
+      "UpstreamHttpMethod": [ "POST", "PUT", "DELETE", "OPTIONS" ]
+    },
+
+    // === LIVE SESSION: Music Catalog ===
+    {
+      "DownstreamPathTemplate": "/api/v1/MusicCatalog",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "live-session-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/live-session/music",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/MusicCatalog/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "live-session-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/live-session/music/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "DELETE", "OPTIONS" ]
+    },
+
+    // === LIVE SESSION: Station ===
+    {
+      "DownstreamPathTemplate": "/api/v1/Station",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "live-session-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/station",
+      "UpstreamHttpMethod": [ "GET", "POST", "OPTIONS" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/Station/{id}/now-playing",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "live-session-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/station/{id}/now-playing",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/Station/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "live-session-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/station/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "OPTIONS" ]
     }
   ]
 }
