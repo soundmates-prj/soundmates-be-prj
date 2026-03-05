@@ -37,6 +37,7 @@ public sealed class RabbitMqPublisher : IMessageBusPublisher
         return _connection;
     }
 
+    // Pubish message to RabbitMQ exchange with topic type
     public async Task PublishAsync(string type, string payload, CancellationToken ct = default)
     {
         const string exchange = "auth.users";

@@ -30,6 +30,7 @@
 	
 	<ItemGroup>
 		<Folder Include="BackgroundJobs\" />
+		<Folder Include="ExternalServices\AzuraCast\ApiModels\" />
 	</ItemGroup>
 
 	<ItemGroup>

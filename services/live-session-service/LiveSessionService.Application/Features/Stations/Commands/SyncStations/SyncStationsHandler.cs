@@ -2,6 +2,7 @@ using LiveSessionService.Application.Abstractions;
 using LiveSessionService.Application.Abstractions.Messaging;
 using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Features.Results;
+using LiveSessionService.Application.Features.Results.Stations;
 using LiveSessionService.Domain.Entities;
 using LiveSessionService.Domain.Exceptions;
 using LiveSessionService.Domain.Interfaces;
@@ -10,14 +11,7 @@ using Microsoft.Extensions.Logging;
 namespace LiveSessionService.Application.Features.Stations.Commands.SyncStations;
 
 /// <summary>
-/// Handler for syncing stations from AzuraCast to local database
-/// 
-/// RESPONSIBILITIES:
-/// 1. Fetch all stations from AzuraCast API
-/// 2. For each station:
-///    - Check if exists in DB (by ExternalStationId)
-///    - Create new or update existing station
-/// 3. Return sync statistics
+/// Handler for syncing stations from AzuraCast to local database with enhanced error handling
 /// </summary>
 public sealed class SyncStationsHandler : ICommandHandler<SyncStationsCommand, SyncStationsResult>
 {
@@ -46,19 +40,15 @@ public sealed class SyncStationsHandler : ICommandHandler<SyncStationsCommand, S
         {
             _logger.LogInformation("Starting station sync from AzuraCast");
 
-            // 1. Fetch all stations from AzuraCast
+            // Fetch stations with error handling
             var azuraCastStations = await _azuraCastClient.GetStationsAsync(cancellationToken);
 
             if (azuraCastStations == null || azuraCastStations.Count == 0)
             {
                 _logger.LogWarning("No stations found in AzuraCast");
-                return Result<SyncStationsResult>.Success(new SyncStationsResult
-                {
-                    TotalStations = 0,
-                    CreatedStations = 0,
-                    UpdatedStations = 0,
-                    FailedStations = 0
-                });
+                return Result<SyncStationsResult>.Failure(
+                    "No stations found in AzuraCast. Please add stations in AzuraCast admin panel first.",
+                    ErrorCode.NotFound);
             }
 
             _logger.LogInformation("Found {Count} stations in AzuraCast", azuraCastStations.Count);
@@ -69,120 +59,187 @@ public sealed class SyncStationsHandler : ICommandHandler<SyncStationsCommand, S
                 CreatedStations = 0,
                 UpdatedStations = 0,
                 FailedStations = 0,
-                Errors = new List<string>()
+                Errors = new List<string>(),
+                SyncedAt = _dateTimeProvider.UtcNow
             };
 
-            // 2. Process each station
-            foreach (var azuraCastStation in azuraCastStations)
+            // Process each station
+            foreach (var station in azuraCastStations)
             {
                 try
                 {
-                    // Check if station exists in DB
-                    var existingStation = await _stationRepository.GetByExternalIdAsync(
-                        azuraCastStation.Id,
-                        cancellationToken);
+                    var existing = await _stationRepository.GetByExternalIdAsync(station.Id, cancellationToken);
 
-                    if (existingStation == null)
+                    if (existing == null)
                     {
                         // Create new station
-                        // Use ListenUrl from API, or construct default if not provided
-                        var streamUrl = azuraCastStation.ListenUrl ?? azuraCastStation.PublicPlayerUrl ?? "http://unknown";
-                        var apiBaseUrl = !string.IsNullOrEmpty(azuraCastStation.PublicPlayerUrl) 
-                            ? new Uri(azuraCastStation.PublicPlayerUrl).GetLeftPart(UriPartial.Authority)
-                            : null;
-
                         var newStation = AzuraCastStation.Create(
-                            externalStationId: azuraCastStation.Id,
-                            stationName: azuraCastStation.Name,
-                            streamUrl: streamUrl,
-                            apiBaseUrl: apiBaseUrl,
-                            description: azuraCastStation.Description,
+                            externalStationId: station.Id,
+                            stationName: station.Name,
+                            streamUrl: station.ListenUrl ?? "http://unknown",
+                            description: station.Description,
+                            apiBaseUrl: null,
                             dateTimeProvider: _dateTimeProvider);
 
-                        // Set additional properties
-                        newStation.StationShortcode = azuraCastStation.Shortcode;
-                        newStation.PublicPlayerUrl = azuraCastStation.PublicPlayerUrl;
-
-                        // Mark as synced
-                        newStation.MarkSyncSuccessful(_dateTimeProvider);
+                        newStation.StationShortcode = station.Shortcode;
+                        newStation.PublicPlayerUrl = station.PublicPlayerUrl;
 
                         await _stationRepository.AddAsync(newStation, cancellationToken);
 
-                        result.CreatedStations++;
+                        // Sync mounts
+                        if (station.Mounts?.Count > 0)
+                        {
+                            var now = _dateTimeProvider.UtcNow;
+                            var mounts = station.Mounts.Select(m => new StationMount
+                            {
+                                Id = Guid.NewGuid(),
+                                AzuraCastStationId = newStation.Id,
+                                ExternalMountId = m.Id,
+                                MountName = m.Name ?? m.Path ?? "/stream",
+                                MountPath = m.Path ?? "/stream",
+                                MountUrl = m.Url,
+                                IsDefault = m.IsDefault,
+                                Bitrate = m.Bitrate,
+                                Format = m.Format,
+                                CurrentListeners = m.Listeners?.Current,
+                                UniqueListeners = m.Listeners?.Unique,
+                                IsEnabled = true,
+                                CreatedAt = now
+                            });
+                            await _stationRepository.SyncMountsAsync(newStation.Id, mounts, cancellationToken);
+                        }
 
+                        result.CreatedStations++;
                         _logger.LogInformation(
                             "Created station: {StationName} (External ID: {ExternalId})",
-                            newStation.StationName,
-                            newStation.ExternalStationId);
+                            station.Name, station.Id);
                     }
                     else
                     {
-                        // Update existing station
-                        var streamUrl = azuraCastStation.ListenUrl ?? azuraCastStation.PublicPlayerUrl ?? existingStation.StreamUrl;
-                        var apiBaseUrl = !string.IsNullOrEmpty(azuraCastStation.PublicPlayerUrl) 
-                            ? new Uri(azuraCastStation.PublicPlayerUrl).GetLeftPart(UriPartial.Authority)
-                            : existingStation.ApiBaseUrl;
+                        // Update existing station if data changed
+                        var hasChanges = false;
 
-                        existingStation.UpdateDetails(
-                            stationName: azuraCastStation.Name,
-                            description: azuraCastStation.Description,
-                            streamUrl: streamUrl,
-                            apiBaseUrl: apiBaseUrl,
-                            dateTimeProvider: _dateTimeProvider);
+                        // Check and update station name
+                        if (existing.StationName != station.Name)
+                        {
+                            existing.UpdateStationName(station.Name, _dateTimeProvider);
+                            hasChanges = true;
+                        }
 
-                        // Update additional properties
-                        existingStation.StationShortcode = azuraCastStation.Shortcode;
-                        existingStation.PublicPlayerUrl = azuraCastStation.PublicPlayerUrl;
+                        // Check and update stream URL
+                        var newStreamUrl = station.ListenUrl ?? existing.StreamUrl;
+                        if (existing.StreamUrl != newStreamUrl)
+                        {
+                            existing.UpdateStreamUrl(newStreamUrl, _dateTimeProvider);
+                            hasChanges = true;
+                        }
 
-                        // Mark as synced
-                        existingStation.MarkSyncSuccessful(_dateTimeProvider);
+                        // Check and update description
+                        if (existing.Description != station.Description)
+                        {
+                            existing.UpdateDescription(station.Description, _dateTimeProvider);
+                            hasChanges = true;
+                        }
 
-                        await _stationRepository.UpdateAsync(existingStation, cancellationToken);
+                        // Update shortcode and publicPlayerUrl
+                        if (existing.StationShortcode != station.Shortcode)
+                        {
+                            existing.StationShortcode = station.Shortcode;
+                            hasChanges = true;
+                        }
+                        if (existing.PublicPlayerUrl != station.PublicPlayerUrl)
+                        {
+                            existing.PublicPlayerUrl = station.PublicPlayerUrl;
+                            hasChanges = true;
+                        }
 
-                        result.UpdatedStations++;
+                        // Mark sync successful
+                        existing.MarkSyncSuccessful(_dateTimeProvider);
 
-                        _logger.LogInformation(
-                            "Updated station: {StationName} (External ID: {ExternalId})",
-                            existingStation.StationName,
-                            existingStation.ExternalStationId);
+                        if (hasChanges)
+                        {
+                            await _stationRepository.UpdateAsync(existing, cancellationToken);
+                            result.UpdatedStations++;
+                            _logger.LogInformation(
+                                "Updated station: {StationName} (External ID: {ExternalId})",
+                                station.Name, station.Id);
+                        }
+                        else
+                        {
+                            await _stationRepository.UpdateAsync(existing, cancellationToken);
+                            _logger.LogDebug(
+                                "No changes for station: {StationName} (External ID: {ExternalId})",
+                                station.Name, station.Id);
+                        }
+
+                        // Sync mounts
+                        if (station.Mounts?.Count > 0)
+                        {
+                            var now = _dateTimeProvider.UtcNow;
+                            var mounts = station.Mounts.Select(m => new StationMount
+                            {
+                                Id = Guid.NewGuid(),
+                                AzuraCastStationId = existing.Id,
+                                ExternalMountId = m.Id,
+                                MountName = m.Name ?? m.Path ?? "/stream",
+                                MountPath = m.Path ?? "/stream",
+                                MountUrl = m.Url,
+                                IsDefault = m.IsDefault,
+                                Bitrate = m.Bitrate,
+                                Format = m.Format,
+                                CurrentListeners = m.Listeners?.Current,
+                                UniqueListeners = m.Listeners?.Unique,
+                                IsEnabled = true,
+                                CreatedAt = now,
+                                UpdatedAt = now
+                            });
+                            await _stationRepository.SyncMountsAsync(existing.Id, mounts, cancellationToken);
+                        }
                     }
-                }
-                catch (DomainException ex)
-                {
-                    result.FailedStations++;
-                    result.Errors.Add($"Station {azuraCastStation.Name}: {ex.Message}");
-
-                    _logger.LogWarning(ex,
-                        "Failed to sync station {StationName} (ID: {StationId}): {Message}",
-                        azuraCastStation.Name,
-                        azuraCastStation.Id,
-                        ex.Message);
                 }
                 catch (Exception ex)
                 {
                     result.FailedStations++;
-                    result.Errors.Add($"Station {azuraCastStation.Name}: Unexpected error");
-
-                    _logger.LogError(ex,
-                        "Unexpected error syncing station {StationName} (ID: {StationId})",
-                        azuraCastStation.Name,
-                        azuraCastStation.Id);
+                    result.Errors.Add($"Station '{station.Name}' (ID: {station.Id}): {ex.Message}");
+                    _logger.LogError(ex, "Failed to process station {StationId}", station.Id);
                 }
             }
 
             _logger.LogInformation(
-                "Station sync completed. Created: {Created}, Updated: {Updated}, Failed: {Failed}",
-                result.CreatedStations,
-                result.UpdatedStations,
-                result.FailedStations);
+                "Sync completed: {Total} total, {Created} created, {Updated} updated, {Failed} failed",
+                result.TotalStations, result.CreatedStations, result.UpdatedStations, result.FailedStations);
 
             return Result<SyncStationsResult>.Success(result);
         }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP error from AzuraCast");
+            
+            var errorMessage = ex.StatusCode switch
+            {
+                System.Net.HttpStatusCode.Unauthorized =>
+                    "Authentication failed with AzuraCast. Please verify your API key configuration.",
+                System.Net.HttpStatusCode.ServiceUnavailable =>
+                    "AzuraCast service is unavailable. Please ensure it is running.",
+                _ => $"Failed to connect to AzuraCast: {ex.Message}"
+            };
+
+            var errorCode = ex.StatusCode == System.Net.HttpStatusCode.Unauthorized
+                ? ErrorCode.Unauthorized
+                : ErrorCode.ServiceUnavailable;
+
+            return Result<SyncStationsResult>.Failure(errorMessage, errorCode);
+        }
+        catch (DomainException ex)
+        {
+            _logger.LogWarning(ex, "Domain validation failed");
+            return Result<SyncStationsResult>.Failure(ex.Message, (ErrorCode)ex.StatusCode);
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to sync stations from AzuraCast");
+            _logger.LogError(ex, "Unexpected error during sync");
             return Result<SyncStationsResult>.Failure(
-                "Failed to sync stations from AzuraCast",
+                $"An unexpected error occurred: {ex.Message}",
                 ErrorCode.InternalServerError);
         }
     }

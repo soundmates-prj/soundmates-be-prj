@@ -92,6 +92,44 @@ public partial class LiveSession
     }
 
     /// <summary>
+    /// Starts the live session
+    /// 
+    /// BUSINESS RULES:
+    /// - Session must not be already active
+    /// - Sets status to Live and records start time
+    /// </summary>
+    /// <exception cref="InvalidSessionStateException">When session is already active</exception>
+    public void Start(IDateTimeProvider dateTimeProvider)
+    {
+        if (Status == SessionStatus.Live)
+            throw new InvalidSessionStateException(
+                "Session is already active",
+                LiveSessionErrorCodes.SessionAlreadyActive);
+
+        if (Status == SessionStatus.Ended)
+            throw new InvalidSessionStateException(
+                "Cannot restart an ended session",
+                LiveSessionErrorCodes.SessionAlreadyEnded);
+
+        Status = SessionStatus.Live;
+        StartedAt = dateTimeProvider.UtcNow;
+        UpdatedAt = dateTimeProvider.UtcNow;
+    }
+
+    /// <summary>
+    /// Stops/Ends the live session
+    /// 
+    /// BUSINESS RULES:
+    /// - Session must be in Active state
+    /// - Cannot end a session that's already ended
+    /// </summary>
+    /// <exception cref="InvalidSessionStateException">When session is not active</exception>
+    public void Stop(IDateTimeProvider dateTimeProvider)
+    {
+        End(dateTimeProvider);
+    }
+
+    /// <summary>
     /// Ends the live session
     /// 
     /// BUSINESS RULES:

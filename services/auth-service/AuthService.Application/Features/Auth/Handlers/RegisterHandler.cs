@@ -1,16 +1,13 @@
 using AuthService.Application.Abstractions.Messaging;
-using AuthService.Application.Configuration;
 using AuthService.Application.Mappings;
 using AuthService.Application.Results;
 using AuthService.Application.Features.Auth.Commands;
 using AuthService.Application.Features.Common;
-using AuthService.Domain.Entities;
 using AuthService.Domain.Enums;
 using AuthService.Domain.Exceptions;
 using AuthService.Domain.Interfaces;
 using AuthService.Domain.Rules;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace AuthService.Application.Features.Auth.Handlers;
 
@@ -18,34 +15,25 @@ public sealed class RegisterHandler : ICommandHandler<RegisterCommand, AuthResul
 {
     private readonly IAuthRepository _repo;
     private readonly IOutboxRepository _outbox;
-    private readonly AppSettings _appSettings;
     private readonly ILogger<RegisterHandler> _logger;
     private readonly IOtpService _otpService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IJwtTokenGenerator _jwt;
-    private readonly IRefreshTokenRepository _refreshTokenRepository;
 
     public RegisterHandler(
         IAuthRepository repo, 
         IOutboxRepository outbox,
-        IOptions<AppSettings> appSettings,
         ILogger<RegisterHandler> logger,
         IOtpService otpService,
         IDateTimeProvider dateTimeProvider,
-        IUnitOfWork unitOfWork,
-        IJwtTokenGenerator jwt,
-        IRefreshTokenRepository refreshTokenRepository)
+        IUnitOfWork unitOfWork)
     {
         _repo = repo;
         _outbox = outbox;
-        _appSettings = appSettings.Value;
         _logger = logger;
         _otpService = otpService;
         _dateTimeProvider = dateTimeProvider;
         _unitOfWork = unitOfWork;
-        _jwt = jwt;
-        _refreshTokenRepository = refreshTokenRepository;
     }
 
     public async Task<Result<AuthResult>> Handle(RegisterCommand command, CancellationToken cancellationToken)
@@ -133,26 +121,16 @@ public sealed class RegisterHandler : ICommandHandler<RegisterCommand, AuthResul
                 _logger.LogError(ex, "Failed to send verification email to {Email}. User can verify later.", user.Email);
             }
 
-            // Generate tokens for immediate login after registration
-            var (accessToken, refreshToken) = _jwt.GenerateTokenPair(user);
+            // Don't generate tokens during registration
+            // User must verify email first, then login to receive tokens
+            // This ensures isActive = true before issuing access tokens
             
-            // Save refresh token
-            var refreshTokenEntity = new RefreshToken
-            {
-                Id = Guid.NewGuid(),
-                UserId = user.Id,
-                Token = refreshToken,
-                ExpiresAt = _dateTimeProvider.UtcNow.AddDays(7),
-                CreatedAt = _dateTimeProvider.UtcNow,
-                IsRevoked = false
-            };
-            await _refreshTokenRepository.AddAsync(refreshTokenEntity);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-            
-            // Map to AuthResult
-            var authResult = user.ToAuthResult(accessToken, refreshToken);
+            // Map to AuthResult without tokens (tokens will be null)
+            var authResult = user.ToAuthResult(null, null);
 
-            return Result<AuthResult>.Success(authResult, "Registration successful. Please check your email to verify your account.");
+            return Result<AuthResult>.Success(
+                authResult, 
+                "Registration successful. Please check your email to verify your account before logging in.");
         }
         catch (Application.Exceptions.AuthException ex)
         {

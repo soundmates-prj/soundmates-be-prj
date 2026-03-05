@@ -12,6 +12,7 @@ public interface ILiveSessionRepository
     Task<List<LiveSession>> GetActiveSessionsAsync(CancellationToken cancellationToken = default);
     Task<List<LiveSession>> GetByHostUserIdAsync(Guid hostUserId, CancellationToken cancellationToken = default);
     Task<LiveSession?> GetByIdWithStationAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<List<LiveSession>> GetAllWithStationsAsync(CancellationToken cancellationToken = default);
     Task AddAsync(LiveSession session, CancellationToken cancellationToken = default);
     Task UpdateAsync(LiveSession session, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);

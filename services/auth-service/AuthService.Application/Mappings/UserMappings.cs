@@ -34,12 +34,11 @@ public static class UserMappings
 
     /// <summary>
     /// Map Domain User + tokens to Application AuthResult
+    /// Tokens can be null for unverified users (registration without immediate login)
     /// </summary>
-    public static AuthResult ToAuthResult(this User user, string accessToken, string refreshToken)
+    public static AuthResult ToAuthResult(this User user, string? accessToken, string? refreshToken)
     {
         if (user == null) throw new ArgumentNullException(nameof(user));
-        if (string.IsNullOrEmpty(accessToken)) throw new ArgumentNullException(nameof(accessToken));
-        if (string.IsNullOrEmpty(refreshToken)) throw new ArgumentNullException(nameof(refreshToken));
 
         return new AuthResult
         {

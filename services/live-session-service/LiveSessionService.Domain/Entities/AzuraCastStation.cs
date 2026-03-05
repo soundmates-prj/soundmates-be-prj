@@ -44,11 +44,3 @@ public partial class AzuraCastStation
     
     public virtual ICollection<StationMount> Mounts { get; set; } = new List<StationMount>();
 }
-
-public enum StationSyncStatus
-{
-    NotSynced = 0,
-    Syncing = 1,
-    Synced = 2,
-    Failed = 3
-}

@@ -17,14 +17,33 @@ public interface IAzuraCastClient
     Task<List<AzuraCastStationListData>> GetStationsAsync(
         CancellationToken cancellationToken = default);
     
-    /// <summary>
-    /// Gets now playing information for a station
-    /// BaseUrl ???c config trong Infrastructure qua HttpClient DI
-    /// </summary>
-    /// <param name="stationId">Station ID (integer: 1, 2, 3...)</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Application model (not API model)</returns>
+    /// <summary>Gets now playing information for a station</summary>
     Task<AzuraCastNowPlayingData?> GetNowPlayingAsync(
         int stationId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Creates a playlist in AzuraCast for the given station</summary>
+    Task<AzuraCastPlaylistData?> CreatePlaylistAsync(
+        int stationId,
+        string name,
+        bool isAutoPlay,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Uploads an audio file to AzuraCast station media library</summary>
+    Task<AzuraCastMediaData?> UploadMediaAsync(
+        int stationId,
+        Stream fileStream,
+        string fileName,
+        string contentType,
+        string title,
+        string artist,
+        string? album,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Assigns an existing AzuraCast media file to a playlist</summary>
+    Task AssignMediaToPlaylistAsync(
+        int stationId,
+        string fileUniqueId,
+        int playlistId,
         CancellationToken cancellationToken = default);
 }
