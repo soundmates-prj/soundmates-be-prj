@@ -51,6 +51,9 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 
+// Auto-apply pending EF Core migrations on startup
+await app.MigrateDatabaseAsync();
+
 // Configure HTTP Pipeline
 app.UseHttpPipeline();
 
