@@ -2,8 +2,27 @@
   "GlobalConfiguration": {
     "BaseUrl": "http://localhost:8080"
   },
-
+  // ─────────────────────────────────────────────────────────────────────────────
+  // QoSOptions  (Circuit Breaker via Polly — requires Ocelot.Provider.Polly)
+  //   ExceptionsAllowedBeforeBreaking : consecutive failures before circuit OPENS
+  //   DurationOfBreak                 : ms the circuit stays OPEN (rejects fast)
+  //   TimeoutValue                    : ms per individual downstream request
+  //
+  // LoadBalancerOptions  (Ocelot built-in — no extra package needed)
+  //   Type : RoundRobin | LeastConnection | NoLoadBalancer | CookieStickySessions
+  //   To scale a service, add more objects to DownstreamHostAndPorts.
+  //   Example for 2 auth-service replicas:
+  //     "DownstreamHostAndPorts": [
+  //       { "Host": "auth-service",   "Port": 8080 },
+  //       { "Host": "auth-service-2", "Port": 8080 }
+  //     ]
+  // ─────────────────────────────────────────────────────────────────────────────
   "Routes": [
+    // ═══════════════════════════════════════════════════════════
+    // AUTH SERVICE  (Command Side — writes, latency-sensitive)
+    //   Circuit Breaker : opens after 5 errors, stays open 30 s
+    //   Timeout         : 5 s per request
+    // ═══════════════════════════════════════════════════════════
     // === AUTH COMMANDS ===
     {
       "DownstreamPathTemplate": "/api/v1/auth/{everything}",
@@ -13,11 +32,24 @@
           "Host": "auth-service",
           "Port": 8080
         }
+        // scale: add { "Host": "auth-service-2", "Port": 8080 }
       ],
       "UpstreamPathTemplate": "/api/v1/auth/{everything}",
-      "UpstreamHttpMethod": [ "POST", "PUT", "DELETE", "OPTIONS" ]
+      "UpstreamHttpMethod": [
+        "POST",
+        "PUT",
+        "DELETE",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 5000
+      }
     },
-
     // === USER COMMANDS ===
     {
       "DownstreamPathTemplate": "/api/v1/user/{everything}",
@@ -29,48 +61,22 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/command/user/{everything}",
-      "UpstreamHttpMethod": [ "POST", "PUT", "DELETE", "OPTIONS" ]
-    },
-
-    // === USER QUERIES ===
-    {
-      "DownstreamPathTemplate": "/api/v1/user/{everything}",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "auth-query-service",
-          "Port": 8080
-        }
+      "UpstreamHttpMethod": [
+        "POST",
+        "PUT",
+        "DELETE",
+        "OPTIONS"
       ],
-      "UpstreamPathTemplate": "/api/v1/user/{everything}",
-      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 5000
+      }
     },
-    {
-      "DownstreamPathTemplate": "/api/v1/users",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "auth-query-service",
-          "Port": 8080
-        }
-      ],
-      "UpstreamPathTemplate": "/api/v1/users",
-      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
-    },
-    {
-      "DownstreamPathTemplate": "/api/v1/users/{everything}",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "auth-query-service",
-          "Port": 8080
-        }
-      ],
-      "UpstreamPathTemplate": "/api/v1/users/{everything}",
-      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
-    },
-
-    // === ROLE COMMANDS ===
+    // === ROLE COMMANDS (/api/v1/command/role) ===
     {
       "DownstreamPathTemplate": "/api/v1/roles/{everything}",
       "DownstreamScheme": "http",
@@ -81,10 +87,126 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/command/role/{everything}",
-      "UpstreamHttpMethod": [ "POST", "PUT", "DELETE", "OPTIONS" ]
+      "UpstreamHttpMethod": [
+        "POST",
+        "PUT",
+        "DELETE",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 5000
+      }
     },
-
-    // === ROLE QUERIES ===
+    // === ROLE COMMANDS (/api/v1/command/roles) ===
+    {
+      "DownstreamPathTemplate": "/api/v1/roles/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "auth-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/command/roles/{everything}",
+      "UpstreamHttpMethod": [
+        "POST",
+        "PUT",
+        "DELETE",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 5000
+      }
+    },
+    // ═══════════════════════════════════════════════════════════
+    // AUTH QUERY SERVICE  (Query Side — reads, higher tolerance)
+    //   Circuit Breaker : opens after 5 errors, stays open 20 s
+    //   Timeout         : 3 s per request (reads should be fast)
+    // ═══════════════════════════════════════════════════════════
+    // === USER QUERIES (/api/v1/user) ===
+    {
+      "DownstreamPathTemplate": "/api/v1/user/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "auth-query-service",
+          "Port": 8080
+        }
+        // scale: add { "Host": "auth-query-service-2", "Port": 8080 }
+      ],
+      "UpstreamPathTemplate": "/api/v1/user/{everything}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 20000,
+        "TimeoutValue": 3000
+      }
+    },
+    // === USER QUERIES (/api/v1/users) ===
+    {
+      "DownstreamPathTemplate": "/api/v1/users",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "auth-query-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/users",
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 20000,
+        "TimeoutValue": 3000
+      }
+    },
+    // === USER QUERIES (/api/v1/users/{everything}) ===
+    {
+      "DownstreamPathTemplate": "/api/v1/users/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "auth-query-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/users/{everything}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 20000,
+        "TimeoutValue": 3000
+      }
+    },
+    // === ROLE QUERIES (/api/v1/query/role) ===
     {
       "DownstreamPathTemplate": "/api/v1/roles/{everything}",
       "DownstreamScheme": "http",
@@ -95,9 +217,20 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/query/role/{everything}",
-      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 20000,
+        "TimeoutValue": 3000
+      }
     },
-    // === ROLE QUERIES (friendly path) ===
+    // === ROLE QUERIES (friendly: /api/v1/role) ===
     {
       "DownstreamPathTemplate": "/api/v1/roles",
       "DownstreamScheme": "http",
@@ -108,7 +241,18 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/role",
-      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 20000,
+        "TimeoutValue": 3000
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/roles/{everything}",
@@ -120,10 +264,20 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/role/{everything}",
-      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 20000,
+        "TimeoutValue": 3000
+      }
     },
-
-    // === ROLE QUERIES (plural path) ===
+    // === ROLE QUERIES (plural: /api/v1/roles) ===
     {
       "DownstreamPathTemplate": "/api/v1/roles",
       "DownstreamScheme": "http",
@@ -134,7 +288,18 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/roles",
-      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 20000,
+        "TimeoutValue": 3000
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/roles/{everything}",
@@ -146,23 +311,24 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/roles/{everything}",
-      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
-    },
-
-    // === ROLE COMMANDS (plural path) ===
-    {
-      "DownstreamPathTemplate": "/api/v1/roles/{everything}",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "auth-service",
-          "Port": 8080
-        }
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
       ],
-      "UpstreamPathTemplate": "/api/v1/command/roles/{everything}",
-      "UpstreamHttpMethod": [ "POST", "PUT", "DELETE", "OPTIONS" ]
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 20000,
+        "TimeoutValue": 3000
+      }
     },
-
+    // ═══════════════════════════════════════════════════════════
+    // LIVE SESSION SERVICE  (AzuraCast proxy + streaming)
+    //   Circuit Breaker : opens after 5 errors, stays open 30 s
+    //   Timeout         : 8 s (AzuraCast calls may be slower)
+    // ═══════════════════════════════════════════════════════════
     // === LIVE SESSION: Music Catalog ===
     {
       "DownstreamPathTemplate": "/api/v1/MusicCatalog",
@@ -172,9 +338,21 @@
           "Host": "live-session-service",
           "Port": 8080
         }
+        // scale: add { "Host": "live-session-service-2", "Port": 8080 }
       ],
       "UpstreamPathTemplate": "/api/v1/live-session/music",
-      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/MusicCatalog/{everything}",
@@ -186,9 +364,21 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/live-session/music/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "DELETE", "OPTIONS" ]
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "DELETE",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
-
     // === LIVE SESSION: Station ===
     {
       "DownstreamPathTemplate": "/api/v1/Station",
@@ -200,7 +390,19 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/station",
-      "UpstreamHttpMethod": [ "GET", "POST", "OPTIONS" ]
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/Station/{id}/now-playing",
@@ -212,7 +414,18 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/station/{id}/now-playing",
-      "UpstreamHttpMethod": [ "GET", "OPTIONS" ]
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/Station/{everything}",
@@ -224,7 +437,19 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/station/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "OPTIONS" ]
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     }
   ]
 }
