@@ -2,118 +2,126 @@
 
 namespace AccountContentService.Api.Extensions;
 
-
-/// <summary>
-/// Extension methods for environment configuration
-/// Handles .env loading and environment variable mapping
-/// </summary>
 public static class ConfigurationExtensions
 {
     public static WebApplicationBuilder AddEnvironmentConfig(this WebApplicationBuilder builder)
     {
-        // Load .env — prefer API project directory, then CWD, then output dir.
-        // In production, rely on real environment variables.
-        try
-        {
-            var envCandidates = new[]
-            {
-                // bin/Debug/<tfm> -> AuthService.Api
-                Path.Combine(AppContext.BaseDirectory, "../../..", ".env"),
-                // CWD (dotnet run from project dir)
-                Path.Combine(Directory.GetCurrentDirectory(), ".env"),
-                // Back-compat: one directory up (older layout)
-                Path.Combine(Directory.GetCurrentDirectory(), "..", ".env"),
-                // Published output dir
-                Path.Combine(AppContext.BaseDirectory, ".env"),
-            };
+        LoadEnvFile();
 
-            var envFile = envCandidates.FirstOrDefault(File.Exists);
-            if (envFile is not null)
-            {
-                Env.Load(envFile);
-            }
-        }
-        catch (Exception)
-        {
-            // .env file not found, will use appsettings.json or environment variables
-        }
-
-        // Map environment variables to configuration
-        MapEnvironmentVariables(builder.Configuration);
+        MapPostgres(builder.Configuration);
+        MapRabbitMq(builder.Configuration);
+        MapJwt(builder.Configuration);
+        MapGoogle(builder.Configuration);
+        MapEmail(builder.Configuration);
+        MapApp(builder.Configuration);
 
         return builder;
     }
 
-    private static void MapEnvironmentVariables(IConfiguration configuration)
+    private static void LoadEnvFile()
     {
-        foreach (System.Collections.DictionaryEntry envVar in Environment.GetEnvironmentVariables())
+        try
         {
-            var key = envVar.Key?.ToString();
-            var value = envVar.Value?.ToString();
-
-            if (string.IsNullOrEmpty(key) || string.IsNullOrEmpty(value))
-                continue;
-
-            // Map PostgreSQL environment variables
-            if (key.StartsWith("POSTGRES_"))
+            var envCandidates = new[]
             {
-                var host = Environment.GetEnvironmentVariable("POSTGRES_HOST");
-                var port = Environment.GetEnvironmentVariable("POSTGRES_PORT");
-                var database = Environment.GetEnvironmentVariable("POSTGRES_DATABASE");
-                var username = Environment.GetEnvironmentVariable("POSTGRES_USERNAME");
-                var password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD");
+                Path.Combine(Directory.GetCurrentDirectory(), ".env"),
+                Path.Combine(AppContext.BaseDirectory, ".env"),
+                Path.Combine(AppContext.BaseDirectory, "../../..", ".env")
+            };
 
-                if (!string.IsNullOrEmpty(host) && !string.IsNullOrEmpty(port))
-                {
-                    var connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={password};Ssl Mode=Disable;Trust Server Certificate=True;";
-                    configuration["ConnectionStrings:DefaultConnection"] = connectionString;
-                }
+            var envFile = envCandidates.FirstOrDefault(File.Exists);
+
+            if (envFile != null)
+            {
+                Env.Load(envFile);
             }
-
-            // Map RabbitMQ environment variables
-            else if (key == "RABBITMQ_HOST")
-                configuration["RabbitMq:HostName"] = value;
-            else if (key == "RABBITMQ_PORT")
-                configuration["RabbitMq:Port"] = value;
-            else if (key == "RABBITMQ_USERNAME")
-                configuration["RabbitMq:UserName"] = value;
-            else if (key == "RABBITMQ_PASSWORD")
-                configuration["RabbitMq:Password"] = value;
-            else if (key == "RABBITMQ_VIRTUALHOST")
-                configuration["RabbitMq:VirtualHost"] = value;
-
-            // Map JWT environment variables
-            else if (key == "JWT_KEY")
-                configuration["Jwt:Key"] = value;
-            else if (key == "JWT_ISSUER")
-                configuration["Jwt:Issuer"] = value;
-            else if (key == "JWT_AUDIENCE")
-                configuration["Jwt:Audience"] = value;
-            else if (key == "JWT_EXPIRES_IN_HOURS")
-                configuration["Jwt:ExpiresInHours"] = value;
-
-            // Map Google OAuth environment variables
-            else if (key == "GOOGLE_CLIENT_ID")
-                configuration["GoogleOAuth:ClientId"] = value;
-            else if (key == "GOOGLE_CLIENT_SECRET")
-                configuration["GoogleOAuth:ClientSecret"] = value;
-
-            // Map Email environment variables
-            else if (key == "EMAIL_HOST")
-                configuration["EmailSettings:Host"] = value;
-            else if (key == "EMAIL_PORT")
-                configuration["EmailSettings:Port"] = value;
-            else if (key == "EMAIL_FROM")
-                configuration["EmailSettings:From"] = value;
-            else if (key == "EMAIL_USERNAME")
-                configuration["EmailSettings:Username"] = value;
-            else if (key == "EMAIL_PASSWORD")
-                configuration["EmailSettings:Password"] = value;
-
-            // Map App Settings environment variables
-            else if (key == "FRONTEND_URL")
-                configuration["AppSettings:FrontendUrl"] = value;
+        }
+        catch
+        {
+            // Ignore if .env not found
         }
     }
-}
 
+    private static void MapPostgres(IConfiguration configuration)
+    {
+        var host = Environment.GetEnvironmentVariable("POSTGRES_HOST");
+        var port = Environment.GetEnvironmentVariable("POSTGRES_PORT");
+        var database = Environment.GetEnvironmentVariable("POSTGRES_DATABASE");
+        var username = Environment.GetEnvironmentVariable("POSTGRES_USERNAME");
+        var password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD");
+
+        if (!string.IsNullOrEmpty(host))
+        {
+            var connectionString =
+                $"Host={host};Port={port};Database={database};Username={username};Password={password};Ssl Mode=Disable;Trust Server Certificate=True;";
+
+            configuration["ConnectionStrings:DefaultConnection"] = connectionString;
+        }
+    }
+
+    private static void MapRabbitMq(IConfiguration configuration)
+    {
+        configuration["RabbitMq:HostName"] =
+            Environment.GetEnvironmentVariable("RABBITMQ_HOST");
+
+        configuration["RabbitMq:Port"] =
+            Environment.GetEnvironmentVariable("RABBITMQ_PORT");
+
+        configuration["RabbitMq:UserName"] =
+            Environment.GetEnvironmentVariable("RABBITMQ_USERNAME");
+
+        configuration["RabbitMq:Password"] =
+            Environment.GetEnvironmentVariable("RABBITMQ_PASSWORD");
+
+        configuration["RabbitMq:VirtualHost"] =
+            Environment.GetEnvironmentVariable("RABBITMQ_VIRTUALHOST");
+    }
+
+    private static void MapJwt(IConfiguration configuration)
+    {
+        configuration["Jwt:Key"] =
+            Environment.GetEnvironmentVariable("JWT_KEY");
+
+        configuration["Jwt:Issuer"] =
+            Environment.GetEnvironmentVariable("JWT_ISSUER");
+
+        configuration["Jwt:Audience"] =
+            Environment.GetEnvironmentVariable("JWT_AUDIENCE");
+
+        configuration["Jwt:ExpiresInHours"] =
+            Environment.GetEnvironmentVariable("JWT_EXPIRES_IN_HOURS");
+    }
+
+    private static void MapGoogle(IConfiguration configuration)
+    {
+        configuration["GoogleOAuth:ClientId"] =
+            Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID");
+
+        configuration["GoogleOAuth:ClientSecret"] =
+            Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET");
+    }
+
+    private static void MapEmail(IConfiguration configuration)
+    {
+        configuration["EmailSettings:Host"] =
+            Environment.GetEnvironmentVariable("EMAIL_HOST");
+
+        configuration["EmailSettings:Port"] =
+            Environment.GetEnvironmentVariable("EMAIL_PORT");
+
+        configuration["EmailSettings:From"] =
+            Environment.GetEnvironmentVariable("EMAIL_FROM");
+
+        configuration["EmailSettings:Username"] =
+            Environment.GetEnvironmentVariable("EMAIL_USERNAME");
+
+        configuration["EmailSettings:Password"] =
+            Environment.GetEnvironmentVariable("EMAIL_PASSWORD");
+    }
+
+    private static void MapApp(IConfiguration configuration)
+    {
+        configuration["AppSettings:FrontendUrl"] =
+            Environment.GetEnvironmentVariable("FRONTEND_URL");
+    }
+}
