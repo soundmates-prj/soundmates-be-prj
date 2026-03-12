@@ -121,6 +121,138 @@ public sealed class AzuraCastClient : IAzuraCastClient
         }
     }
 
+    public async Task<List<AzuraCastPlaylistData>> GetStationPlaylistsAsync(
+        int stationId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var endpoint = $"api/station/{stationId}/playlists";
+            _logger.LogInformation(
+                "Fetching playlists from AzuraCast for station {StationId}",
+                stationId);
+
+            var apiResponse = await _httpClient.GetFromJsonAsync<List<AzuraCastApiPlaylistResponse>>(
+                endpoint,
+                cancellationToken);
+
+            if (apiResponse == null || apiResponse.Count == 0)
+            {
+                _logger.LogWarning(
+                    "Received empty or null playlists response from AzuraCast for station {StationId}",
+                    stationId);
+                return new List<AzuraCastPlaylistData>();
+            }
+
+            var playlists = apiResponse.Select(p => new AzuraCastPlaylistData
+            {
+                Id = p.Id,
+                Name = p.Name ?? "Unnamed",
+                Type = p.Type,
+                Source = p.Source,
+                Order = p.Order,
+                IsEnabled = p.IsEnabled,
+                IncludeInRequests = p.IncludeInRequests,
+                IncludeInOnDemand = p.IncludeInOnDemand,
+                Weight = p.Weight
+            }).ToList();
+
+            _logger.LogInformation(
+                "Successfully fetched {Count} playlists from AzuraCast for station {StationId}",
+                playlists.Count, stationId);
+
+            return playlists;
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex,
+                "HTTP error fetching playlists from AzuraCast for station {StationId}: {Message}",
+                stationId, ex.Message);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Error fetching playlists from AzuraCast for station {StationId}",
+                stationId);
+            throw;
+        }
+    }
+
+    public async Task<List<AzuraCastStationFileData>> GetStationFilesAsync(
+        int stationId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var endpoint = $"api/station/{stationId}/files";
+            _logger.LogInformation(
+                "Fetching media files from AzuraCast for station {StationId}",
+                stationId);
+
+            var apiResponse = await _httpClient.GetFromJsonAsync<List<AzuraCastApiStationFileResponse>>(
+                endpoint,
+                cancellationToken);
+
+            if (apiResponse == null || apiResponse.Count == 0)
+            {
+                _logger.LogWarning(
+                    "Received empty or null files response from AzuraCast for station {StationId}",
+                    stationId);
+                return new List<AzuraCastStationFileData>();
+            }
+
+            var files = apiResponse.Select(f => new AzuraCastStationFileData
+            {
+                Id = f.Id,
+                UniqueId = f.UniqueId ?? string.Empty,
+                SongId = f.SongId,
+                Text = f.Text,
+                Artist = f.Artist,
+                Title = f.Title,
+                Album = f.Album,
+                Genre = f.Genre,
+                Isrc = f.Isrc,
+                Lyrics = f.Lyrics,
+                Art = f.Art,
+                Path = f.Path ?? string.Empty,
+                Mtime = f.Mtime,
+                UploadedAt = f.UploadedAt,
+                ArtUpdatedAt = f.ArtUpdatedAt,
+                Length = f.Length,
+                LengthText = f.LengthText,
+                Playlists = f.Playlists?.Select(p => new AzuraCastFilePlaylistInfo
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    ShortName = p.ShortName,
+                    Folder = p.Folder,
+                    Count = p.Count
+                }).ToList()
+            }).ToList();
+
+            _logger.LogInformation(
+                "Successfully fetched {Count} media files from AzuraCast for station {StationId}",
+                files.Count, stationId);
+
+            return files;
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex,
+                "HTTP error fetching media files from AzuraCast for station {StationId}: {Message}",
+                stationId, ex.Message);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Error fetching media files from AzuraCast for station {StationId}",
+                stationId);
+            throw;
+        }
+    }
+
     public async Task<AzuraCastPlaylistData?> CreatePlaylistAsync(
         int stationId,
         string name,

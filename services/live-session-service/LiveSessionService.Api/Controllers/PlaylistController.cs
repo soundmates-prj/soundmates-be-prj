@@ -5,6 +5,8 @@ using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Features.Results.Playlists;
 using LiveSessionService.Application.Features.Playlists.Commands.CreatePlaylist;
 using LiveSessionService.Application.Features.Playlists.Commands.AddMediaToPlaylist;
+using LiveSessionService.Application.Features.Playlists.Commands.SyncPlaylists;
+using LiveSessionService.Application.Features.Playlists.Queries.GetPlaylistsByStation;
 using LiveSessionService.Api.Models.Responses;
 using LiveSessionService.Api.Extensions;
 using LiveSessionService.Api.Models.Requests.Playlist;
@@ -62,17 +64,45 @@ public class PlaylistController : ControllerBase
     }
 
     /// <summary>
+    /// Sync playlists from AzuraCast for a specific station
+    /// </summary>
+    /// <param name="stationId">Station ID</param>
+    /// <param name="ct">Cancellation token</param>
+    /// <returns>Sync result with playlist information</returns>
+    [HttpPost("station/{stationId:guid}/sync")]
+    [ProducesResponseType(typeof(ApiResponse<SyncPlaylistsResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 500)]
+    public async Task<IActionResult> SyncStationPlaylists(Guid stationId, CancellationToken ct)
+    {
+        var result = await _commands.Send<SyncPlaylistsCommand, SyncPlaylistsResult>(
+            new SyncPlaylistsCommand(stationId), ct);
+
+        if (!result.IsSuccess)
+            return result.ErrorCode == ErrorCode.NotFound
+                ? NotFound(result.ToApiResponse())
+                : StatusCode(500, result.ToApiResponse());
+
+        return Ok(result.ToApiResponse());
+    }
+
+    /// <summary>
     /// Get all playlists for a station
     /// </summary>
     [HttpGet("station/{stationId:guid}")]
     [ProducesResponseType(typeof(ApiResponse<List<PlaylistResult>>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
     public async Task<IActionResult> GetStationPlaylists(Guid stationId, CancellationToken ct)
     {
-        _logger.LogWarning("GetStationPlaylists not yet implemented");
+        var result = await _queries.Send<GetPlaylistsByStationQuery, List<PlaylistResult>>(
+            new GetPlaylistsByStationQuery(stationId), ct);
 
-        return Ok(ApiResponse<List<PlaylistResult>>.SuccessResponse(
-            new List<PlaylistResult>(),
-            "Feature coming soon"));
+        if (!result.IsSuccess)
+            return result.ErrorCode == ErrorCode.NotFound 
+                ? NotFound(result.ToApiResponse()) 
+                : BadRequest(result.ToApiResponse());
+
+        return Ok(result.ToApiResponse());
     }
 
     /// <summary>

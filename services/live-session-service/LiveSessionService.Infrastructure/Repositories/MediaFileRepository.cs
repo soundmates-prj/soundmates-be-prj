@@ -20,6 +20,10 @@ public sealed class MediaFileRepository : IMediaFileRepository
     public Task<MediaFile?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         => _db.MediaFiles.FirstOrDefaultAsync(f => f.Id == id, cancellationToken);
 
+    public Task<MediaFile?> GetByFilePathAsync(string filePath, CancellationToken cancellationToken = default)
+        => _db.MediaFiles.FirstOrDefaultAsync(f => f.FilePath == filePath, cancellationToken);
+
+
     public async Task<IReadOnlyList<MediaFile>> GetAllAsync(CancellationToken cancellationToken = default)
         => await _db.MediaFiles
             .AsNoTracking()
