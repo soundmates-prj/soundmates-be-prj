@@ -1,5 +1,6 @@
 using Ocelot.DependencyInjection;
 using Ocelot.Middleware;
+using Ocelot.Provider.Polly;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,8 +19,9 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Register Ocelot services
-builder.Services.AddOcelot(builder.Configuration);
+// Register Ocelot + Polly (circuit breaker & timeout per route via QoSOptions in ocelot.json)
+builder.Services.AddOcelot(builder.Configuration)
+                .AddPolly();
 
 var app = builder.Build();
 
