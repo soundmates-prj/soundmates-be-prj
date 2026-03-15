@@ -1,36 +1,55 @@
 ﻿using AccountContentService.Api.Extensions;
 using AccountContentService.Api.Middleware;
+using AccountContentService.Api.Swagger;
+using AccountContentService.Application.DependencyInjection;
+using AccountContentService.Infrastructure.Extensions;
 using AccountContentService.Infrastructure.Persistence;
+
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddEnvironmentConfig();
 
-// Add services
-builder.Services.AddControllers();
-builder.Services.AddOpenApi();
 
-// Add DbContext
+// Controllers
+builder.Services.AddControllers();
+
+
+// Swagger
+builder.Services.AddSwaggerDocs();
+
+
+// Application Layer
+builder.Services
+    .AddApplication()
+    .AddInfrastructure();
+
+
+
+// AutoMapper
+builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+
+
+// FluentValidation
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+
+
+// DbContext
 builder.Services.AddDbContext<AccountContentDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-// Configure services
-builder.AddEnvironmentConfig();    // Load .env and map environment 
-//builder.AddWebApi();                // Controllers, JSON, validation, routing
-//builder.AddSwaggerWithJwt();        // Swagger with JWT Bearer auth
-//builder.AddAuth();                  // JWT authentication + Application/Infrastructure layers
-//builder.AddCorsPolicy();            // CORS configuration
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("DefaultConnection")
+    ));
+
+// Authentication
+builder.Services.AddJwtAuthentication(builder.Configuration);
 
 var app = builder.Build();
 
-//builder.Services
-//    .AddApplicationServices()
-//    .AddInfrastructureServices(builder.Configuration)
-//    .AddJwtAuthentication(builder.Configuration)
-//    .AddSwaggerDocs()
-//    .AddHealthChecks();
 
-// AUTO MIGRATION (tạo DB + apply migration khi container start)
+// AUTO MIGRATION
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AccountContentDbContext>();
@@ -40,20 +59,29 @@ using (var scope = app.Services.CreateScope())
     await DataSeeder.SeedAsync(dbContext);
 }
 
-// Configure pipeline
+
+// Swagger
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
+
+
+// Middleware
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
 
 app.UseHttpsRedirection();
 
-app.UseMiddleware<ExceptionHandlingMiddleware>();
-
 app.UseAuthentication();
+
 app.UseAuthorization();
 
+
 app.MapControllers();
-app.MapHealthChecks("/health");
+
+//app.MapHealthChecks("/health");
+
 
 app.Run();

@@ -4,11 +4,11 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace AccountContentService.Application.Features.BlogPosts.Commands.CreatePost
+namespace AccountContentService.Application.Features.BlogPosts.Commands.UpdatePost
 {
-    public class CreatePostCommand : IRequest<PostDto>
+    public class UpdatePostCommand : IRequest<PostDto>
     {
-        public Guid UserId { get; set; }
+        public Guid PostId { get; set; }
 
         public string Title { get; set; } = string.Empty;
 
@@ -16,7 +16,7 @@ namespace AccountContentService.Application.Features.BlogPosts.Commands.CreatePo
 
         public string? AudioUrl { get; set; }
 
-        public string? Status { get; set; } = "Draft";
+        public string? Status { get; set; } = "Edited";
 
         public string? PrivacyScope { get; set; }
 

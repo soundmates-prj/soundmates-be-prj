@@ -2,7 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AccountContentService.Domain\AccountContentService.Domain.csproj" />
-    <ProjectReference Include="..\AccountContentService.Application\AccountContentService.Application.csproj" />
+	  <ProjectReference Include="..\AccountContentService.Application\AccountContentService.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>

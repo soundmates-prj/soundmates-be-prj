@@ -1,10 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using AccountContentService.Application.Interfaces.Repositories;
+using AccountContentService.Infrastructure.Repositories;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AccountContentService.Infrastructure.Extensions
 {
-    internal class InfrastructureServiceCollectionExtensions
+    public static class InfrastructureServiceCollectionExtensions
     {
+        public static IServiceCollection AddInfrastructure(this IServiceCollection services)
+        {
+            services.AddScoped<IBlogPostRepository, BlogPostRepository>();
+
+            return services;
+        }
     }
 }

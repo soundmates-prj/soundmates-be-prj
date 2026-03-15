@@ -10,7 +10,9 @@ public class AccountContentDbContextFactory
     {
         try
         {
-            Env.Load();
+            Env.Load("../.env");
+
+            Env.Load("../.local.env");
         }
         catch
         {

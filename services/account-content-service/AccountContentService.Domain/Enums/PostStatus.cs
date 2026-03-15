@@ -4,7 +4,11 @@ using System.Text;
 
 namespace AccountContentService.Domain.Enums
 {
-    internal class PostStatus
+    public enum PostStatus
     {
+        Draft,
+        Published,
+        Edited,
+        Archived
     }
 }

@@ -7,8 +7,9 @@ public static class DataSeeder
 {
     public static async Task SeedAsync(AccountContentDbContext context)
     {
-        if (await context.BlogPosts.AnyAsync())
-            return;
+        if (await context.BlogPosts.AnyAsync()) return; // Data already seeded
+
+        var now = DateTime.UtcNow;
 
         var userId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
@@ -45,8 +46,8 @@ public static class DataSeeder
             RequestLimit = 5,
             Description = "Free tier",
             IsActive = true,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = now,
+            UpdatedAt = now
         };
 
         var premiumPlan = new SubscriptionPlan
@@ -58,8 +59,8 @@ public static class DataSeeder
             RequestLimit = 100,
             Description = "Premium plan",
             IsActive = true,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = now,
+            UpdatedAt = now
         };
 
         context.SubscriptionPlans.AddRange(freePlan, premiumPlan);
@@ -70,8 +71,8 @@ public static class DataSeeder
             Id = Guid.NewGuid(),
             UserId = userId,
             PlanId = premiumPlan.Id,
-            StartDate = DateTime.UtcNow,
-            EndDate = DateTime.UtcNow.AddDays(30),
+            StartDate = now,
+            EndDate = now.AddDays(30),
             Status = "active"
         };
 
@@ -82,14 +83,16 @@ public static class DataSeeder
         {
             Id = Guid.NewGuid(),
             UserId = userId,
-            ContentText = "Welcome to Soundmates!",
+            Title = "Welcome to Soundmates",
+            ContentText = "Welcome to Soundmates! This is the first post.",
             MoodTag = "happy",
             PrivacyScope = "public",
+            Status = "published",
             IsGenerated = false,
             IsActive = true,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-            PublishedAt = DateTime.UtcNow
+            CreatedAt = now,
+            UpdatedAt = now,
+            PublishedAt = now
         };
 
         context.BlogPosts.Add(post);
@@ -102,8 +105,8 @@ public static class DataSeeder
             UserId = userId,
             Content = "Great post!",
             Status = "active",
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = now,
+            UpdatedAt = now
         };
 
         context.BlogComments.Add(comment);
@@ -115,7 +118,7 @@ public static class DataSeeder
             PostId = post.Id,
             UserId = userId,
             ReactionType = "like",
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = now
         };
 
         context.PostReactions.Add(reaction);
@@ -128,7 +131,7 @@ public static class DataSeeder
             ContentId = post.Id,
             Reason = "Spam",
             Status = "pending",
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = now
         };
 
         context.ContentReports.Add(report);
@@ -143,8 +146,8 @@ public static class DataSeeder
             TargetId = subscription.Id,
             TotalAmount = 9.99m,
             Status = "completed",
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
+            CreatedAt = now,
+            UpdatedAt = now,
             ExternalReference = "PAY123456"
         };
 
@@ -158,10 +161,10 @@ public static class DataSeeder
             PaymentProvider = "Stripe",
             PaymentMethod = "card",
             Amount = 9.99m,
-            PaymentAt = DateTime.UtcNow,
+            PaymentAt = now,
             TransactionStatus = "success",
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = now,
+            UpdatedAt = now
         };
 
         context.PaymentTransactions.Add(transaction);
@@ -174,7 +177,7 @@ public static class DataSeeder
             Payload = "{status:'success'}",
             Signature = "abc123",
             Processed = true,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = now,
             TransactionId = transaction.Id
         };
 
@@ -189,7 +192,7 @@ public static class DataSeeder
             ReferenceId = payment.Id,
             Message = "Your payment was successful",
             IsRead = false,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = now
         };
 
         context.Notifications.Add(notification);

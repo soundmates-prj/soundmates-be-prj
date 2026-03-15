@@ -26,6 +26,7 @@ public static class ConfigurationExtensions
             {
                 Path.Combine(Directory.GetCurrentDirectory(), ".env"),
                 Path.Combine(AppContext.BaseDirectory, ".env"),
+                Path.Combine(AppContext.BaseDirectory, "../.env"),
                 Path.Combine(AppContext.BaseDirectory, "../../..", ".env")
             };
 
