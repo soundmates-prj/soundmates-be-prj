@@ -216,6 +216,27 @@ internal sealed class AzuraCastApiPlaylistResponse
 
     [JsonPropertyName("name")]
     public string? Name { get; set; }
+    
+    [JsonPropertyName("type")]
+    public string? Type { get; set; }
+    
+    [JsonPropertyName("source")]
+    public string? Source { get; set; }
+    
+    [JsonPropertyName("order")]
+    public string? Order { get; set; }  // Changed from int to string (shuffle, sequential, random)
+    
+    [JsonPropertyName("is_enabled")]
+    public bool IsEnabled { get; set; }
+    
+    [JsonPropertyName("include_in_requests")]
+    public bool IncludeInRequests { get; set; }
+    
+    [JsonPropertyName("include_in_on_demand")]
+    public bool IncludeInOnDemand { get; set; }
+    
+    [JsonPropertyName("weight")]
+    public int Weight { get; set; }
 }
 
 // Matches: POST /api/station/{id}/files response
@@ -238,6 +259,82 @@ internal sealed class AzuraCastApiFileResponse
 
     [JsonPropertyName("length")]
     public double Length { get; set; }
+}
+
+// Matches: GET /api/station/{id}/files response
+internal sealed class AzuraCastApiStationFileResponse
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("unique_id")]
+    public string? UniqueId { get; set; }
+
+    [JsonPropertyName("song_id")]
+    public string? SongId { get; set; }
+
+    [JsonPropertyName("text")]
+    public string? Text { get; set; }
+
+    [JsonPropertyName("artist")]
+    public string? Artist { get; set; }
+
+    [JsonPropertyName("title")]
+    public string? Title { get; set; }
+
+    [JsonPropertyName("album")]
+    public string? Album { get; set; }
+
+    [JsonPropertyName("genre")]
+    public string? Genre { get; set; }
+
+    [JsonPropertyName("isrc")]
+    public string? Isrc { get; set; }
+
+    [JsonPropertyName("lyrics")]
+    public string? Lyrics { get; set; }
+
+    [JsonPropertyName("art")]
+    public string? Art { get; set; }
+
+    [JsonPropertyName("path")]
+    public string? Path { get; set; }
+
+    [JsonPropertyName("mtime")]
+    public long Mtime { get; set; }
+
+    [JsonPropertyName("uploaded_at")]
+    public long UploadedAt { get; set; }
+
+    [JsonPropertyName("art_updated_at")]
+    public long ArtUpdatedAt { get; set; }
+
+    [JsonPropertyName("length")]
+    public double Length { get; set; }
+
+    [JsonPropertyName("length_text")]
+    public string? LengthText { get; set; }
+
+    [JsonPropertyName("playlists")]
+    public List<AzuraCastApiFilePlaylistInfo>? Playlists { get; set; }
+}
+
+internal sealed class AzuraCastApiFilePlaylistInfo
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+
+    [JsonPropertyName("short_name")]
+    public string? ShortName { get; set; }
+
+    [JsonPropertyName("folder")]
+    public string? Folder { get; set; }
+
+    [JsonPropertyName("count")]
+    public int Count { get; set; }
 }
 
 
