@@ -170,6 +170,41 @@ services:
       - soundmates-network
     restart: unless-stopped
 
+  # Account Content Service
+  account-content-service:
+    build:
+      context: ./services/account-content-service
+      dockerfile: AccountContentService.Api/Dockerfile
+    container_name: soundmates-account-content-service
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_DATABASE=${ACCOUNT_CONTENT_POSTGRES_DATABASE:-account_content_db}
+      - POSTGRES_USERNAME=${POSTGRES_USERNAME:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
+      - RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
+      - RABBITMQ_USERNAME=${RABBITMQ_USERNAME:-guest}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-guest}
+      - RABBITMQ_VIRTUALHOST=${RABBITMQ_VIRTUALHOST:-/}
+      - JWT_KEY=${JWT_KEY}
+      - JWT_ISSUER=${JWT_ISSUER:-Soundmates.Auth}
+      - JWT_AUDIENCE=${JWT_AUDIENCE:-Soundmates.Users}
+      - AZURACAST_BASE_URL=${AZURACAST_BASE_URL:-http://azuracast:8080}
+      - AZURACAST_API_KEY=${AZURACAST_API_KEY}
+    ports:
+      - "8004:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - soundmates-network
+    restart: unless-stopped
+
   # API Gateway
   api-gateway:
     build:
