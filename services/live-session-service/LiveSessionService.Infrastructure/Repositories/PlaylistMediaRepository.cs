@@ -33,6 +33,15 @@ public sealed class PlaylistMediaRepository : IPlaylistMediaRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<PlaylistMedia>> GetByMediaFileIdAsync(
+        Guid mediaFileId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.PlaylistMedias
+            .Where(pm => pm.MediaFileId == mediaFileId)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<PlaylistMedia?> GetByPlaylistAndMediaIdAsync(
         Guid playlistId, 
         string mediaId, 
@@ -61,6 +70,22 @@ public sealed class PlaylistMediaRepository : IPlaylistMediaRepository
     public async Task UpdateAsync(PlaylistMedia playlistMedia, CancellationToken cancellationToken = default)
     {
         _context.PlaylistMedias.Update(playlistMedia);
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task DeleteAsync(PlaylistMedia playlistMedia, CancellationToken cancellationToken = default)
+    {
+        _context.PlaylistMedias.Remove(playlistMedia);
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task DeleteRangeAsync(IEnumerable<PlaylistMedia> playlistMedias, CancellationToken cancellationToken = default)
+    {
+        var medias = playlistMedias.ToList();
+        if (medias.Count == 0)
+            return;
+
+        _context.PlaylistMedias.RemoveRange(medias);
         await _context.SaveChangesAsync(cancellationToken);
     }
 
