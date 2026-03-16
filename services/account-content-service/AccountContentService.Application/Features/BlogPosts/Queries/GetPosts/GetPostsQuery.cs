@@ -67,4 +67,34 @@ namespace AccountContentService.Application.Features.BlogPosts.Queries.GetPosts
         }
     }
 
+    public class GetUserPostDetailQuery : IRequest<PaginationResult<PostDto>>
+    {
+        public Guid UserId { get; set; }
+        public int Page { get; set; }
+
+        public int PageSize { get; set; }
+
+        public GetUserPostDetailQuery(Guid userId, int page, int pageSize)
+        {
+            UserId = userId;
+            Page = page;
+            PageSize = pageSize;
+        }
+    }
+
+    public class GetCurrentUserPostDetailQuery : IRequest<PaginationResult<PostDto>>
+    {
+        public Guid UserId { get; set; }
+        public int Page { get; set; }
+
+        public int PageSize { get; set; }
+
+        public GetCurrentUserPostDetailQuery(Guid userId, int page, int pageSize)
+        {
+            UserId = userId;
+            Page = page;
+            PageSize = pageSize;
+        }
+    }
+
 }

@@ -26,5 +26,7 @@
 
         public DateTime UpdatedAt { get; set; }
         public DateTime? PublishedAt { get; set; }
+        public List<CommentResponse> Comments { get; set; } = new();
+        public List<ReactionResponse> Reactions { get; set; } = new();
     }
 }

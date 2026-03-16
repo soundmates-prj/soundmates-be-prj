@@ -1,18 +1,18 @@
-﻿using System;
+﻿using AccountContentService.Application.DTOs;
+using MediatR;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace AccountContentService.Application.DTOs
+namespace AccountContentService.Application.Features.BlogComments.Commands.UpdateComment
 {
-    public class CommentDto
+    public class UpdateCommentCommand : IRequest<CommentDto>
     {
         public Guid Id { get; set; }
-        public Guid ParentCommentId { get; set; }
 
         public Guid PostId { get; set; }
 
         public Guid UserId { get; set; }
-
 
         public string Content { get; set; } = string.Empty;
 

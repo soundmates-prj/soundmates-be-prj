@@ -9,6 +9,7 @@ namespace AccountContentService.Infrastructure.Extensions
         public static IServiceCollection AddInfrastructure(this IServiceCollection services)
         {
             services.AddScoped<IBlogPostRepository, BlogPostRepository>();
+            services.AddScoped<ICommentRepository, CommentRepository>();
 
             return services;
         }

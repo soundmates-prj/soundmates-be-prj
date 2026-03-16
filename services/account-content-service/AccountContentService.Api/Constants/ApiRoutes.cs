@@ -6,10 +6,17 @@
     /// </summary>
     public static class ApiRoutes
     {
+        /// <summary>
+        /// Base API route prefix.
+        /// </summary>
         private const string Base = "v1/api";
 
+        // =====================================================
+        // POSTS
+        // =====================================================
+
         /// <summary>
-        /// Blog Post endpoints.
+        /// Endpoints for blog post management.
         /// </summary>
         public static class Posts
         {
@@ -19,183 +26,259 @@
             // CRUD
             // ===============================
 
-            /// <summary>
-            /// POST /v1/api/posts
-            /// Create a new blog post.
-            /// </summary>
+            /// <summary>Create a new blog post.</summary>
             public const string Create = BaseRoute;
 
-            /// <summary>
-            /// GET /v1/api/posts
-            /// Retrieve all blog posts (feed).
-            /// </summary>
+            /// <summary>Retrieve all blog posts.</summary>
             public const string GetAll = BaseRoute;
 
-            /// <summary>
-            /// GET /v1/api/posts/{postId}
-            /// Retrieve blog post details.
-            /// </summary>
+            /// <summary>Retrieve blog post details.</summary>
             public const string GetById = $"{BaseRoute}/{{postId:guid}}";
 
-            /// <summary>
-            /// PUT /v1/api/posts/{postId}
-            /// Update blog post content.
-            /// </summary>
+            /// <summary>Update blog post content.</summary>
             public const string Update = $"{BaseRoute}/{{postId:guid}}";
 
-            /// <summary>
-            /// DELETE /v1/api/posts/{postId}
-            /// Delete a blog post.
-            /// </summary>
+            /// <summary>Delete a blog post.</summary>
             public const string Delete = $"{BaseRoute}/{{postId:guid}}";
 
             // ===============================
             // PUBLISHED POSTS
             // ===============================
 
-            /// <summary>
-            /// GET /v1/api/posts/published
-            /// Retrieve all published blog posts.
-            /// </summary>
+            /// <summary>Retrieve all published blog posts.</summary>
             public const string GetAllPublished = $"{BaseRoute}/published";
 
-            /// <summary>
-            /// GET /v1/api/posts/published/{postId}
-            /// Retrieve details of a published blog post.
-            /// </summary>
+            /// <summary>Retrieve details of a published blog post.</summary>
             public const string GetPublishedById = $"{BaseRoute}/published/{{postId:guid}}";
 
             // ===============================
             // POST LIFECYCLE
             // ===============================
 
-            /// <summary>
-            /// PATCH /v1/api/posts/{postId}/publish
-            /// Publish a blog post.
-            /// </summary>
+            /// <summary>Publish a blog post.</summary>
             public const string Publish = $"{BaseRoute}/{{postId:guid}}/publish";
 
-            /// <summary>
-            /// PATCH /v1/api/posts/{postId}/draft
-            /// Save or revert a blog post to draft status.
-            /// </summary>
+            /// <summary>Save or revert a blog post to draft.</summary>
             public const string Draft = $"{BaseRoute}/{{postId:guid}}/draft";
 
-            /// <summary>
-            /// PATCH /v1/api/posts/{postId}/archive
-            /// Archive a blog post.
-            /// </summary>
+            /// <summary>Archive a blog post.</summary>
             public const string Archive = $"{BaseRoute}/{{postId:guid}}/archive";
 
             // ===============================
             // DISCOVERY
             // ===============================
 
-            /// <summary>
-            /// GET /v1/api/posts/moods/{moodTag}
-            /// Retrieve blog posts filtered by mood.
-            /// </summary>
+            /// <summary>Retrieve posts filtered by mood tag.</summary>
             public const string GetByMood = $"{BaseRoute}/moods/{{moodTag}}";
 
-            /// <summary>
-            /// GET /v1/api/posts/trending
-            /// Retrieve trending blog posts.
-            /// </summary>
+            /// <summary>Retrieve trending posts.</summary>
             public const string Trending = $"{BaseRoute}/trending";
 
-            /// <summary>
-            /// GET /v1/api/posts/popular
-            /// Retrieve popular blog posts.
-            /// </summary>
+            /// <summary>Retrieve popular posts.</summary>
             public const string Popular = $"{BaseRoute}/popular";
 
-            /// <summary>
-            /// GET /v1/api/posts/recommended
-            /// Retrieve recommended blog posts.
-            /// </summary>
+            /// <summary>Retrieve recommended posts for the current user.</summary>
             public const string Recommended = $"{BaseRoute}/recommended";
 
-            /// <summary>
-            /// GET /v1/api/posts/search
-            /// Search blog posts by keyword.
-            /// </summary>
+            /// <summary>Search blog posts by keyword.</summary>
             public const string Search = $"{BaseRoute}/search";
 
             // ===============================
             // MEDIA
             // ===============================
 
-            /// <summary>
-            /// POST /v1/api/posts/{postId}/cover-image
-            /// Upload or update cover image of the blog post.
-            /// </summary>
+            /// <summary>Upload or update a blog post cover image.</summary>
             public const string UploadCoverImage = $"{BaseRoute}/{{postId:guid}}/cover-image";
 
-            /// <summary>
-            /// POST /v1/api/posts/{postId}/audio
-            /// Upload audio narration for the blog post.
-            /// </summary>
+            /// <summary>Upload audio narration.</summary>
             public const string UploadAudio = $"{BaseRoute}/{{postId:guid}}/audio";
 
-            /// <summary>
-            /// POST /v1/api/posts/{postId}/audio/generate
-            /// Generate AI audio narration from blog content.
-            /// </summary>
+            /// <summary>Generate AI narration from blog content.</summary>
             public const string GenerateAudio = $"{BaseRoute}/{{postId:guid}}/audio/generate";
 
-            /// <summary>
-            /// GET /v1/api/posts/{postId}/audio
-            /// Retrieve audio narration of the blog post.
-            /// </summary>
+            /// <summary>Retrieve blog post audio.</summary>
             public const string GetAudio = $"{BaseRoute}/{{postId:guid}}/audio";
 
-            /// <summary>
-            /// DELETE /v1/api/posts/{postId}/audio
-            /// Remove audio narration from the blog post.
-            /// </summary>
+            /// <summary>Delete blog post audio.</summary>
             public const string DeleteAudio = $"{BaseRoute}/{{postId:guid}}/audio";
 
             // ===============================
             // STATISTICS
             // ===============================
 
-            /// <summary>
-            /// GET /v1/api/posts/{postId}/stats
-            /// Retrieve engagement statistics of the blog post.
-            /// </summary>
+            /// <summary>Retrieve statistics of a specific post.</summary>
             public const string GetStats = $"{BaseRoute}/{{postId:guid}}/stats";
 
-            /// <summary>
-            /// POST /v1/api/posts/{postId}/views
-            /// Increase the view count of the blog post.
-            /// </summary>
+            /// <summary>Retrieve statistics of all posts.</summary>
+            public const string GetAllStats = $"{BaseRoute}/stats";
+
+            /// <summary>Increase post view count.</summary>
             public const string IncreaseViews = $"{BaseRoute}/{{postId:guid}}/views";
         }
 
-        // ===============================
-        // USER POSTS
-        // ===============================
+        // =====================================================
+        // USERS
+        // =====================================================
 
+        /// <summary>
+        /// Endpoints related to user resources.
+        /// </summary>
         public static class Users
         {
             private const string BaseRoute = $"{Base}/users";
 
-            /// <summary>
-            /// GET /v1/api/users/{userId}/posts
-            /// Retrieve blog posts created by a specific user.
-            /// </summary>
+            /// <summary>Retrieve blog posts created by a user.</summary>
             public const string GetUserPosts = $"{BaseRoute}/{{userId:guid}}/posts";
+
+            /// <summary>Retrieve comments created by a user.</summary>
+            public const string GetUserComments = $"{BaseRoute}/{{userId:guid}}/comments";
+
+            /// <summary>Retrieve reactions created by a user.</summary>
+            public const string GetUserReactions = $"{BaseRoute}/{{userId:guid}}/reactions";
         }
 
+        // =====================================================
+        // CURRENT USER
+        // =====================================================
+
+        /// <summary>
+        /// Endpoints for the currently authenticated user.
+        /// </summary>
         public static class Me
         {
             private const string BaseRoute = $"{Base}/me";
 
-            /// <summary>
-            /// GET /v1/api/me/posts
-            /// Retrieve blog posts created by the current user.
-            /// </summary>
+            /// <summary>Retrieve current user's posts.</summary>
             public const string MyPosts = $"{BaseRoute}/posts";
+
+            /// <summary>Retrieve current user's comments.</summary>
+            public const string MyComments = $"{BaseRoute}/comments";
+
+            /// <summary>Retrieve current user's reactions.</summary>
+            public const string MyReactions = $"{BaseRoute}/reactions";
+        }
+
+        // =====================================================
+        // COMMENTS
+        // =====================================================
+
+        /// <summary>
+        /// Endpoints for comment management.
+        /// </summary>
+        public static class Comments
+        {
+            private const string BaseRoute = $"{Base}/comments";
+
+            /// <summary>Add a comment to a post.</summary>
+            public const string Create = $"{Base}/posts/{{postId:guid}}/comments";
+
+            /// <summary>Reply to an existing comment.</summary>
+            public const string Reply = $"{BaseRoute}/{{commentId:guid}}/reply";
+
+            /// <summary>Retrieve comments of a post.</summary>
+            public const string GetByPost = $"{Base}/posts/{{postId:guid}}/comments";
+
+            /// <summary>Retrieve comment details.</summary>
+            public const string GetById = $"{BaseRoute}/{{commentId:guid}}";
+
+            /// <summary>Update a comment.</summary>
+            public const string Update = $"{BaseRoute}/{{commentId:guid}}";
+
+            /// <summary>Delete a comment.</summary>
+            public const string Delete = $"{BaseRoute}/{{commentId:guid}}";
+
+            /// <summary>Report a comment.</summary>
+            public const string Report = $"{BaseRoute}/{{commentId:guid}}/report";
+        }
+
+        // =====================================================
+        // REACTIONS
+        // =====================================================
+
+        /// <summary>
+        /// Endpoints for reactions.
+        /// </summary>
+        public static class Reactions
+        {
+            private const string BaseRoute = $"{Base}/reactions";
+
+            /// <summary>Add or update reaction.</summary>
+            public const string AddOrUpdate = $"{Base}/posts/{{postId:guid}}/reactions";
+
+            /// <summary>Remove reaction.</summary>
+            public const string Remove = $"{Base}/posts/{{postId:guid}}/reactions";
+
+            /// <summary>Retrieve reaction summary.</summary>
+            public const string GetSummary = $"{Base}/posts/{{postId:guid}}/reactions";
+
+            /// <summary>Retrieve users who reacted.</summary>
+            public const string GetUsers = $"{Base}/posts/{{postId:guid}}/reactions/users";
+        }
+
+        // =====================================================
+        // SUBSCRIPTIONS
+        // =====================================================
+
+        /// <summary>
+        /// Endpoints for subscription management.
+        /// </summary>
+        public static class Subscriptions
+        {
+            private const string BaseRoute = $"{Base}/subscriptions";
+
+            /// <summary>Retrieve subscription plans.</summary>
+            public const string GetPlans = $"{Base}/subscription-plans";
+
+            /// <summary>Retrieve subscription plan detail.</summary>
+            public const string GetPlanById = $"{Base}/subscription-plans/{{planId:guid}}";
+
+            /// <summary>Create subscription.</summary>
+            public const string Subscribe = BaseRoute;
+
+            /// <summary>Retrieve current subscription.</summary>
+            public const string MySubscription = $"{BaseRoute}/me";
+
+            /// <summary>Retrieve subscription history.</summary>
+            public const string History = $"{BaseRoute}/history";
+
+            /// <summary>Check subscription status.</summary>
+            public const string Status = $"{BaseRoute}/status";
+
+            /// <summary>Cancel subscription.</summary>
+            public const string Cancel = $"{BaseRoute}/{{subscriptionId:guid}}/cancel";
+
+            /// <summary>Renew subscription.</summary>
+            public const string Renew = $"{BaseRoute}/{{subscriptionId:guid}}/renew";
+        }
+
+        // =====================================================
+        // PAYMENTS
+        // =====================================================
+
+        /// <summary>
+        /// Endpoints for payment processing.
+        /// </summary>
+        public static class Payments
+        {
+            private const string BaseRoute = $"{Base}/payments";
+
+            /// <summary>Create payment request.</summary>
+            public const string Create = BaseRoute;
+
+            /// <summary>Retrieve payment details.</summary>
+            public const string GetById = $"{BaseRoute}/{{paymentId:guid}}";
+
+            /// <summary>Retrieve payment history.</summary>
+            public const string GetAll = BaseRoute;
+
+            /// <summary>Confirm payment.</summary>
+            public const string Confirm = $"{BaseRoute}/{{paymentId:guid}}/confirm";
+
+            /// <summary>Refund payment.</summary>
+            public const string Refund = $"{BaseRoute}/refund";
+
+            /// <summary>Check transaction status.</summary>
+            public const string Status = $"{BaseRoute}/status/{{transactionId}}";
         }
     }
 }

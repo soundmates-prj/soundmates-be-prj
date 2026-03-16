@@ -1,7 +1,5 @@
-﻿using AccountContentService.Application.Abstractions;
-using AccountContentService.Application.DTOs;
+﻿using AccountContentService.Application.DTOs;
 using AccountContentService.Application.Exceptions;
-using AccountContentService.Application.Features.BlogPosts.Commands.CreatePost;
 using AccountContentService.Application.Interfaces.Repositories;
 using AccountContentService.Domain.Entities;
 using AccountContentService.Domain.Enums;
@@ -9,26 +7,29 @@ using AutoMapper;
 using MediatR;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Text;
 
-namespace AccountContentService.Application.Features.BlogPosts.Commands.UpdatePost
+namespace AccountContentService.Application.Features.BlogComments.Commands.CreateComment
 {
-    public class UpdatePostHandler : IRequestHandler<UpdatePostCommand, PostDto>
+    public class CreateCommentHandler
+     : IRequestHandler<CreateCommentCommand, CommentDto>
     {
+        private readonly ICommentRepository _repository;
         private readonly IBlogPostRepository _postRepository;
         private readonly IMapper _mapper;
 
-        public UpdatePostHandler(
+        public CreateCommentHandler(
+            ICommentRepository repository,
             IBlogPostRepository postRepository,
             IMapper mapper)
         {
+            _repository = repository;
             _postRepository = postRepository;
             _mapper = mapper;
         }
 
-        public async Task<PostDto> Handle(
-            UpdatePostCommand request,
+        public async Task<CommentDto> Handle(
+            CreateCommentCommand request,
             CancellationToken cancellationToken)
         {
             var post = await _postRepository.GetByIdAsync(request.PostId, cancellationToken);
@@ -38,17 +39,13 @@ namespace AccountContentService.Application.Features.BlogPosts.Commands.UpdatePo
                 throw new NotFoundException("Post not found");
             }
 
-            
-            _mapper.Map(request, post);
-            if (post.Status != PostStatus.Draft.ToString())
-            {
-                post.Status = PostStatus.Edited.ToString();
-            }
-            post.UpdatedAt = DateTime.UtcNow;
+            var comment = _mapper.Map<BlogComment>(request);
+            comment.Status = CommentStatus.Active.ToString();
+            comment.CreatedAt  = DateTime.UtcNow;
 
-            await _postRepository.UpdateAsync(post);
+            await _repository.AddAsync(comment);
 
-            return _mapper.Map<PostDto>(post);
+            return _mapper.Map<CommentDto>(comment);
         }
     }
 }

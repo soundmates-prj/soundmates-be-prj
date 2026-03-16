@@ -4,7 +4,12 @@ using System.Text;
 
 namespace AccountContentService.Domain.Enums
 {
-    internal class CommentStatus
+    public enum CommentStatus
     {
+        Active = 1,     
+        Pending = 2,  
+        Hidden = 3,
+        Edited = 4,
+        Banned = 5
     }
 }

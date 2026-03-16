@@ -1,4 +1,5 @@
 ﻿using AccountContentService.Application.Common.Pagination;
+using AccountContentService.Application.Common.Result;
 using AccountContentService.Application.DTOs;
 using AccountContentService.Application.Interfaces.Repositories;
 using AutoMapper;
@@ -10,7 +11,9 @@ public class GetPostsHandler:
     IRequestHandler<GetPostsQuery, PaginationResult<PostDto>>,
     IRequestHandler<GetPublisedPostsQuery, PaginationResult<PostDto>>,
     IRequestHandler<GetPostDetailQuery, PostDto>,
-    IRequestHandler<GetPublisedPostDetailQuery, PostDto>
+    IRequestHandler<GetPublisedPostDetailQuery, PostDto>,
+    IRequestHandler<GetUserPostDetailQuery, PaginationResult<PostDto>>,
+    IRequestHandler<GetCurrentUserPostDetailQuery, PaginationResult<PostDto>>
 {
     private readonly IBlogPostRepository _repository;
     private readonly IMapper _mapper;
@@ -79,5 +82,37 @@ public class GetPostsHandler:
             return null;
         }
         return _mapper.Map<PostDto>(post);
+    }
+
+    public async Task<PaginationResult<PostDto>> Handle(
+       GetUserPostDetailQuery request,
+       CancellationToken cancellationToken)
+    {
+        var result = await _repository.GetByUserIdAsync(request.UserId, request.PageSize, request.Page, cancellationToken);
+        var items = _mapper.Map<IEnumerable<PostDto>>(result.Items);
+
+        return new PaginationResult<PostDto>
+        {
+            Items = items,
+            TotalCount = result.TotalCount,
+            Page = request.Page,
+            PageSize = request.PageSize
+        };
+    }
+
+    public async Task<PaginationResult<PostDto>> Handle(
+       GetCurrentUserPostDetailQuery request,
+       CancellationToken cancellationToken)
+    {
+        var result = await _repository.GetByUserIdAsync(request.UserId, request.PageSize, request.Page, cancellationToken);
+        var items = _mapper.Map<IEnumerable<PostDto>>(result.Items);
+
+        return new PaginationResult<PostDto>
+        {
+            Items = items,
+            TotalCount = result.TotalCount,
+            Page = request.Page,
+            PageSize = request.PageSize
+        };
     }
 }
