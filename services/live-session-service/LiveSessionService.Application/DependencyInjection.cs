@@ -6,6 +6,8 @@ using LiveSessionService.Application.Features.LiveSessions.Commands.StartSession
 using LiveSessionService.Application.Features.LiveSessions.Commands.StopSession;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetAllLiveSessions;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSession;
+using LiveSessionService.Application.Features.Music.Commands.DeleteMedia;
+using LiveSessionService.Application.Features.Music.Commands.SyncMediaFiles;
 using LiveSessionService.Application.Features.Music.Commands.UploadMusic;
 using LiveSessionService.Application.Features.Music.Queries.GetAllMediaFiles;
 using LiveSessionService.Application.Features.Music.Queries.GetMediaFilesByStation;
@@ -14,8 +16,10 @@ using LiveSessionService.Application.Features.NowPlaying.Queries.GetNowPlaying;
 using LiveSessionService.Application.Features.NowPlaying.Queries.GetNowPlayingHistory;
 using LiveSessionService.Application.Features.Playlists.Commands.AddMediaToPlaylist;
 using LiveSessionService.Application.Features.Playlists.Commands.CreatePlaylist;
+using LiveSessionService.Application.Features.Playlists.Commands.RemoveMediaFromPlaylist;
 using LiveSessionService.Application.Features.Playlists.Commands.SyncPlaylists;
 using LiveSessionService.Application.Features.Playlists.Queries.GetPlaylistsByStation;
+using LiveSessionService.Application.Features.Playlists.Queries.GetPlaylistTracks;
 using LiveSessionService.Application.Features.Results;
 using LiveSessionService.Application.Features.Results.LiveSessions;
 using LiveSessionService.Application.Features.Results.Music;
@@ -60,10 +64,13 @@ public static class DependencyInjection
         // Register Playlist Command Handlers
         services.AddScoped<ICommandHandler<CreatePlaylistCommand, PlaylistResult>, CreatePlaylistHandler>();
         services.AddScoped<ICommandHandler<AddMediaToPlaylistCommand, PlaylistMediaResult>, AddMediaToPlaylistHandler>();
+        services.AddScoped<ICommandHandler<RemoveMediaFromPlaylistCommand>, RemoveMediaFromPlaylistHandler>();
         services.AddScoped<ICommandHandler<SyncPlaylistsCommand, SyncPlaylistsResult>, SyncPlaylistsHandler>();
 
         // Register Music Command Handlers
         services.AddScoped<ICommandHandler<UploadMusicCommand, MusicResult>, UploadMusicHandler>();
+        services.AddScoped<ICommandHandler<SyncMediaFilesCommand, SyncMediaFilesResult>, SyncMediaFilesHandler>();
+        services.AddScoped<ICommandHandler<DeleteMediaCommand>, DeleteMediaHandler>();
 
         // Register Music Query Handlers
         services.AddScoped<IQueryHandler<GetAllMediaFilesQuery, List<MusicResult>>, GetAllMediaFilesHandler>();
@@ -75,6 +82,7 @@ public static class DependencyInjection
 
         // Register Playlist Query Handlers
         services.AddScoped<IQueryHandler<GetPlaylistsByStationQuery, List<PlaylistResult>>, GetPlaylistsByStationHandler>();
+        services.AddScoped<IQueryHandler<GetPlaylistTracksQuery, List<PlaylistMediaResult>>, GetPlaylistTracksHandler>();
 
         return services;
     }

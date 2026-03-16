@@ -5,8 +5,10 @@ using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Features.Results.Playlists;
 using LiveSessionService.Application.Features.Playlists.Commands.CreatePlaylist;
 using LiveSessionService.Application.Features.Playlists.Commands.AddMediaToPlaylist;
+using LiveSessionService.Application.Features.Playlists.Commands.RemoveMediaFromPlaylist;
 using LiveSessionService.Application.Features.Playlists.Commands.SyncPlaylists;
 using LiveSessionService.Application.Features.Playlists.Queries.GetPlaylistsByStation;
+using LiveSessionService.Application.Features.Playlists.Queries.GetPlaylistTracks;
 using LiveSessionService.Api.Models.Responses;
 using LiveSessionService.Api.Extensions;
 using LiveSessionService.Api.Models.Requests.Playlist;
@@ -106,6 +108,25 @@ public class PlaylistController : ControllerBase
     }
 
     /// <summary>
+    /// Get all tracks in a playlist
+    /// </summary>
+    [HttpGet("{playlistId:guid}/tracks")]
+    [ProducesResponseType(typeof(ApiResponse<List<PlaylistMediaResult>>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> GetPlaylistTracks(Guid playlistId, CancellationToken ct)
+    {
+        var result = await _queries.Send<GetPlaylistTracksQuery, List<PlaylistMediaResult>>(
+            new GetPlaylistTracksQuery(playlistId), ct);
+
+        if (!result.IsSuccess)
+            return result.ErrorCode == ErrorCode.NotFound
+                ? NotFound(result.ToApiResponse())
+                : BadRequest(result.ToApiResponse());
+
+        return Ok(result.ToApiResponse());
+    }
+
+    /// <summary>
     /// Add music tracks to playlist
     /// </summary>
     [HttpPost("{playlistId:guid}/tracks")]
@@ -140,11 +161,18 @@ public class PlaylistController : ControllerBase
         [FromBody] RemoveTracksRequest request,
         CancellationToken ct)
     {
-        _logger.LogWarning("RemoveTracksFromPlaylist not yet implemented");
+        foreach (var musicId in request.MusicIds)
+        {
+            var result = await _commands.Send(new RemoveMediaFromPlaylistCommand(playlistId, musicId), ct);
+            if (!result.IsSuccess)
+            {
+                return result.ErrorCode == ErrorCode.NotFound
+                    ? NotFound(result.ToApiResponse())
+                    : BadRequest(result.ToApiResponse());
+            }
+        }
 
-        return StatusCode(501, ApiResponse<object>.FailureResponse(
-            "Remove tracks feature coming soon",
-            501));
+        return NoContent();
     }
 
     /// <summary>

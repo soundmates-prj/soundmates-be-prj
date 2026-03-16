@@ -56,4 +56,17 @@ public interface IAzuraCastClient
         string fileUniqueId,
         int playlistId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>Removes an existing AzuraCast media file from a specific playlist</summary>
+    Task RemoveMediaFromPlaylistAsync(
+        int stationId,
+        string fileUniqueId,
+        int playlistId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Deletes an existing AzuraCast media file from station library</summary>
+    Task DeleteMediaAsync(
+        int stationId,
+        string fileUniqueId,
+        CancellationToken cancellationToken = default);
 }
