@@ -29,6 +29,7 @@ namespace AccountContentService.Application.Features.BlogPosts.Commands.CreatePo
             CancellationToken cancellationToken)
         {
             var post = _mapper.Map<BlogPost>(request);
+            post.PublishedAt = DateTime.UtcNow;
 
             await _postRepository.AddAsync(post);
 

@@ -1,4 +1,5 @@
 ﻿using AccountContentService.Application.DTOs;
+using AccountContentService.Domain.Enums;
 using MediatR;
 using System;
 using System.Collections.Generic;
@@ -16,7 +17,9 @@ namespace AccountContentService.Application.Features.BlogPosts.Commands.CreatePo
 
         public string? AudioUrl { get; set; }
 
-        public string? Status { get; set; } = "Draft";
+        public string? ImageUrl { get; set; }
+
+        public string? Status { get; set; } = PostStatus.Published.ToString();
 
         public string? PrivacyScope { get; set; }
 

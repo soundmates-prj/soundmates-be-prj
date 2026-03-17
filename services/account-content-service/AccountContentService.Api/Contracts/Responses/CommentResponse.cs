@@ -1,4 +1,6 @@
-﻿namespace AccountContentService.Api.Contracts.Responses
+﻿using AccountContentService.Application.DTOs;
+
+namespace AccountContentService.Api.Contracts.Responses
 {
     public class CommentResponse
     {
@@ -16,5 +18,6 @@
         public DateTime CreatedAt { get; set; }
 
         public DateTime UpdatedAt { get; set; }
+        public List<CommentResponse> Replies { get; set; } = new();
     }
 }
