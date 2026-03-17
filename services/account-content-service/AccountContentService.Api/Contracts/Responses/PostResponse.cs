@@ -11,6 +11,7 @@
         public string ContentText { get; set; } = string.Empty;
 
         public string? AudioUrl { get; set; }
+        public string? ImageUrl { get; set; }
 
         public bool IsActive { get; set; } = true;
 
@@ -26,7 +27,7 @@
 
         public DateTime UpdatedAt { get; set; }
         public DateTime? PublishedAt { get; set; }
-        public List<CommentResponse> Comments { get; set; } = new();
-        public List<ReactionResponse> Reactions { get; set; } = new();
+        //public List<CommentResponse> Comments { get; set; } = new();
+        //public List<ReactionResponse> Reactions { get; set; } = new();
     }
 }

@@ -16,6 +16,8 @@ namespace AccountContentService.Application.Features.BlogPosts.Commands.UpdatePo
 
         public string? AudioUrl { get; set; }
 
+        public string? ImageUrl { get; set; }
+
         public string? Status { get; set; } = "Edited";
 
         public string? PrivacyScope { get; set; }

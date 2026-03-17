@@ -10,7 +10,7 @@ namespace AccountContentService.Api.Contracts.Responses
 
         public Guid UserId { get; set; }
 
-        public string ReactionType { get; set; } = "like";
+        public string ReactionType { get; set; }
 
         public DateTime CreatedAt { get; set; }
     }

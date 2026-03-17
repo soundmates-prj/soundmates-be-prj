@@ -20,6 +20,9 @@ namespace AccountContentService.Application.Interfaces.Repositories
         ///</summary>
         Task<PaginationResult<BlogComment>> GetByUserIdAsync(Guid userId, int pageSize, int page, CancellationToken cancellationToken);
         Task<BlogComment> GetByIdAsync(Guid id, CancellationToken cancellationToken);
+        Task<List<BlogComment>> GetDetailByIdAsync(Guid id, CancellationToken cancellationToken);
+
+        Task<PaginationResult<BlogComment>> GetByPostIdAsync(Guid postId, int pageSize, int page, CancellationToken cancellationToken);
 
     }
 }
