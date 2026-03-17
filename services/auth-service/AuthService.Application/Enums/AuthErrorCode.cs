@@ -39,6 +39,9 @@ namespace AuthService.Application.Enums
         
         // External auth errors (1400-1499)
         GoogleAuthFailed = 1401,
+
+        // External service errors (1500-1599)
+        EmailSendFailed = 1501,
         
         // Generic errors
         Unknown = 1999

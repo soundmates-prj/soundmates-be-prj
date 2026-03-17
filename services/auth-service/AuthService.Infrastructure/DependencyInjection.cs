@@ -30,6 +30,8 @@ public static class DependencyInjection
         services.AddScoped<IRoleRepository, RoleRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IProfileRepository, ProfileRepository>();
+        services.AddScoped<IUserFavouriteRepository, UserFavouriteRepository>();
+        services.AddScoped<ISpotifyItemRepository, SpotifyItemRepository>();
         services.AddScoped<IOtpRepository, OtpRepository>();
         services.AddScoped<IOutboxRepository, OutboxRepository>();
 

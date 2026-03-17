@@ -3,6 +3,7 @@ using System;
 using AuthService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AuthService.Infrastructure.Migrations
 {
     [DbContext(typeof(AuthDbContext))]
-    partial class AuthDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260316093957_AddUserFavouritesTable")]
+    partial class AddUserFavouritesTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -261,76 +264,6 @@ namespace AuthService.Infrastructure.Migrations
                     b.HasIndex(new[] { "UserId" }, "refresh_tokens_user_id_idx");
 
                     b.ToTable("refresh_tokens", (string)null);
-                });
-
-            modelBuilder.Entity("AuthService.Domain.Entities.SpotifyItem", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("uuid_generate_v4()");
-
-                    b.Property<string>("AlbumName")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("album_name");
-
-                    b.Property<string>("ArtistName")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("artist_name");
-
-                    b.Property<string>("ImgUrl")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("img_url");
-
-                    b.Property<string>("ItemType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("item_type");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("name");
-
-                    b.Property<string>("PreviewUrl")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("preview_url");
-
-                    b.Property<string>("RawJson")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("raw_json");
-
-                    b.Property<string>("SpotifyId")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("spotify_id");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("now() at time zone 'utc'");
-
-                    b.HasKey("Id")
-                        .HasName("spotify_items_pkey");
-
-                    b.HasIndex(new[] { "SpotifyId", "ItemType" }, "spotify_items_spotify_id_item_type_key")
-                        .IsUnique();
-
-                    b.ToTable("spotify_items", (string)null);
                 });
 
             modelBuilder.Entity("AuthService.Domain.Entities.User", b =>
