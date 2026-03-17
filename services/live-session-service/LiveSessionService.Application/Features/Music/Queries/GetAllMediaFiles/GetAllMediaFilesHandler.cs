@@ -35,7 +35,7 @@ public sealed class GetAllMediaFilesHandler
                 .Select(m => new MusicResult
                 {
                     Id         = m.Id,
-                    StationId  = Guid.Empty, // not station-specific in this listing
+                    //StationId  = Guid.Empty, // not station-specific in this listing
                     Title      = m.Title,
                     Artist     = m.Artist ?? string.Empty,
                     Album      = m.Album,

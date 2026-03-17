@@ -97,6 +97,21 @@ public class LiveSessionConfiguration : IEntityTypeConfiguration<LiveSession>
             .HasForeignKey(l => l.LiveSessionId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        builder.HasMany(x => x.SongRequests)
+            .WithOne(r => r.LiveSession)
+            .HasForeignKey(r => r.LiveSessionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(x => x.SessionSchedules)
+            .WithOne(s => s.LiveSession)
+            .HasForeignKey(s => s.LiveSessionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(x => x.Chats)
+            .WithOne(c => c.LiveSession)
+            .HasForeignKey(c => c.LiveSessionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         // Indexes
         builder.HasIndex(x => x.HostUserId);
         builder.HasIndex(x => x.Status);

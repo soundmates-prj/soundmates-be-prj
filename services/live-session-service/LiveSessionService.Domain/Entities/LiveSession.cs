@@ -43,4 +43,12 @@ public partial class LiveSession
     public virtual ICollection<NowPlayingHistory> NowPlayingHistory { get; set; } = new List<NowPlayingHistory>();
     
     public virtual ICollection<SessionListener> Listeners { get; set; } = new List<SessionListener>();
+
+    public virtual ICollection<SongRequest> SongRequests { get; set; }
+        = new List<SongRequest>();
+
+    public virtual ICollection<SessionSchedule> SessionSchedules { get; set; }
+    = new List<SessionSchedule>();
+
+    public virtual ICollection<LiveSessionChat> Chats { get; set; } = new List<LiveSessionChat>();
 }

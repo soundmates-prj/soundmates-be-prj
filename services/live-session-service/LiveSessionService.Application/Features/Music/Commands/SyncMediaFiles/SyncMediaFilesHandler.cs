@@ -42,7 +42,7 @@ public sealed class SyncMediaFilesHandler : ICommandHandler<SyncMediaFilesComman
                 return Result<SyncMediaFilesResult>.Failure("Station not found", ErrorCode.NotFound);
 
             var azuraFiles = await _azuraCastClient.GetStationFilesAsync(station.ExternalStationId, cancellationToken);
-            var localFiles = await _mediaFileRepository.GetByStationIdAsync(station.Id, cancellationToken);
+            var localFiles = await _mediaFileRepository.GetAllAsync(cancellationToken);
 
             var localFilesByUniqueId = localFiles
                 .Where(f => !string.IsNullOrWhiteSpace(f.FilePath))
@@ -103,7 +103,6 @@ public sealed class SyncMediaFilesHandler : ICommandHandler<SyncMediaFilesComman
                 var mediaFile = new MediaFile
                 {
                     Id = Guid.NewGuid(),
-                    StationId = station.Id,
                     Title = title,
                     Artist = azuraFile.Artist,
                     Album = azuraFile.Album,
