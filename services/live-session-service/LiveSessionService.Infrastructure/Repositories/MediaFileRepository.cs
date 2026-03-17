@@ -32,27 +32,23 @@ public sealed class MediaFileRepository : IMediaFileRepository
 
     public async Task<IReadOnlyList<MediaFile>> GetByStationIdAsync(Guid stationId, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("MediaFileRepository: Querying database for StationId={StationId}", stationId);
-        
-        var allFiles = await _db.MediaFiles.AsNoTracking().ToListAsync(cancellationToken);
-        _logger.LogInformation("MediaFileRepository: Total media files in database: {Count}", allFiles.Count);
-        
-        if (allFiles.Any())
-        {
-            var stationIds = allFiles.Select(f => f.StationId).Distinct().ToList();
-            _logger.LogInformation("MediaFileRepository: StationIds in database: {StationIds}", 
-                string.Join(", ", stationIds));
-        }
-        
+        _logger.LogInformation(
+            "MediaFileRepository: Querying media files by StationId={StationId} through PlaylistMedia -> StationPlaylist",
+            stationId);
+
         var result = await _db.MediaFiles
             .AsNoTracking()
-            .Where(f => f.StationId == stationId)
+            .Where(f => _db.PlaylistMedias.Any(pm =>
+                pm.MediaFileId == f.Id &&
+                pm.StationPlaylist.AzuraCastStationId == stationId))
             .OrderByDescending(f => f.UploadedAt)
             .ToListAsync(cancellationToken);
-        
-        _logger.LogInformation("MediaFileRepository: Found {Count} media files for StationId={StationId}", 
-            result.Count, stationId);
-        
+
+        _logger.LogInformation(
+            "MediaFileRepository: Found {Count} media files for StationId={StationId}",
+            result.Count,
+            stationId);
+
         return result;
     }
 

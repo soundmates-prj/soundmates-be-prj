@@ -15,7 +15,7 @@ namespace AccountContentService.Application.DTOs
         public string ContentText { get; set; } = string.Empty;
 
         public string? AudioUrl { get; set; }
-
+        public string? ImageUrl { get; set; }
         public bool IsActive { get; set; } = true;
 
         public string? PrivacyScope { get; set; } = "Public";
@@ -31,8 +31,8 @@ namespace AccountContentService.Application.DTOs
         public DateTime UpdatedAt { get; set; }
         public DateTime? PublishedAt { get; set; }
 
-        public List<CommentDto> Comments { get; set; } = new();
-        public List<ReactionDto> Reactions { get; set; } = new();
+        //public List<CommentDto> Comments { get; set; } = new();
+        //public List<ReactionDto> Reactions { get; set; } = new();
 
     }
 }

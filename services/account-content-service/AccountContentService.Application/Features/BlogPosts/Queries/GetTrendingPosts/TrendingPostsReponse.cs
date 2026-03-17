@@ -15,6 +15,7 @@ namespace AccountContentService.Application.Features.BlogPosts.Queries.GetTrendi
         public string ContentText { get; set; }
 
         public string? AudioUrl { get; set; }
+        public string? ImgUrl { get; set; }
 
         public string? PrivacyScope { get; set; } 
 
