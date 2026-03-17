@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Podcast.Api/PodcastService.Api.csproj" />
+  <Project Path="PodcastService.Application/PodcastService.Application.csproj" />
+  <Project Path="PodcastService.Domain/PodcastService.Domain.csproj" />
+  <Project Path="PodcastService.infrastucture/PodcastService.Infrastructure.csproj" />
+</Solution>
