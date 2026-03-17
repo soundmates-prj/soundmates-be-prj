@@ -1,0 +1,6 @@
+@Podcast.Api_HostAddress = http://localhost:5259
+
+GET {{Podcast.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

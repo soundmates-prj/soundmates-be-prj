@@ -365,6 +365,56 @@ public sealed class AzuraCastClient : IAzuraCastClient
             fileUniqueId, playlistId, stationId);
     }
 
+    public async Task RemoveMediaFromPlaylistAsync(
+        int stationId,
+        string fileUniqueId,
+        int playlistId,
+        CancellationToken cancellationToken = default)
+    {
+        var stationFiles = await GetStationFilesAsync(stationId, cancellationToken);
+        var stationFile = stationFiles.FirstOrDefault(f =>
+            string.Equals(f.UniqueId, fileUniqueId, StringComparison.OrdinalIgnoreCase));
+
+        if (stationFile == null)
+        {
+            throw new AzuraCastException(
+                $"Media file '{fileUniqueId}' was not found on AzuraCast station {stationId}.",
+                ErrorCode.NotFound);
+        }
+
+        var updatedPlaylistIds = stationFile.Playlists?
+            .Select(p => p.Id)
+            .Where(id => id != playlistId)
+            .Distinct()
+            .ToArray() ?? Array.Empty<int>();
+
+        var body = new { playlists = updatedPlaylistIds };
+
+        using var response = await _httpClient.PutAsJsonAsync(
+            $"api/station/{stationId}/file/{fileUniqueId}", body, cancellationToken);
+        await EnsureAzuraCastSuccessAsync(response, $"remove file from playlist on station {stationId}", cancellationToken);
+
+        _logger.LogInformation(
+            "Removed file {UniqueId} from playlist {PlaylistId} on station {StationId}",
+            fileUniqueId, playlistId, stationId);
+    }
+
+    public async Task DeleteMediaAsync(
+        int stationId,
+        string fileUniqueId,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await _httpClient.DeleteAsync(
+            $"api/station/{stationId}/file/{fileUniqueId}", cancellationToken);
+
+        await EnsureAzuraCastSuccessAsync(response, $"delete media on station {stationId}", cancellationToken);
+
+        _logger.LogInformation(
+            "Deleted file {UniqueId} on station {StationId}",
+            fileUniqueId,
+            stationId);
+    }
+
     // ---------------------------------------------------------------------------
     // Helpers
     // ---------------------------------------------------------------------------

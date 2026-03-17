@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Authorization;
 using LiveSessionService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
 using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Features.Results.Music;
+using LiveSessionService.Application.Features.Music.Commands.SyncMediaFiles;
 using LiveSessionService.Application.Features.Music.Commands.UploadMusic;
+using LiveSessionService.Application.Features.Music.Commands.DeleteMedia;
 using LiveSessionService.Application.Features.Music.Queries.GetAllMediaFiles;
 using LiveSessionService.Application.Features.Music.Queries.GetMediaFilesByStation;
 using LiveSessionService.Api.Models.Responses;
@@ -156,6 +158,33 @@ public class MusicCatalogController : ControllerBase
     }
 
     /// <summary>
+    /// Sync music files from AzuraCast for a station
+    /// </summary>
+    [HttpPost("station/{stationId:guid}/sync")]
+    [ProducesResponseType(typeof(ApiResponse<SyncMediaFilesResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> SyncStationMusic(Guid stationId, CancellationToken ct)
+    {
+        var result = await _commands.Send<SyncMediaFilesCommand, SyncMediaFilesResult>(
+            new SyncMediaFilesCommand(stationId), ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.Unauthorized => Unauthorized(result.ToApiResponse()),
+                ErrorCode.Forbidden => StatusCode(403, result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                ErrorCode.UnprocessableEntity => StatusCode(422, result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(result.ToApiResponse());
+    }
+
+    /// <summary>
     /// Get all music for a station
     /// </summary>
     [HttpGet("station/{stationId:guid}")]
@@ -194,11 +223,22 @@ public class MusicCatalogController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
     public async Task<IActionResult> DeleteMusic(Guid id, CancellationToken ct)
     {
-        _logger.LogWarning("DeleteMusic not yet implemented");
-        
-        return StatusCode(501, ApiResponse<object>.FailureResponse(
-            "Delete music feature coming soon",
-            501));
+        var result = await _commands.Send(new DeleteMediaCommand(id), ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.Unauthorized => Unauthorized(result.ToApiResponse()),
+                ErrorCode.Forbidden => StatusCode(403, result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                ErrorCode.UnprocessableEntity => StatusCode(422, result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return NoContent();
     }
 
     /// <summary>

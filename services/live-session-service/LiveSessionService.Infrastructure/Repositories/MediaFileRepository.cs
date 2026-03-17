@@ -61,4 +61,16 @@ public sealed class MediaFileRepository : IMediaFileRepository
         await _db.MediaFiles.AddAsync(mediaFile, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task UpdateAsync(MediaFile mediaFile, CancellationToken cancellationToken = default)
+    {
+        _db.MediaFiles.Update(mediaFile);
+        await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task DeleteAsync(MediaFile mediaFile, CancellationToken cancellationToken = default)
+    {
+        _db.MediaFiles.Remove(mediaFile);
+        await _db.SaveChangesAsync(cancellationToken);
+    }
 }
