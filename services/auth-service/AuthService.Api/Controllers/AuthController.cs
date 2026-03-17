@@ -1,6 +1,7 @@
 using AuthService.Api.Models.Requests;
 using AuthService.Api.Models.Requests.User;
 using AuthService.Api.Models.Responses;
+using AuthService.Api.Extensions;
 using AuthService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
 using AuthService.Application.Enums;
 using AuthService.Application.Exceptions;
@@ -12,6 +13,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AuthService.Api.Controllers
 {
+    /// <summary>
+    /// Authentication and account security endpoints.
+    /// </summary>
     [ApiController]
     [Route("api/v1/[controller]")]
     public class AuthController : ControllerBase
@@ -24,7 +28,12 @@ namespace AuthService.Api.Controllers
             _commands = commands;
         }
 
-        // api/v1/auth/login
+        /// <summary>
+        /// Authenticates with username/email and password.
+        /// </summary>
+        /// <remarks>
+        /// Returns access token and refresh token when credentials are valid.
+        /// </remarks>
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken ct)
         {
@@ -64,7 +73,9 @@ namespace AuthService.Api.Controllers
             return Ok(ApiResponse<AuthResult>.SuccessResponse(result.Data!, result.ErrorMessage ?? "Login successful"));
         }
 
-        // api/v1/auth/register
+        /// <summary>
+        /// Registers a new user account.
+        /// </summary>
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request, CancellationToken ct)
         {
@@ -97,7 +108,9 @@ namespace AuthService.Api.Controllers
             return Ok(ApiResponse<AuthResult>.SuccessResponse(result.Data!, result.ErrorMessage ?? "Registration successful"));
         }
 
-        // api/v1/auth/google-login
+        /// <summary>
+        /// Authenticates a user using Google ID token.
+        /// </summary>
         [HttpPost("google-login")]
         public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request, CancellationToken ct)
         {
@@ -123,7 +136,9 @@ namespace AuthService.Api.Controllers
             return Ok(ApiResponse<AuthResult>.SuccessResponse(result.Data!, result.ErrorMessage ?? "Google login successful"));
         }
 
-        // api/v1/auth/refresh-token
+        /// <summary>
+        /// Issues a new access token using a valid refresh token.
+        /// </summary>
         [HttpPost("refresh-token")]
         public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request, CancellationToken ct)
         {
@@ -145,7 +160,9 @@ namespace AuthService.Api.Controllers
             return Ok(ApiResponse<AuthResult>.SuccessResponse(result.Data!, result.ErrorMessage ?? "Token refreshed successfully"));
         }
 
-        // api/v1/auth/verify-email
+        /// <summary>
+        /// Verifies user email with OTP code.
+        /// </summary>
         [HttpPost("verify-email")]
         public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailRequest request, CancellationToken ct)
         {
@@ -173,7 +190,9 @@ namespace AuthService.Api.Controllers
             return Ok(ApiResponse<AuthResult>.SuccessResponse(result.Data!, result.ErrorMessage ?? "Email verified successfully"));
         }
 
-        // api/v1/auth/resend-otp
+        /// <summary>
+        /// Resends OTP for email verification.
+        /// </summary>
         [HttpPost("resend-otp")]
         public async Task<IActionResult> ResendOtp([FromBody] ResendOtpRequest request, CancellationToken ct)
         {
@@ -214,7 +233,9 @@ namespace AuthService.Api.Controllers
             }
         }
 
-        // api/v1/auth/forget-password
+        /// <summary>
+        /// Starts forgot-password flow by sending reset OTP.
+        /// </summary>
         [HttpPost("forget-password")]
         public async Task<IActionResult> ForgetPassword([FromBody] ForgetPasswordRequest request, CancellationToken ct)
         {
@@ -237,7 +258,9 @@ namespace AuthService.Api.Controllers
             }
         }
 
-        // api/v1/auth/reset-password
+        /// <summary>
+        /// Resets password using email + OTP.
+        /// </summary>
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request, CancellationToken ct)
         {
@@ -266,7 +289,9 @@ namespace AuthService.Api.Controllers
             }
         }
 
-        // api/v1/auth/change-password
+        /// <summary>
+        /// Changes password for the authenticated user.
+        /// </summary>
         [HttpPost("change-password")]
         [Authorize]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request, CancellationToken ct)
@@ -277,11 +302,7 @@ namespace AuthService.Api.Controllers
             try
             {
                 // Get user ID from JWT claims
-                var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)
-                                  ?? User.FindFirst("sub")
-                                  ?? User.Claims.FirstOrDefault(c => c.Type == "user_id");
-
-                if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+                if (!User.TryGetCurrentUserId(out var userId))
                 {
                     return Unauthorized(ApiResponse<bool>.FailureResponse("Invalid or missing user token", 401));
                 }
@@ -306,9 +327,12 @@ namespace AuthService.Api.Controllers
             }
         }
 
-        // api/v1/auth/profile (PUT - Update Full Profile)
-        // Merged endpoint: Updates both basic info (firstname, lastname) and extended profile fields
-        // All fields are optional - only provided fields will be updated
+        /// <summary>
+        /// Updates authenticated user's profile (basic + extended fields).
+        /// </summary>
+        /// <remarks>
+        /// All fields are optional; only provided fields are updated.
+        /// </remarks>
         [HttpPut("profile")]
         [Authorize]
         public async Task<IActionResult> UpdateUserProfile([FromBody] UpdateUserProfileRequest request, CancellationToken ct)
@@ -317,11 +341,7 @@ namespace AuthService.Api.Controllers
                 return BadRequest(ApiResponse<UserProfileResult>.FailureResponse("Invalid input", 400));
 
             // Get user ID from JWT claims
-            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)
-                              ?? User.FindFirst("sub")
-                              ?? User.Claims.FirstOrDefault(c => c.Type == "user_id");
-
-            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+            if (!User.TryGetCurrentUserId(out var userId))
             {
                 return Unauthorized(ApiResponse<UserProfileResult>.FailureResponse("Invalid or missing user token", 401));
             }

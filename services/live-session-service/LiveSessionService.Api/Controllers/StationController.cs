@@ -88,7 +88,7 @@ public class StationController : ControllerBase
     }
 
     /// <summary>
-    /// Get live now playing data from AzuraCast for a station
+    /// Get live now-playing data from AzuraCast for a station (not a live session)
     /// </summary>
     /// <param name="id">Station local Guid (from GET /station)</param>
     [HttpGet("{id:guid}/now-playing")]
@@ -114,14 +114,6 @@ public class StationController : ControllerBase
     /// <summary>
     /// Sync all stations from AzuraCast to local database
     /// </summary>
-    /// <remarks>
-    /// This endpoint fetches all stations from AzuraCast and syncs them to local database.
-    /// 
-    /// Common errors:
-    /// - 401: Invalid API key ? Check appsettings.json "AzuraCast:ApiKey"
-    /// - 404: No stations found ? Add stations in AzuraCast admin panel
-    /// - 503: Cannot connect ? Verify "AzuraCast:BaseUrl" and ensure AzuraCast is running
-    /// </remarks>
     /// <response code="200">Sync completed with statistics</response>
     /// <response code="401">Authentication failed - invalid API key</response>
     /// <response code="404">No stations found in AzuraCast</response>

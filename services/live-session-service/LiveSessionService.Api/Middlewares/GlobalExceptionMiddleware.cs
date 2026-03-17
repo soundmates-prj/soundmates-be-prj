@@ -1,4 +1,4 @@
-﻿using LiveSessionService.Application.Enums;
+﻿    using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Exceptions;
 using LiveSessionService.Api.Models.Responses;
 using System.Net;
@@ -8,7 +8,7 @@ namespace LiveSessionService.Api.Middleware;
 
 /// <summary>
 /// Global exception handler middleware
-/// Catches unhandled exceptions và convert thành API response chu?n
+/// Catches unhandled exceptions và convert thành API response chuẩn
 /// </summary>
 public sealed class GlobalExceptionMiddleware
 {
@@ -43,27 +43,58 @@ public sealed class GlobalExceptionMiddleware
     {
         context.Response.ContentType = "application/json";
 
-        // AzuraCast-specific errors carry their own HTTP status code
-        if (exception is AzuraCastException azEx)
+        var errorCode = ErrorCode.InternalServerError;
+        var message = "An unexpected error occurred";
+        var statusCode = HttpStatusCode.InternalServerError;
+
+        // Map exception types to ErrorCode
+        switch (exception)
         {
-            context.Response.StatusCode = (int)azEx.ErrorCode;
-            var azResponse = ApiResponse<object>.FailureResponse(azEx.Message, (int)azEx.ErrorCode);
-            await context.Response.WriteAsync(JsonSerializer.Serialize(azResponse,
-                new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
-            return;
+            case AzuraCastException azEx:
+                errorCode = azEx.ErrorCode;
+                message = azEx.Message;
+                statusCode = (HttpStatusCode)errorCode;
+                break;
+
+            case InvalidOperationException:
+                errorCode = ErrorCode.BadRequest;
+                message = exception.Message;
+                statusCode = HttpStatusCode.BadRequest;
+                break;
+
+            case KeyNotFoundException:
+                errorCode = ErrorCode.NotFound;
+                message = exception.Message;
+                statusCode = HttpStatusCode.NotFound;
+                break;
+
+            case UnauthorizedAccessException:
+                errorCode = ErrorCode.Unauthorized;
+                message = "Unauthorized access";
+                statusCode = HttpStatusCode.Unauthorized;
+                break;
+
+            case ArgumentException:
+                errorCode = ErrorCode.BadRequest;
+                message = exception.Message;
+                statusCode = HttpStatusCode.BadRequest;
+                break;
+
+            default:
+                errorCode = ErrorCode.InternalServerError;
+                message = _env.IsDevelopment() 
+                    ? $"Internal server error: {exception.Message}" 
+                    : "An internal server error occurred";
+                statusCode = HttpStatusCode.InternalServerError;
+                break;
         }
 
-        context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+        context.Response.StatusCode = (int)statusCode;
 
-        var response = ApiResponse<object>.FailureResponse(
-            message: _env.IsDevelopment() 
-                ? $"Internal server error: {exception.Message}" 
-                : "An internal server error occurred",
-            errorCode: (int)ErrorCode.InternalServerError
-        );
+        var response = ApiResponse<object>.FailureResponse(message, (int)errorCode);
 
-        // In Development, can include stack trace
-        if (_env.IsDevelopment())
+        // In Development, include exception details
+        if (_env.IsDevelopment() && exception is not AzuraCastException)
         {
             var detailedResponse = new
             {
@@ -71,7 +102,8 @@ public sealed class GlobalExceptionMiddleware
                 response.Message,
                 response.ErrorCode,
                 ExceptionType = exception.GetType().Name,
-                StackTrace = exception.StackTrace
+                StackTrace = exception.StackTrace,
+                InnerException = exception.InnerException?.Message
             };
 
             var json = JsonSerializer.Serialize(detailedResponse, new JsonSerializerOptions
@@ -95,7 +127,7 @@ public sealed class GlobalExceptionMiddleware
 }
 
 /// <summary>
-/// Extension method middleware for register GlobalExceptionMiddleware
+/// Extension method to register GlobalExceptionMiddleware
 /// </summary>
 public static class GlobalExceptionMiddlewareExtensions
 {

@@ -86,7 +86,7 @@ public class LiveSessionController : ControllerBase
     }
 
     /// <summary>
-    /// Create a new live session
+    /// Create a new live stream session
     /// </summary>
     [HttpPost]
     [ProducesResponseType(typeof(ApiResponse<LiveSessionResult>), 201)]
@@ -126,7 +126,7 @@ public class LiveSessionController : ControllerBase
     }
 
     /// <summary>
-    /// Start a live session
+    /// Start a live stream session
     /// </summary>
     [HttpPost("{id:guid}/start")]
     [ProducesResponseType(typeof(ApiResponse<LiveSessionResult>), 200)]
@@ -151,7 +151,7 @@ public class LiveSessionController : ControllerBase
     }
 
     /// <summary>
-    /// Stop a live session
+    /// Stop a live stream session
     /// </summary>
     [HttpPost("{id:guid}/stop")]
     [ProducesResponseType(typeof(ApiResponse<LiveSessionResult>), 200)]
@@ -176,7 +176,7 @@ public class LiveSessionController : ControllerBase
     }
 
     /// <summary>
-    /// Get listener statistics for a live session
+    /// Get listener statistics for a live stream session
     /// </summary>
     [HttpGet("{id:guid}/listeners")]
     [ProducesResponseType(typeof(ApiResponse<ListenerStatsResult>), 200)]

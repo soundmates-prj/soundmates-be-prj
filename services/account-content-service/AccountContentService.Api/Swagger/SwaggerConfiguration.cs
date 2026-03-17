@@ -16,9 +16,9 @@ namespace AccountContentService.Api.Swagger
             {
                 c.SwaggerDoc("v1", new OpenApiInfo
                 {
-                    Title = "AuthService API",
+                    Title = "AccountContentService API",
                     Version = "v1",
-                    Description = "Authentication and Authorization Service API"
+                    Description = "User Account Content Service API"
                 });
 
                 // JWT Security

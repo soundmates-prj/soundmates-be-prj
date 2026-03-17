@@ -26,13 +26,14 @@ namespace AuthService.Infrastructure.Services
 
         public async Task SendEmailAsync(string to, string subject, string body)
         {
-            var client = new SmtpClient(_options.Host, _options.Port)
+            using var client = new SmtpClient(_options.Host, _options.Port)
             {
+                UseDefaultCredentials = false,
                 Credentials = new NetworkCredential(_options.Username, _options.Password),
                 EnableSsl = true
             };
 
-            var mail = new MailMessage(_options.From, to, subject, body)
+            using var mail = new MailMessage(_options.From, to, subject, body)
             {
                 IsBodyHtml = true
             };

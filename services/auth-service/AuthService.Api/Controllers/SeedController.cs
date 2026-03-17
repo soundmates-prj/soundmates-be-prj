@@ -9,8 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace AuthService.Api.Controllers
 {
     /// <summary>
-    /// Seed controller for initial data setup (Development/Migration only)
-    /// Should be removed or disabled in production
+    /// Development/migration endpoints for seeding initial roles and users.
     /// </summary>
     [Route("api/v1/[controller]")]
     [ApiController]
@@ -31,7 +30,7 @@ namespace AuthService.Api.Controllers
         /// <remarks>
         /// Creates:
         /// - Roles: MEMBER, HOST, STAFF, ADMIN
-        /// - Users: admin@server.com (ADMIN), host@server.com (HOST)
+        /// - Users: admin@server.com (ADMIN), host@server.com (HOST), staff@server.com (STAFF), member@server.com (MEMER)
         /// Default password for both users: 123456
         /// </remarks>
         [HttpPost("default-users")]
@@ -168,6 +167,48 @@ namespace AuthService.Api.Controllers
                         success = hostUserRes.IsSuccess,
                         userId = hostUserRes.Data,
                         message = hostUserRes.ErrorMessage
+                    });
+                }
+
+                if (staffRole != null)
+                {
+                    var createStaffUserCmd = new CreateUserCommand
+                    {
+                        Username = "staff404",
+                        Email = "staff@server.com",
+                        FirstName = "Default",
+                        LastName = "staff",
+                        Password = "123456",
+                        RoleId = staffRole.Id
+                    };
+                    var staffUserRes = await _commands.Send<CreateUserCommand, Guid>(createStaffUserCmd, ct);
+                    results.Add(new
+                    {
+                        action = "Create staff user",
+                        success = staffUserRes.IsSuccess,
+                        userId = staffUserRes.Data,
+                        message = staffUserRes.ErrorMessage
+                    });
+                }
+
+                if (memberRole != null)
+                {
+                    var creatememberUserCmd = new CreateUserCommand
+                    {
+                        Username = "member404",
+                        Email = "member@server.com",
+                        FirstName = "Default",
+                        LastName = "member",
+                        Password = "123456",
+                        RoleId = memberRole.Id
+                    };
+                    var memberUserRes = await _commands.Send<CreateUserCommand, Guid>(creatememberUserCmd, ct);
+                    results.Add(new
+                    {
+                        action = "Create staff user",
+                        success = memberUserRes.IsSuccess,
+                        userId = memberUserRes.Data,
+                        message = memberUserRes.ErrorMessage
                     });
                 }
 

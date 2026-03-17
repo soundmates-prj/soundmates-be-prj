@@ -11,21 +11,18 @@ public static class JwtExtensions
 {
     public static WebApplicationBuilder AddJwtAuthentication(this WebApplicationBuilder builder)
     {
-        // Read from environment variables (Docker) or config
-        var secretKey = Environment.GetEnvironmentVariable("JWT_KEY")
-            ?? builder.Configuration["Jwt:Key"]
+        // Read from mapped configuration (appsettings + .env via AddEnvironmentConfig)
+        var secretKey = builder.Configuration["Jwt:Key"]
             ?? throw new InvalidOperationException("JWT_KEY is not configured.");
 
         if (secretKey.StartsWith("${") || secretKey.Contains("<"))
             throw new InvalidOperationException(
                 "JWT_KEY is still a placeholder. " +
-                "Set JWT_KEY in your .env file or as an environment variable.");
+                "Set JWT_KEY in your configuration (.env/appsettings/environment). ");
 
-        var issuer = Environment.GetEnvironmentVariable("JWT_ISSUER")
-            ?? builder.Configuration["Jwt:Issuer"];
+        var issuer = builder.Configuration["Jwt:Issuer"];
         
-        var audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE")
-            ?? builder.Configuration["Jwt:Audience"];
+        var audience = builder.Configuration["Jwt:Audience"];
 
         builder.Services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

@@ -1,8 +1,11 @@
 ﻿using AuthService.Application.Features.Common;
+using AuthService.Application.Enums;
+using AuthService.Application.Exceptions;
 using AuthService.Domain.Entities;
 using AuthService.Domain.Enums;
 using AuthService.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
+using System.Net.Mail;
 
 namespace AuthService.Infrastructure.Services;
 
@@ -58,11 +61,23 @@ public sealed class OtpService : IOtpService
                 email,
                 purpose);
         }
-        catch (Exception ex)
+        catch (SmtpException ex)
         {
             _logger.LogError(
                 ex,
                 "Failed to send OTP email to {Email} for purpose {Purpose}",
+                email,
+                purpose);
+
+            throw new AuthException(
+                AuthErrorCode.EmailSendFailed,
+                "Unable to send OTP email at the moment. Please try again later.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Unexpected failure while sending OTP email to {Email} for purpose {Purpose}",
                 email,
                 purpose);
             throw;
