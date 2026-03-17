@@ -22,6 +22,13 @@ public class LiveSessionDbContext : DbContext
     public DbSet<StationMount> StationMounts => Set<StationMount>();
     public DbSet<ListenerStatistics> ListenerStatistics => Set<ListenerStatistics>();
     public DbSet<MediaFile> MediaFiles => Set<MediaFile>();
+    public DbSet<LiveSessionChat> LiveSessionChats => Set<LiveSessionChat>();
+    public DbSet<SessionSchedule> SessionSchedules => Set<SessionSchedule>();
+    public DbSet<SongRequest> SongRequests => Set<SongRequest>();
+    public DbSet<UserPlaylist> UserPlaylists => Set<UserPlaylist>();
+    public DbSet<UserPlaylistMedia> UserPlaylistMedias => Set<UserPlaylistMedia>();
+    public DbSet<Podcast> Podcasts => Set<Podcast>();
+    public DbSet<PodcastEpisode> PodcastEpisodes => Set<PodcastEpisode>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
