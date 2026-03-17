@@ -10,6 +10,8 @@ namespace AccountContentService.Infrastructure.Extensions
         {
             services.AddScoped<IBlogPostRepository, BlogPostRepository>();
             services.AddScoped<ICommentRepository, CommentRepository>();
+            services.AddScoped<IPostReactionRepository, ReactionRepository>();
+            services.AddScoped<ISubscriptionRepository, SubscriptionRepository>();
 
             return services;
         }

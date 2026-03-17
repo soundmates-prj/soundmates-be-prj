@@ -9,19 +9,19 @@ namespace AccountContentService.Application.Interfaces.Repositories
     public interface IPostReactionRepository
     {
         /// <summary>
-        /// CRUD operations for comments
+        /// CRUD operations for reactions
         ///</summary>
-        Task AddAsync(PostReaction comment);
-        Task UpdateAsync(PostReaction comment);
-        Task DeleteAsync(PostReaction comment);
+        Task AddAsync(PostReaction reaction);
+        Task UpdateAsync(PostReaction reaction);
+        Task DeleteAsync(PostReaction reaction);
 
         /// <summary>
-        /// Query comments by post ID, with pagination
+        /// Query reactions by post ID, with pagination
         ///</summary>
-        Task<PaginationResult<PostReaction>> GetByUserIdAsync(Guid userId, int pageSize, int page, CancellationToken cancellationToken);
+        Task<List<PostReaction>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken);
         Task<PostReaction> GetByIdAsync(Guid id, CancellationToken cancellationToken);
         Task<List<PostReaction>> GetDetailByIdAsync(Guid id, CancellationToken cancellationToken);
-
-        Task<PaginationResult<PostReaction>> GetByPostIdAsync(Guid postId, int pageSize, int page, CancellationToken cancellationToken);
+        Task<PostReaction> GetUserReactionAsync(Guid userId, Guid postId, CancellationToken cancellationToken);
+        Task<List<PostReaction>> GetByPostIdAsync(Guid postId, CancellationToken cancellationToken);
     }
 }

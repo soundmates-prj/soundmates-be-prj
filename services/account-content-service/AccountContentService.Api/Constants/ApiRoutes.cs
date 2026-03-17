@@ -202,8 +202,10 @@
         {
             private const string BaseRoute = $"{Base}/reactions";
 
-            /// <summary>Add or update reaction.</summary>
-            public const string AddOrUpdate = $"{Base}/posts/{{postId:guid}}/reactions";
+            /// <summary>Add reaction to a post.</summary>
+            public const string Add = $"{Base}/posts/{{postId:guid}}/reactions";
+            /// <summary>Update reaction.</summary>
+            public const string Update = $"{Base}/reactions/{{reationId:guid}}";
 
             /// <summary>Remove reaction.</summary>
             public const string Remove = $"{Base}/posts/{{postId:guid}}/reactions";
@@ -225,6 +227,15 @@
         public static class Subscriptions
         {
             private const string BaseRoute = $"{Base}/subscriptions";
+
+            /// <summary>Create new subscription plans.</summary>
+            public const string CreatePlan = $"{Base}/subscription-plans";
+
+            /// <summary>Update subscription plan.</summary>
+            public const string UpdatePlan = $"{Base}/subscription-plans/{{planId:guid}}";
+
+            /// <summary>Update subscription plan.</summary>
+            public const string DeletePlan = $"{Base}/subscription-plans/{{planId:guid}}";
 
             /// <summary>Retrieve subscription plans.</summary>
             public const string GetPlans = $"{Base}/subscription-plans";
