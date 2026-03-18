@@ -13,6 +13,7 @@ public static class ConfigurationExtensions
         MapJwt(builder.Configuration);
         MapGoogle(builder.Configuration);
         MapEmail(builder.Configuration);
+        MapVNPay(builder.Configuration);
         MapApp(builder.Configuration);
 
         return builder;
@@ -118,6 +119,21 @@ public static class ConfigurationExtensions
 
         configuration["EmailSettings:Password"] =
             Environment.GetEnvironmentVariable("EMAIL_PASSWORD");
+    }
+
+    private static void MapVNPay(IConfiguration configuration)
+    {
+        configuration["VNPay:TmnCode"] =
+            Environment.GetEnvironmentVariable("VNPAY_TMN_CODE");
+
+        configuration["VNPay:HashSecret"] =
+            Environment.GetEnvironmentVariable("VNPAY_HASH_SECRET");
+
+        configuration["VNPay:BaseUrl"] =
+            Environment.GetEnvironmentVariable("VNPAY_BASE_URL");
+
+        configuration["VNPay:ReturnUrl"] =
+            Environment.GetEnvironmentVariable("VNPAY_RETURN_URL");
     }
 
     private static void MapApp(IConfiguration configuration)

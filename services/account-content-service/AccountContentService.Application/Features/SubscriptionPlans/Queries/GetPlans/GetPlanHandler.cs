@@ -33,4 +33,5 @@ namespace AccountContentService.Application.Features.SubscriptionPlans.Queries.G
             var plans = await _repository.GetAllPlansAsync(cancellationToken);
             return _mapper.Map<List<SubscriptionPlanDto>>(plans);
         }
+    }
 }

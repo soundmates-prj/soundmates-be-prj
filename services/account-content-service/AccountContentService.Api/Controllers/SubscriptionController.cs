@@ -10,6 +10,8 @@ using AutoMapper;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using AccountContentService.Application.Features.Subscriptions.Queries.GetSubscriptions;
+using AccountContentService.Domain.Entities;
 
 namespace AccountContentService.Api.Controllers
 {
@@ -125,6 +127,56 @@ namespace AccountContentService.Api.Controllers
             var response = _mapper.Map<List<SubscriptionPlanResponse>>(result);
 
             return Ok(ApiResponse<List<SubscriptionPlanResponse>>.Ok(response, "Subscription plans retrieved successfully"));
+        }
+
+        /// <summary>
+        /// Get current user's subscription history.
+        /// </summary>
+        /// <response code="200">Subscription retrieved successfully</response>
+        /// <response code="404">Subscription not found</response>
+        [HttpGet(ApiRoutes.Me.MySubscriptionHistory)]
+        public async Task<IActionResult> GetCurrentUserSubscriptionHistory([FromQuery] PaginationNoFilterRequest request)
+        {
+            var userId = UserContext.GetUserId(HttpContext);
+            var query = _mapper.Map<GetSubscriptionsHistoryQuery>(request);
+            query.UserId = userId;
+            var result = await _mediator.Send(query);
+
+            if (result == null)
+            {
+                return NotFound(ApiResponse<string>.Fail("Subscription not found"));
+            }
+            var items = _mapper.Map<IEnumerable<SubscriptionResponse>>(result.Items);
+
+            var response = new PaginationResponse<SubscriptionResponse>(
+                items,
+                result.Page,
+                result.PageSize,
+                result.TotalCount);
+
+            return Ok(ApiResponse<PaginationResponse<SubscriptionResponse>>.Ok(response, "Subscription retrieved successfully"));
+        }
+
+        /// <summary>
+        /// Get current user's subscription detail.
+        /// </summary>
+        /// <response code="200">Subscription retrieved successfully</response>
+        /// <response code="404">Subscription not found</response>
+        [HttpGet(ApiRoutes.Me.MySubscription)]
+        public async Task<IActionResult> GetCurrentUserSubscription()
+        {
+            var userId = UserContext.GetUserId(HttpContext);
+            var query = new GetUserSubscriptionQuery(userId);
+          
+            var result = await _mediator.Send(query);
+
+            if (result == null)
+            {
+                return NotFound(ApiResponse<string>.Fail("Subscription not found"));
+            }
+            var response = _mapper.Map<SubscriptionResponse>(result);
+
+            return Ok(ApiResponse<SubscriptionResponse>.Ok(response, "Subscription retrieved successfully"));
         }
     }
 }

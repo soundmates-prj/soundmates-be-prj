@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <Folder Include="Common\Constants\" />
+    <Folder Include="Features\Payments\Queries\" />
   </ItemGroup>
 
   <ItemGroup>

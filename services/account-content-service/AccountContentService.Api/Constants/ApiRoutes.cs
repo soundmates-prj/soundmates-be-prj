@@ -156,6 +156,12 @@
 
             /// <summary>Retrieve current user's reactions.</summary>
             public const string MyReactions = $"{BaseRoute}/reactions";
+
+            /// <summary>Retrieve current user's subscription.</summary>
+            public const string MySubscription = $"{BaseRoute}/subscriptions";
+
+            /// <summary>Retrieve current user's subscription history.</summary>
+            public const string MySubscriptionHistory = $"{BaseRoute}/subscriptions/history";
         }
 
         // =====================================================
@@ -245,12 +251,6 @@
 
             /// <summary>Create subscription.</summary>
             public const string Subscribe = BaseRoute;
-
-            /// <summary>Retrieve current subscription.</summary>
-            public const string MySubscription = $"{BaseRoute}/me";
-
-            /// <summary>Retrieve subscription history.</summary>
-            public const string History = $"{BaseRoute}/history";
 
             /// <summary>Check subscription status.</summary>
             public const string Status = $"{BaseRoute}/status";

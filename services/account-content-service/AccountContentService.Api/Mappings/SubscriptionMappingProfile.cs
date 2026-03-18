@@ -1,8 +1,11 @@
-﻿using AccountContentService.Api.Contracts.Requests;
+﻿using AccountContentService.Api.Common;
+using AccountContentService.Api.Contracts.Requests;
 using AccountContentService.Api.Contracts.Responses;
 using AccountContentService.Application.DTOs;
+using AccountContentService.Application.Features.BlogComments.Queries.GetComments;
 using AccountContentService.Application.Features.SubscriptionPlans.Commands.CreatePlan;
 using AccountContentService.Application.Features.SubscriptionPlans.Commands.UpdatePlan;
+using AccountContentService.Application.Features.Subscriptions.Queries.GetSubscriptions;
 using AutoMapper;
 
 namespace AccountContentService.Api.Mappings
@@ -14,6 +17,8 @@ namespace AccountContentService.Api.Mappings
             CreateMap<SubscriptionPlanDto, SubscriptionPlanResponse>();
             CreateMap<SubscriptionPlanRequest, CreatePlanCommand>();
             CreateMap<SubscriptionPlanRequest, UpdatePlanCommand>();
+            CreateMap<PaginationNoFilterRequest, GetSubscriptionsHistoryQuery>();
+
         }
     }
 }

@@ -20,4 +20,23 @@
 
         public string? Description { get; set; }
     }
+
+    public class SubscriptionResponse
+    {
+        public Guid Id { get; set; }
+
+        public Guid UserId { get; set; }
+
+        public Guid PlanId { get; set; }
+
+        public Guid PlanName { get; set; }
+
+        public DateTime StartDate { get; set; }
+
+        public DateTime EndDate { get; set; }
+
+        public DateTime SubscribeAt { get; set; }
+
+        public string Status { get; set; }
+    }
 }

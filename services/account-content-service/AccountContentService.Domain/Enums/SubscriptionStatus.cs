@@ -4,7 +4,12 @@ using System.Text;
 
 namespace AccountContentService.Domain.Enums
 {
-    internal class SubscriptionStatus
+    public enum SubscriptionStatus
     {
+        Pending = 0,
+        Active = 1,
+        Cancelled = 2,
+        Expired = 3,
+        Suspended = 4
     }
 }

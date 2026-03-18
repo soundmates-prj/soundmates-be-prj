@@ -8,12 +8,10 @@ namespace AccountContentService.Application.Interfaces.Repositories
 {
     public interface ISubscriptionRepository
     {
-        ///// <summary>
-        ///// CRUD operations for subcription 
-        /////</summary>
-        //Task AddAsync(Subscription comment);
-        //Task UpdateAsync(Subscription comment);
-        //Task DeleteAsync(Subscription comment);
+        /// <summary>
+        /// CRUD operations for subcription 
+        ///</summary>
+        Task AddAsync(Subscription comment);
 
         /// <summary>
         /// CRUD operations for subcription plans
@@ -22,14 +20,15 @@ namespace AccountContentService.Application.Interfaces.Repositories
         Task UpdatePlanAsync(SubscriptionPlan comment);
         Task DeletePlanAsync(SubscriptionPlan comment);
 
-        ///// <summary>
-        ///// Query comments by post ID, with pagination
-        /////</summary>
-        //Task<PaginationResult<BlogComment>> GetByUserIdAsync(Guid userId, int pageSize, int page, CancellationToken cancellationToken);
-        //Task<BlogComment> GetByIdAsync(Guid id, CancellationToken cancellationToken);
-        //Task<List<BlogComment>> GetDetailByIdAsync(Guid id, CancellationToken cancellationToken);
+        /// <summary>
+        /// Query subscription
+        ///</summary>
+        Task<PaginationResult<Subscription>> GetSubscriptionsAsync(int page, int pageSize, CancellationToken cancellationToken);
+        Task<PaginationResult<Subscription>> GetSubscriptionsHistoryAsync(Guid userId, int page, int pageSize, CancellationToken cancellationToken);
 
-        //Task<PaginationResult<BlogComment>> GetByPostIdAsync(Guid postId, int pageSize, int page, CancellationToken cancellationToken);
+        Task<Subscription> GetSubscriptionByIdAsync(Guid subId, CancellationToken cancellationToken);
+        Task<Subscription> GetActiveByUserIdAsync(Guid userId, CancellationToken cancellationToken);
+        Task<Subscription> GetSubscriptionByUserIdAsync(Guid userId, CancellationToken cancellationToken);
 
         /// <summary>
         /// Query plans 

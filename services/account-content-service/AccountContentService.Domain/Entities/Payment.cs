@@ -6,13 +6,13 @@ public class Payment
 
     public Guid UserId { get; set; }
 
-    public Guid PlanId { get; set; }
-
     public string TargetType { get; set; } = string.Empty;
 
     public Guid TargetId { get; set; }
 
     public decimal TotalAmount { get; set; }
+
+    public long? OrderCode { get; private set; } //PayOs
 
     public string Status { get; set; } = "pending";
 
