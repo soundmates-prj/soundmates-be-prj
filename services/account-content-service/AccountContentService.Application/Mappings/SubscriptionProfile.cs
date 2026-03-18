@@ -17,7 +17,7 @@ namespace AccountContentService.Application.Mappings
             CreateMap<SubscriptionPlan, SubscriptionPlanDto>();
             CreateMap<Subscription, SubscriptionDto>()
                 .ForMember(dest => dest.PlanName,
-                 opt => opt.MapFrom(src => src.Plan.PlanName));
+    opt => opt.MapFrom(src => src.Plan != null ? src.Plan.PlanName : null));
             CreateMap<CreatePlanCommand, SubscriptionPlan>();
             CreateMap<CreateSubscriptionCommand, Subscription>();
             CreateMap<UpdatePlanCommand, SubscriptionPlan>()

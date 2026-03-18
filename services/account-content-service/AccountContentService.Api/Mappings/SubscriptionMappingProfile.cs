@@ -15,6 +15,7 @@ namespace AccountContentService.Api.Mappings
         public SubscriptionMappingProfile()
         {
             CreateMap<SubscriptionPlanDto, SubscriptionPlanResponse>();
+            CreateMap<SubscriptionDto, SubscriptionResponse>();
             CreateMap<SubscriptionPlanRequest, CreatePlanCommand>();
             CreateMap<SubscriptionPlanRequest, UpdatePlanCommand>();
             CreateMap<PaginationNoFilterRequest, GetSubscriptionsHistoryQuery>();

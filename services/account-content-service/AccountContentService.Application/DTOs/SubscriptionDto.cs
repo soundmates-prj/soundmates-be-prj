@@ -34,7 +34,7 @@ namespace AccountContentService.Application.DTOs
 
         public Guid PlanId { get; set; }
 
-        public Guid PlanName { get; set; }
+        public string PlanName { get; set; }
 
         public DateTime StartDate { get; set; }
 
