@@ -211,7 +211,7 @@
             /// <summary>Add reaction to a post.</summary>
             public const string Add = $"{Base}/posts/{{postId:guid}}/reactions";
             /// <summary>Update reaction.</summary>
-            public const string Update = $"{Base}/reactions/{{reationId:guid}}";
+            public const string Update = $"{Base}/reactions/{{reactionId:guid}}";
 
             /// <summary>Remove reaction.</summary>
             public const string Remove = $"{Base}/posts/{{postId:guid}}/reactions";
@@ -281,6 +281,12 @@
 
             /// <summary>Retrieve payment history.</summary>
             public const string GetAll = BaseRoute;
+
+            /// <summary>VNPay callback.</summary>
+            public const string VNPayCallBack = $"{BaseRoute}/vnpay/callback";
+
+            /// <summary>Payos webhook.</summary>
+            public const string PayOsWebhook = $"{BaseRoute}/payos/webhook";
 
             /// <summary>Confirm payment.</summary>
             public const string Confirm = $"{BaseRoute}/{{paymentId:guid}}/confirm";
