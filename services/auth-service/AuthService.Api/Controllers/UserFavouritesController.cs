@@ -8,9 +8,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AuthService.Api.Controllers;
 
-/// <summary>
-/// API quản lý danh sách yêu thích của người dùng đăng nhập hiện tại.
-/// </summary>
 [ApiController]
 [Route("api/v1/me/favorites")]
 [Authorize]
@@ -27,13 +24,6 @@ public class UserFavouritesController : ControllerBase
     /// Adds an item to the current user's favourites.
     /// If <c>source = spotify</c>, attached Spotify metadata is cached as well.
     /// </summary>
-    /// <remarks>
-    /// Processing flow:
-    /// 1) Validate request model.
-    /// 2) Resolve <c>UserId</c> from JWT claims.
-    /// 3) Dispatch command to Application handler.
-    /// 4) Map <c>Result</c> to the appropriate HTTP status code.
-    /// </remarks>
     [HttpPost]
     [ProducesResponseType(typeof(ApiResponse<Guid>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse<Guid>), StatusCodes.Status400BadRequest)]
