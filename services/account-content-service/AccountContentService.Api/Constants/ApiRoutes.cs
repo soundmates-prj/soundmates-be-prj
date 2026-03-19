@@ -9,7 +9,7 @@
         /// <summary>
         /// Base API route prefix.
         /// </summary>
-        private const string Base = "v1/api";
+        private const string Base = "api/v1";
 
         // =====================================================
         // POSTS
