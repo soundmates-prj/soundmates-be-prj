@@ -188,8 +188,8 @@ namespace AccountContentService.Infrastructure.Migrations
                     b.Property<string>("ExternalReference")
                         .HasColumnType("text");
 
-                    b.Property<Guid>("PlanId")
-                        .HasColumnType("uuid");
+                    b.Property<long?>("OrderCode")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -338,6 +338,9 @@ namespace AccountContentService.Infrastructure.Migrations
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<DateTime>("SubscribeAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");

@@ -4,7 +4,8 @@ using System.Text;
 
 namespace AccountContentService.Application.Interfaces.Services
 {
-    internal interface IPaymentService
+    public interface IPaymentService
     {
+        bool VNPayVerifySignature(Dictionary<string, string> data);
     }
 }

@@ -1,4 +1,5 @@
 ﻿using AccountContentService.Domain.Entities;
+using AccountContentService.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace AccountContentService.Infrastructure.Persistence;
@@ -141,9 +142,8 @@ public static class DataSeeder
         {
             Id = Guid.NewGuid(),
             UserId = userId,
-            PlanId = premiumPlan.Id,
-            TargetType = "subscription",
-            TargetId = subscription.Id,
+            TargetType = PaymentTargetType.Subscription.ToString(),
+            TargetId = premiumPlan.Id,
             TotalAmount = 9.99m,
             Status = "completed",
             CreatedAt = now,

@@ -4,7 +4,18 @@ using System.Text;
 
 namespace AccountContentService.Domain.Enums
 {
-    internal class PaymentStatus
+    public enum PaymentStatus
     {
+        Pending,
+        Success,
+        Failed,
+        Cancelled
+    }
+    public enum PaymentTransactionStatus
+    {
+        Pending,
+        Success,
+        Failed,
+        Expired
     }
 }

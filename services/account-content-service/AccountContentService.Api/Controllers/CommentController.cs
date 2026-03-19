@@ -205,9 +205,9 @@ namespace AccountContentService.Api.Controllers
         }
 
         /// <summary>
-        /// Retrieve comments created by a specific user.
+        /// Retrieve comment by Id.
         /// </summary>
-        /// <param name="commentId">User identifier</param>
+        /// <param name="commentId">Comment identifier</param>
         /// <response code="200">Get comments successfully</response>
         /// <response code="404">No comments found</response>
         [HttpGet(ApiRoutes.Comments.GetById)]
