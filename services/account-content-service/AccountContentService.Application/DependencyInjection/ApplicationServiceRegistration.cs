@@ -1,4 +1,6 @@
-﻿using FluentValidation;
+﻿using AccountContentService.Application.Interfaces.Services;
+using AccountContentService.Application.Services;
+using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
