@@ -64,6 +64,12 @@ public interface IAzuraCastClient
         int playlistId,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Queues a song request in AzuraCast for the given station</summary>
+    Task QueueSongRequestAsync(
+        int stationId,
+        string mediaUniqueId,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Deletes an existing AzuraCast media file from station library</summary>
     Task DeleteMediaAsync(
         int stationId,

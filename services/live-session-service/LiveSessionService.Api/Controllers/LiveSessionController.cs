@@ -8,6 +8,10 @@ using LiveSessionService.Application.Features.LiveSessions.Commands.StartSession
 using LiveSessionService.Application.Features.LiveSessions.Commands.StopSession;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSession;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetAllLiveSessions;
+using LiveSessionService.Application.Features.SongRequests.Commands.CreateSongRequest;
+using LiveSessionService.Application.Features.SongRequests.Commands.ReviewSongRequest;
+using LiveSessionService.Application.Features.SongRequests.Queries.GetSongRequestsBySession;
+using LiveSessionService.Application.Features.Results.SongRequests;
 using LiveSessionService.Api.Models.Responses;
 using LiveSessionService.Api.Models.Requests.LiveSessions;
 using LiveSessionService.Api.Extensions;
@@ -204,5 +208,129 @@ public class LiveSessionController : ControllerBase
         return Ok(ApiResponse<ListenerStatsResult>.SuccessResponse(
             listenerStats,
             "Listener statistics retrieved"));
+    }
+
+    /// <summary>
+    /// Create a new song request for a live session
+    /// </summary>
+    [HttpPost("{id:guid}/song-requests")]
+    [ProducesResponseType(typeof(ApiResponse<SongRequestResult>), 201)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> CreateSongRequest(
+        Guid id,
+        [FromBody] CreateSongRequestRequest request,
+        CancellationToken ct)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ApiResponse<object>.FailureResponse(
+                "Invalid input",
+                (int)ErrorCode.BadRequest));
+        }
+
+        var command = new CreateSongRequestCommand(
+            id,
+            request.MediaFileId,
+            request.RequestedByUserId,
+            request.Message);
+
+        var result = await _commands.Send<CreateSongRequestCommand, SongRequestResult>(command, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return StatusCode(201, result.ToApiResponse());
+    }
+
+    /// <summary>
+    /// Get song requests of a live session
+    /// </summary>
+    [HttpGet("{id:guid}/song-requests")]
+    [ProducesResponseType(typeof(ApiResponse<List<SongRequestResult>>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> GetSongRequests(
+        Guid id,
+        [FromQuery] string? status,
+        CancellationToken ct)
+    {
+        var query = new GetSongRequestsBySessionQuery(id, status);
+        var result = await _queries.Send<GetSongRequestsBySessionQuery, List<SongRequestResult>>(query, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(result.ToApiResponse());
+    }
+
+    /// <summary>
+    /// Approve or reject a song request
+    /// </summary>
+    [HttpPost("song-requests/{songRequestId:guid}/review")]
+    [ProducesResponseType(typeof(ApiResponse<SongRequestResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> ReviewSongRequest(
+        Guid songRequestId,
+        [FromBody] ReviewSongRequestRequest request,
+        CancellationToken ct)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ApiResponse<object>.FailureResponse(
+                "Invalid input",
+                (int)ErrorCode.BadRequest));
+        }
+
+        var isApproved = request.Action.Equals("approve", StringComparison.OrdinalIgnoreCase);
+        var isRejected = request.Action.Equals("reject", StringComparison.OrdinalIgnoreCase);
+
+        if (!isApproved && !isRejected)
+        {
+            return BadRequest(ApiResponse<object>.FailureResponse(
+                "Action must be either 'approve' or 'reject'",
+                (int)ErrorCode.BadRequest));
+        }
+
+        if (isRejected && string.IsNullOrWhiteSpace(request.RejectReason))
+        {
+            return BadRequest(ApiResponse<object>.FailureResponse(
+                "Reject reason is required when action is reject",
+                (int)ErrorCode.BadRequest));
+        }
+
+        var command = new ReviewSongRequestCommand(
+            songRequestId,
+            request.ReviewedByUserId,
+            isApproved,
+            request.RejectReason);
+
+        var result = await _commands.Send<ReviewSongRequestCommand, SongRequestResult>(command, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(result.ToApiResponse());
     }
 }

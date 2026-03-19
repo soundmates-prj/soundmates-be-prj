@@ -1,0 +1,39 @@
+using LiveSessionService.Application.Abstractions.Messaging;
+using LiveSessionService.Application.Enums;
+using LiveSessionService.Application.Features.Results;
+using LiveSessionService.Application.Features.Results.Podcasts;
+using LiveSessionService.Domain.Interfaces;
+
+namespace LiveSessionService.Application.Features.Podcasts.Queries.GetPodcast;
+
+public sealed class GetPodcastHandler : IQueryHandler<GetPodcastQuery, PodcastResult>
+{
+    private readonly IPodcastRepository _podcastRepository;
+
+    public GetPodcastHandler(IPodcastRepository podcastRepository)
+    {
+        _podcastRepository = podcastRepository;
+    }
+
+    public async Task<Result<PodcastResult>> Handle(GetPodcastQuery query, CancellationToken cancellationToken)
+    {
+        var podcast = await _podcastRepository.GetByIdAsync(query.PodcastId, cancellationToken);
+        if (podcast == null)
+            return Result<PodcastResult>.Failure("Podcast not found", ErrorCode.NotFound);
+
+        return Result<PodcastResult>.Success(new PodcastResult
+        {
+            Id = podcast.Id,
+            Title = podcast.Title,
+            Description = podcast.Description,
+            Author = podcast.Author,
+            Status = podcast.Status.ToString(),
+            Type = podcast.Type,
+            Banner = podcast.Banner,
+            CreatedAt = podcast.CreatedAt,
+            UpdatedAt = podcast.UpdatedAt,
+            CreatedBy = podcast.CreatedBy,
+            EpisodeCount = podcast.Episodes.Count
+        });
+    }
+}
