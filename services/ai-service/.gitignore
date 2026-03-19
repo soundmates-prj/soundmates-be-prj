@@ -1,0 +1,7 @@
+# Ignore environment files with sensitive data
+.env
+.env.local
+.env.production
+
+# Keep the example file in version control
+!.env.example
