@@ -16,5 +16,7 @@ namespace AccountContentService.Application.DTOs
         public string ReactionType { get; set; } = string.Empty;
 
         public DateTime CreatedAt { get; set; }
+        public UserProfileDto userProfile { get; set; } = null!;
+
     }
 }

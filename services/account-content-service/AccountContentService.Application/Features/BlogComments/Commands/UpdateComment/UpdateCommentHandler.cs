@@ -2,6 +2,7 @@
 using AccountContentService.Application.Exceptions;
 
 using AccountContentService.Application.Interfaces.Repositories;
+using AccountContentService.Application.Interfaces.Services;
 using AccountContentService.Domain.Enums;
 using AutoMapper;
 using MediatR;
@@ -13,13 +14,16 @@ namespace AccountContentService.Application.Features.BlogComments.Commands.Updat
     {
         private readonly ICommentRepository _commentRepository;
         private readonly IMapper _mapper;
+        private readonly IUserServiceClient _userClient;
 
         public UpdateCommentHandler(
             ICommentRepository commentRepository,
-            IMapper mapper)
+            IMapper mapper,
+            IUserServiceClient userClient)
         {
             _commentRepository = commentRepository;
             _mapper = mapper;
+            _userClient = userClient;
         }
 
         public async Task<CommentDto> Handle(
@@ -39,8 +43,11 @@ namespace AccountContentService.Application.Features.BlogComments.Commands.Updat
             comment.UpdatedAt = DateTime.UtcNow;
 
             await _commentRepository.UpdateAsync(comment);
+            var response = _mapper .Map<CommentDto>(comment);
+            var userProfile = await _userClient.GetMyProfile();
+            response.userProfile = userProfile;
 
-            return _mapper.Map<CommentDto>(comment);
+            return _mapper.Map<CommentDto>(response);
         }
     }
 }

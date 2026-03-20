@@ -43,5 +43,7 @@ namespace AccountContentService.Application.DTOs
         public DateTime SubscribeAt { get; set; }
 
         public string Status { get; set; } = "active";
+        public UserProfileDto userProfile { get; set; } = null!;
+
     }
 }

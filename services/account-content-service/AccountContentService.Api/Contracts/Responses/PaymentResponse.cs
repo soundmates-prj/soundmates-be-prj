@@ -21,5 +21,7 @@
         public DateTime UpdatedAt { get; set; }
 
         public string? ExternalReference { get; set; }
+
+        public UserProfileResponse userProfile { get; set; } = null!;
     }
 }
