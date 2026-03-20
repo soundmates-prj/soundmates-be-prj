@@ -44,47 +44,23 @@ public class VoicesController : ControllerBase
         if (!User.TryGetCurrentUserId(out var userId))
             return Unauthorized(ApiResponse<string>.Error(ApiStatusCode.HB40101, "Invalid token"));
 
-        var normalizedProvider = request.VoiceType == VoiceType.User
-            ? "user"
-            : request.Provider.Trim().ToLowerInvariant();
-
-        string voiceCode;
-        try
-        {
-            voiceCode = BuildVoiceCode(request, userId);
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(ApiResponse<string>.Error(ApiStatusCode.HB40001, ex.Message));
-        }
-
-        var voice = new TtsVoice
-        {
-            Provider = normalizedProvider,
-            VoiceCode = voiceCode,
-            DisplayName = request.DisplayName.Trim(),
-            Region = request.Region.Trim(),
-            Gender = request.Gender.Trim(),
-            Model = request.Model.Trim(),
-            IsActive = request.IsActive
-        };
-
-        var result = await _commands.Send<CreateVoiceCommand, TtsVoice>(new CreateVoiceCommand(voice), cancellationToken);
+        var isUserVoice = request.VoiceType == VoiceType.User;
+        var result = await _commands.Send<CreateVoiceCommand, TtsVoice>(
+            new CreateVoiceCommand(
+                UserId: userId,
+                IsUserVoice: isUserVoice,
+                Provider: request.Provider,
+                VoiceCode: request.VoiceCode,
+                DisplayName: request.DisplayName,
+                Region: request.Region,
+                Gender: request.Gender,
+                Model: request.Model,
+                IsActive: request.IsActive),
+            cancellationToken);
 
         return result.IsSuccess
             ? Ok(ApiResponse<object>.SuccessResponse(new { voice = result.Data }))
             : BadRequest(ApiResponse<string>.Error(ApiStatusCode.HB40001, result.ErrorMessage ?? "Failed"));
-    }
-
-    private static string BuildVoiceCode(CreateVoiceRequest request, Guid userId)
-    {
-        if (!string.IsNullOrWhiteSpace(request.VoiceCode))
-            return request.VoiceCode.Trim();
-
-        if (request.VoiceType == VoiceType.User)
-            return $"user-{userId:N}-{Guid.NewGuid():N}";
-
-        throw new ArgumentException("voiceCode is required for built-in voice.");
     }
 }
 

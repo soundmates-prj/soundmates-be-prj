@@ -33,7 +33,7 @@ namespace AuthService.Infrastructure.Persistence
         public virtual DbSet<Profile> Profiles { get; set; }
         public virtual DbSet<UserFavourite> UserFavourites { get; set; }
         public virtual DbSet<SpotifyItem> SpotifyItems { get; set; }
-
+        public virtual DbSet<SpotifyToken> SpotifyTokens { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             if (!optionsBuilder.IsConfigured)
@@ -411,6 +411,47 @@ namespace AuthService.Infrastructure.Persistence
                     .HasDefaultValueSql("now() at time zone 'utc'")
                     .HasColumnType("timestamp with time zone")
                     .HasColumnName("updated_at");
+            });
+
+            modelBuilder.Entity<SpotifyToken>(entity =>
+            {
+                entity.HasKey(e => e.Id).HasName("spotify_tokens_pkey");
+                entity.ToTable("spotify_tokens");
+
+                entity.HasIndex(e => e.UserId, "spotify_tokens_user_id_key").IsUnique();
+
+                entity.Property(e => e.Id)
+                    .HasDefaultValueSql("uuid_generate_v4()")
+                    .HasColumnName("id");
+
+                entity.Property(e => e.UserId)
+                    .HasColumnName("user_id");
+
+                entity.Property(e => e.AccessToken)
+                    .IsRequired()
+                    .HasColumnName("access_token");
+
+                entity.Property(e => e.RefreshToken)
+                    .HasColumnName("refresh_token");
+
+                entity.Property(e => e.ExpiresAt)
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("expires_at");
+                
+                entity.Property(e => e.CreatedAt)
+                    .HasDefaultValueSql("now() at time zone 'utc'")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("created_at");
+
+                entity.Property(e => e.UpdatedAt)
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("updated_at");
+
+                entity.HasOne(d => d.User)
+                    .WithOne(p => p.SpotifyToken)
+                    .HasForeignKey<SpotifyToken>(d => d.UserId)
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .HasConstraintName("spotify_tokens_user_id_fkey");
             });
 
             OnModelCreatingPartial(modelBuilder);

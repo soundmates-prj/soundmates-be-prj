@@ -3,6 +3,7 @@ namespace AiService.Application.Interfaces;
 public record TtsSynthesizeRequest(
     string Text,
     string VoiceCode,
+    string? Model,
     decimal? Speed,
     decimal? Pitch);
 

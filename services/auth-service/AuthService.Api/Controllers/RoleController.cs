@@ -9,6 +9,11 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AuthService.Api.Controllers
 {
+    /// <summary>
+    /// Role Management API
+    /// Handle role creation, updates, and deletion (Write-side).
+    /// All endpoints require ADMIN privileges.
+    /// </summary>
     [Route("api/v1/roles")]
     [ApiController]
     [Authorize(Roles = "ADMIN")]

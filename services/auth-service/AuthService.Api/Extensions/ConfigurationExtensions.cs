@@ -112,6 +112,20 @@ public static class ConfigurationExtensions
             // Map App Settings environment variables
             else if (key == "FRONTEND_URL")
                 configuration["AppSettings:FrontendUrl"] = value;
+            
+            // Map Spotify API credentials
+            else if (key == "SPOTIFY_CLIENT_ID")
+                configuration["Spotify:ClientId"] = value;
+            else if (key == "SPOTIFY_CLIENT_SECRET")
+                configuration["Spotify:ClientSecret"] = value;
+            else if (key == "SPOTIFY_REDIRECT_URI")
+                configuration["Spotify:RedirectUri"] = value;
+            
+            // Map MongoDB (for dual-write to read-side)
+            else if (key == "MONGODB_CONNECTION_STRING")
+                configuration["ConnectionStrings:MongoDb"] = value;
+            else if (key == "MONGODB_DATABASE")
+                configuration["Mongo:Database"] = value;
         }
     }
 }

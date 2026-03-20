@@ -18,13 +18,13 @@ public class AudiosController : ControllerBase
 {
     private readonly ICommandDispatcher _commands;
     private readonly IQueryDispatcher _queries;
-    private readonly IAudioStorage _storage;
+    private readonly IAudioService _audioService;
 
-    public AudiosController(ICommandDispatcher commands, IQueryDispatcher queries, IAudioStorage storage)
+    public AudiosController(ICommandDispatcher commands, IQueryDispatcher queries, IAudioService audioService)
     {
         _commands = commands;
         _queries = queries;
-        _storage = storage;
+        _audioService = audioService;
     }
 
     [HttpPost("/api/scripts/{scriptId:guid}/audio:generate")]
@@ -54,21 +54,24 @@ public class AudiosController : ControllerBase
     [HttpGet("{audioId:guid}/file")]
     public async Task<IActionResult> GetFile([FromRoute] Guid audioId, CancellationToken cancellationToken)
     {
-        var meta = await _queries.Send<GetAudioByIdQuery, Domain.Entities.ScriptAudio>(new GetAudioByIdQuery(audioId), cancellationToken);
-        if (!meta.IsSuccess || meta.Data is null)
-            return NotFound(ApiResponse<string>.Error(ApiStatusCode.HB40401, "audio not found"));
-
         if (!User.TryGetCurrentUserId(out var userId))
             return Unauthorized(ApiResponse<string>.Error(ApiStatusCode.HB40101, "Invalid token"));
 
-        if (meta.Data.Script.AuthorId != userId)
-            return Forbid();
+        var openResult = await _audioService.OpenReadForUserAsync(userId, audioId, cancellationToken);
+        if (!openResult.IsSuccess || openResult.Data is null)
+        {
+            if (openResult.ErrorCode == (int)ApiStatusCode.HB40301)
+                return Forbid();
 
-        var (stream, contentType, contentLength) = await _storage.OpenReadAsync(meta.Data.AudioPath, cancellationToken);
-        if (contentLength is long len)
+            return NotFound(ApiResponse<string>.Error(
+                ApiStatusCode.HB40401,
+                openResult.ErrorMessage ?? "audio not found"));
+        }
+
+        if (openResult.Data.ContentLength is long len)
             Response.ContentLength = len;
 
-        return File(stream, contentType, enableRangeProcessing: true);
+        return File(openResult.Data.Stream, openResult.Data.ContentType, enableRangeProcessing: true);
     }
 }
 

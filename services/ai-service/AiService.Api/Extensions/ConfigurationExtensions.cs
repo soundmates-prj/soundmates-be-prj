@@ -86,6 +86,8 @@ public static class ConfigurationExtensions
                 configuration["Tts:PromptTemplate"] = value;
             else if (key == "TTS_TIMEOUT_SECONDS")
                 configuration["Tts:TimeoutSeconds"] = value;
+            else if (key == "TTS_DEMO_MODE")
+                configuration["Tts:DemoMode"] = value;
             else if (key == "AUDIO_STORAGE_ROOT")
                 configuration["Storage:AudioRoot"] = value;
             else if (key == "PUBLIC_BASE_URL")

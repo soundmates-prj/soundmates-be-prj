@@ -100,6 +100,20 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
+// ── Spotify configuration ──────────────────────────────────────────────
+// Reads SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET from environment variables
+// and exposes them as Spotify:ClientId / Spotify:ClientSecret in IConfiguration
+// so that SpotifyApiClient (registered via AddHttpClient) can consume them.
+var spotifyClientId = Environment.GetEnvironmentVariable("SPOTIFY_CLIENT_ID")
+    ?? builder.Configuration["Spotify:ClientId"];
+var spotifyClientSecret = Environment.GetEnvironmentVariable("SPOTIFY_CLIENT_SECRET")
+    ?? builder.Configuration["Spotify:ClientSecret"];
+
+if (!string.IsNullOrWhiteSpace(spotifyClientId))
+    builder.Configuration["Spotify:ClientId"] = spotifyClientId;
+if (!string.IsNullOrWhiteSpace(spotifyClientSecret))
+    builder.Configuration["Spotify:ClientSecret"] = spotifyClientSecret;
+
 builder.Services.AddAuthApplication();
 builder.Services.AddAuthInfrastructure(builder.Configuration);
 
@@ -109,7 +123,15 @@ builder.Services.AddRouting(options => options.LowercaseUrls = true);
 // Swagger + JWT security
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "AuthQueryService API", Version = "v1" });
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "QueryService API", Version = "v1" });
+
+    // Enable XML comments for standard API documentation
+    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = System.IO.Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (System.IO.File.Exists(xmlPath))
+    {
+        c.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
+    }
 
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {

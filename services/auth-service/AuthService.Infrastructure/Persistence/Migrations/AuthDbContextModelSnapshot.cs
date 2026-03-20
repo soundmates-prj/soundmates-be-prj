@@ -333,6 +333,50 @@ namespace AuthService.Infrastructure.Migrations
                     b.ToTable("spotify_items", (string)null);
                 });
 
+            modelBuilder.Entity("AuthService.Domain.Entities.SpotifyToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("uuid_generate_v4()");
+
+                    b.Property<string>("AccessToken")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("access_token");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("now() at time zone 'utc'");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<string>("RefreshToken")
+                        .HasColumnType("text")
+                        .HasColumnName("refresh_token");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("spotify_tokens_pkey");
+
+                    b.HasIndex(new[] { "UserId" }, "spotify_tokens_user_id_key")
+                        .IsUnique();
+
+                    b.ToTable("spotify_tokens", (string)null);
+                });
+
             modelBuilder.Entity("AuthService.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -514,6 +558,18 @@ namespace AuthService.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("AuthService.Domain.Entities.SpotifyToken", b =>
+                {
+                    b.HasOne("AuthService.Domain.Entities.User", "User")
+                        .WithOne("SpotifyToken")
+                        .HasForeignKey("AuthService.Domain.Entities.SpotifyToken", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("spotify_tokens_user_id_fkey");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("AuthService.Domain.Entities.User", b =>
                 {
                     b.HasOne("AuthService.Domain.Entities.UserRole", "Role")
@@ -543,6 +599,8 @@ namespace AuthService.Infrastructure.Migrations
                     b.Navigation("Profile");
 
                     b.Navigation("RefreshTokens");
+
+                    b.Navigation("SpotifyToken");
 
                     b.Navigation("UserFavourites");
                 });

@@ -84,6 +84,7 @@ namespace AccountContentService.Api.Controllers
         /// </remarks>
         /// <response code="200">Callback processed successfully.</response>
         /// <response code="400">Invalid or tampered VNPay data.</response>
+        [AllowAnonymous]
         [HttpGet(ApiRoutes.Payments.VNPayCallBack)]
         public async Task<IActionResult> VNPayCallback()
         {

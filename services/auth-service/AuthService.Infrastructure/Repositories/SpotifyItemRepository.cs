@@ -14,6 +14,9 @@ public class SpotifyItemRepository : ISpotifyItemRepository
         _db = (AuthDbContext)uow.Context;
     }
 
+    public async Task<SpotifyItem?> GetByIdAsync(string spotifyId)
+        => await _db.Set<SpotifyItem>().FirstOrDefaultAsync(x => x.SpotifyId == spotifyId);
+
     public async Task<Guid> UpsertAsync(SpotifyItem item)
     {
         var existing = await _db.Set<SpotifyItem>().FirstOrDefaultAsync(x =>

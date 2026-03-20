@@ -4,6 +4,7 @@ using AiService.Infrastructure.Clients;
 using AiService.Infrastructure.Persistence;
 using AiService.Infrastructure.Repositories;
 using AiService.Infrastructure.Storage;
+using AiService.Application.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,7 +29,10 @@ public static class DependencyInjection
 
         services.AddSingleton<IAudioStorage, LocalAudioStorage>();
 
-        services.AddSingleton<ILlmClient, LlmClientStub>();
+        services.AddHttpClient<ILlmClient, GeminiLlmClient>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(60);
+        });
 
         services.AddHttpClient<VieNeuTtsClient>((sp, http) =>
         {
@@ -48,6 +52,13 @@ public static class DependencyInjection
         });
         services.AddScoped<ITtsClient, VieNeuTtsClient>();
 
+        services.AddHttpClient<IPodcastSyncClient, PodcastSyncClient>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+
+        services.AddScoped<IPodcastPipelineService, PodcastPipelineService>();
+        
         services.Configure<StorageOptions>(configuration.GetSection("Storage"));
         services.Configure<TtsOptions>(configuration.GetSection("Tts"));
         services.Configure<LlmOptions>(configuration.GetSection("Llm"));

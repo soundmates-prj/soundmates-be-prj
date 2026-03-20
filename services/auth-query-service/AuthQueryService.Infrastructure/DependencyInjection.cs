@@ -1,21 +1,11 @@
 using System;
+using AuthQueryService.Application.Abstractions;
 using AuthQueryService.Application.Abstractions.Messaging;
-using AuthQueryService.Domain.Interfaces;
-using AuthQueryService.Infrastructure.Messaging;
-using AuthQueryService.Infrastructure.Messaging.EventHandlers;
-using AuthQueryService.Infrastructure.Repositories;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using MongoDB.Driver;
-using MongoDB.Bson;
-using MongoDB.Bson.Serialization;
-using MongoDB.Bson.Serialization.Serializers;
-using AuthQueryService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
-using AuthQueryService.Application.Abstractions.Messaging.Dispatcher;
-using AuthQueryService.Application.DTOs;
 using AuthQueryService.Application.DTOs.Response;
+using AuthQueryService.Application.DTOs;
 using AuthQueryService.Application.Services.ActivityLogs.Queries.GetRecentActivityLogs;
 using AuthQueryService.Application.Services.ActivityLogs.Queries.GetUserActivityLogs;
+using AuthQueryService.Application.Services.Favourites.Queries.GetMyFavourites;
 using AuthQueryService.Application.Services.Roles.Queries.GetAllRoles;
 using AuthQueryService.Application.Services.Roles.Queries.GetRoleById;
 using AuthQueryService.Application.Services.Roles.Queries.GetRoleByName;
@@ -25,6 +15,19 @@ using AuthQueryService.Application.Services.Users.Queries.GetUserById;
 using AuthQueryService.Application.Services.Users.Queries.GetUserByUsername;
 using AuthQueryService.Application.Services.Users.Queries.GetUserRole;
 using AuthQueryService.Application.Services.Users.Queries.SearchUsers;
+using AuthQueryService.Domain.Interfaces;
+using AuthQueryService.Infrastructure.ExternalServices;
+using AuthQueryService.Infrastructure.Messaging;
+using AuthQueryService.Infrastructure.Messaging.EventHandlers;
+using AuthQueryService.Infrastructure.Repositories;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
+using MongoDB.Bson.Serialization.Serializers;
+using MongoDB.Driver;
+using AuthQueryService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
+using AuthQueryService.Application.Abstractions.Messaging.Dispatcher;
 
 namespace AuthQueryService.Infrastructure;
 
@@ -41,8 +44,9 @@ public static class DependencyInjection
         {
             // Already registered, ignore
         }
-        
+
         // MongoDB for Read side
+
         services.AddSingleton<IMongoDatabase>(sp =>
         {
             // Read from environment variables first (Docker/Kubernetes), then from config
@@ -76,6 +80,13 @@ public static class DependencyInjection
         services.AddScoped<IUserReadRepository, UserReadRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();
         services.AddScoped<IUserActivityLogRepository, UserActivityLogRepository>();
+        services.AddScoped<IFavouriteReadRepository, FavouriteReadRepository>();
+
+        // Spotify API Client (HttpClient managed by IHttpClientFactory)
+        services.AddHttpClient<ISpotifyApiClient, SpotifyApiClient>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
 
         // Query dispatcher
         services.AddScoped<IQueryDispatcher, QueryDispatcher>();
@@ -98,6 +109,10 @@ public static class DependencyInjection
             GetUserActivityLogsQueryHandler>();
         services.AddScoped<IQueryHandler<GetRecentActivityLogsQuery, List<UserActivityLogDto>>,
             GetRecentActivityLogsQueryHandler>();
+
+        // Query handlers - Favourites
+        services.AddScoped<IQueryHandler<GetMyFavouritesQuery, List<UserFavouriteDto>>,
+            GetMyFavouritesQueryHandler>();
 
 
         // ============================================

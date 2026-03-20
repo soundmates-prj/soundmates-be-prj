@@ -10,5 +10,10 @@ public class TtsOptions
     public string? AudioFormat { get; set; }
     public string? PromptTemplate { get; set; }
     public int TimeoutSeconds { get; set; } = 100;
+    /// <summary>
+    /// When the TTS server does not return decodable audio (e.g. returns speech tokens),
+    /// we can fall back to a silent demo WAV to keep API flows working.
+    /// </summary>
+    public bool DemoMode { get; set; } = false;
 }
 

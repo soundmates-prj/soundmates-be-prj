@@ -38,6 +38,16 @@ public class UserFavouriteRepository : IUserFavouriteRepository
         await _db.UserFavourites.AddAsync(userFavourite);
     }
 
+    public async Task<UserFavourite?> FindByKeyAsync(
+        Guid userId, string itemType, string itemId, string source)
+    {
+        return await _db.UserFavourites.FirstOrDefaultAsync(x =>
+            x.UserId   == userId   &&
+            x.ItemType == itemType &&
+            x.ItemId   == itemId   &&
+            x.Source   == source);
+    }
+
     public async Task<bool> DeleteAsync(Guid userId, string itemType, string itemId, string source)
     {
         var entity = await _db.UserFavourites.FirstOrDefaultAsync(x =>
