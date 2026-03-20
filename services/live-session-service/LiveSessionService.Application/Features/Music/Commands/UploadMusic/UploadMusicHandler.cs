@@ -61,7 +61,6 @@ public sealed class UploadMusicHandler
         var mediaFile = new MediaFile
         {
             Id               = Guid.NewGuid(),
-            StationId        = station.Id,
             Title            = media.Title,
             Artist           = media.Artist,
             Album            = media.Album,

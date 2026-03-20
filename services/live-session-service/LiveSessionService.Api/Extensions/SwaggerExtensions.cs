@@ -1,4 +1,5 @@
 using Microsoft.OpenApi.Models;
+using System.Reflection;
 
 namespace LiveSessionService.Api.Extensions;
 
@@ -16,7 +17,7 @@ public static class SwaggerExtensions
             {
                 Title = "LiveSessionService API",
                 Version = "v1",
-                Description = "Live Session Management Service API with AzuraCast Integration"
+                Description = "SoundMates - Live Session Service / AzuraCast Integration / AI Integration"
             });
 
             // Add JWT security definition
@@ -29,6 +30,14 @@ public static class SwaggerExtensions
                 In = ParameterLocation.Header,
                 Description = "Enter your JWT token. Example: Bearer {token}"
             });
+
+            // Load XML comments để hiển thị summary/remarks từ Controllers/Models trong Swagger
+            var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+            var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+            if (File.Exists(xmlPath))
+            {
+                c.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
+            }
 
             // Add security requirement
             c.AddSecurityRequirement(new OpenApiSecurityRequirement

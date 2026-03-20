@@ -68,6 +68,8 @@ public static class DependencyInjection
         services.AddScoped<IStationPlaylistRepository, StationPlaylistRepository>();
         services.AddScoped<IMediaFileRepository, MediaFileRepository>();
         services.AddScoped<IPlaylistMediaRepository, PlaylistMediaRepository>();
+        services.AddScoped<ISongRequestRepository, SongRequestRepository>();
+        services.AddScoped<IPodcastRepository, PodcastRepository>();
         services.AddScoped<IOutboxRepository, OutboxRepository>();
 
         // External Services - AzuraCast

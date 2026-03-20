@@ -12,9 +12,6 @@ public class MediaFileConfiguration : IEntityTypeConfiguration<MediaFile>
 
         builder.HasKey(x => x.Id);
 
-        builder.Property(x => x.StationId)
-            .IsRequired();
-
         builder.Property(x => x.Title)
             .IsRequired()
             .HasMaxLength(300);
@@ -42,8 +39,12 @@ public class MediaFileConfiguration : IEntityTypeConfiguration<MediaFile>
         builder.Property(x => x.UploadedAt)
             .IsRequired();
 
-        // PlaylistMedias relationship defined on PlaylistMedia side
         builder.HasMany(x => x.PlaylistMedias)
+            .WithOne(x => x.MediaFile)
+            .HasForeignKey(x => x.MediaFileId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasMany(x => x.UserPlaylistMedias)
             .WithOne(x => x.MediaFile)
             .HasForeignKey(x => x.MediaFileId)
             .OnDelete(DeleteBehavior.SetNull);

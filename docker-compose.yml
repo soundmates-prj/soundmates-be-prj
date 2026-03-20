@@ -11,6 +11,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init-multiple-dbs.sql:/docker-entrypoint-initdb.d/00-init-multiple-dbs.sql
     networks:
       - soundmates-network
     healthcheck:
@@ -135,6 +136,43 @@ services:
       - soundmates-network
     restart: unless-stopped
 
+  # AI Service (Script + TTS)
+  ai-service:
+    build:
+      context: ./services/ai-service
+      dockerfile: AiService.Api/Dockerfile
+    container_name: soundmates-ai-service
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_DATABASE=${AI_POSTGRES_DATABASE:-ai_db}
+      - POSTGRES_USERNAME=${POSTGRES_USERNAME:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - JWT_KEY=${JWT_KEY}
+      - JWT_ISSUER=${JWT_ISSUER:-Soundmates.Auth}
+      - JWT_AUDIENCE=${JWT_AUDIENCE:-Soundmates.Users}
+      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
+      - LLM_BASE_URL=${LLM_BASE_URL:-https://api.openai.com}
+      - LLM_API_KEY=${LLM_API_KEY}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4.1-mini}
+      - TTS_PROVIDER=${TTS_PROVIDER:-vienetts}
+      - TTS_BASE_URL=${TTS_BASE_URL:-http://vienetts:8080}
+      - TTS_API_KEY=${TTS_API_KEY}
+      - AUDIO_STORAGE_ROOT=/app/data/audios
+      - PUBLIC_BASE_URL=${AI_PUBLIC_BASE_URL:-http://localhost:8067}
+    ports:
+      - "8067:8080"
+    volumes:
+      - ai-audios-data:/app/data/audios
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - soundmates-network
+    restart: unless-stopped
+
   # Live Session Service
   live-session-service:
     build:
@@ -232,3 +270,4 @@ volumes:
   postgres-data:
   mongodb-data:
   rabbitmq-data:
+  ai-audios-data:

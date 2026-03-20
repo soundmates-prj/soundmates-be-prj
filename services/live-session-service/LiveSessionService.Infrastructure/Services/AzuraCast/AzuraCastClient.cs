@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.IO;
+using System.Text.Json;
 using LiveSessionService.Application.Abstractions;
 using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Exceptions;
@@ -399,6 +400,75 @@ public sealed class AzuraCastClient : IAzuraCastClient
             fileUniqueId, playlistId, stationId);
     }
 
+    public async Task QueueSongRequestAsync(
+        int stationId,
+        string mediaUniqueId,
+        CancellationToken cancellationToken = default)
+    {
+        var stationFiles = await GetStationFilesAsync(stationId, cancellationToken);
+        var stationFile = stationFiles.FirstOrDefault(f =>
+            string.Equals(f.UniqueId, mediaUniqueId, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(f.Path, mediaUniqueId, StringComparison.OrdinalIgnoreCase));
+
+        var candidateIds = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(stationFile?.SongId))
+            candidateIds.Add(stationFile!.SongId!);
+
+        if (stationFile is not null)
+            candidateIds.Add(stationFile.Id.ToString());
+
+        if (!string.IsNullOrWhiteSpace(stationFile?.UniqueId))
+            candidateIds.Add(stationFile!.UniqueId);
+
+        if (!string.IsNullOrWhiteSpace(mediaUniqueId))
+            candidateIds.Add(mediaUniqueId);
+
+        candidateIds = candidateIds
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (candidateIds.Count == 0)
+        {
+            throw new AzuraCastException(
+                $"No valid media identifier for song request on station {stationId}.",
+                ErrorCode.BadRequest);
+        }
+
+        var triedIds = new List<string>();
+
+        foreach (var candidate in candidateIds)
+        {
+            var encodedMediaId = Uri.EscapeDataString(candidate);
+            using var response = await _httpClient.PostAsync(
+                $"api/station/{stationId}/request/{encodedMediaId}",
+                content: null,
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                _logger.LogInformation(
+                    "Queued AzuraCast song request for media {MediaUniqueId} using identifier {RequestMediaId} on station {StationId}",
+                    mediaUniqueId,
+                    candidate,
+                    stationId);
+                return;
+            }
+
+            triedIds.Add(candidate);
+
+            if (response.StatusCode != HttpStatusCode.NotFound)
+            {
+                await EnsureAzuraCastSuccessAsync(response, $"queue song request on station {stationId}", cancellationToken);
+            }
+        }
+
+        throw new AzuraCastException(
+            $"Song cannot be requested on station {stationId}. Tried identifiers: {string.Join(", ", triedIds)}",
+            ErrorCode.BadRequest);
+    }
+
     public async Task DeleteMediaAsync(
         int stationId,
         string fileUniqueId,
@@ -468,10 +538,19 @@ public sealed class AzuraCastClient : IAzuraCastClient
                 (string.IsNullOrWhiteSpace(body) ? string.Empty : $" Response: {TruncateForError(body)}"),
                 ErrorCode.Unauthorized);
 
+        if (response.StatusCode == HttpStatusCode.InternalServerError &&
+            TryMapAzuraCastBusinessError(body, out var businessMessage, out var businessCode))
+        {
+            throw new AzuraCastException(
+                $"AzuraCast rejected '{operation}': {businessMessage}",
+                businessCode);
+        }
+
         var mapped = status switch
         {
             HttpStatusCode.BadRequest => ErrorCode.BadRequest,
             HttpStatusCode.NotFound => ErrorCode.NotFound,
+            HttpStatusCode.Conflict => ErrorCode.Conflict,
             HttpStatusCode.UnprocessableEntity => ErrorCode.UnprocessableEntity,
             HttpStatusCode.ServiceUnavailable => ErrorCode.ServiceUnavailable,
             _ when (int)status >= 500 => ErrorCode.InternalServerError,
@@ -488,6 +567,45 @@ public sealed class AzuraCastClient : IAzuraCastClient
             (string.IsNullOrWhiteSpace(body) ? string.Empty : $" Response: {TruncateForError(body)}");
 
         throw new AzuraCastException(message, mapped);
+    }
+
+    private static bool TryMapAzuraCastBusinessError(
+        string? body,
+        out string message,
+        out ErrorCode errorCode)
+    {
+        message = "Request cannot be completed by AzuraCast.";
+        errorCode = ErrorCode.BadRequest;
+
+        if (string.IsNullOrWhiteSpace(body))
+            return false;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(body);
+            var root = doc.RootElement;
+
+            var type = root.TryGetProperty("type", out var typeElement)
+                ? typeElement.GetString()
+                : null;
+
+            var apiMessage = root.TryGetProperty("message", out var msgElement)
+                ? msgElement.GetString()
+                : null;
+
+            if (string.Equals(type, "CannotCompleteActionException", StringComparison.OrdinalIgnoreCase))
+            {
+                message = apiMessage ?? message;
+                errorCode = ErrorCode.Conflict;
+                return true;
+            }
+        }
+        catch
+        {
+            // ignore parse errors
+        }
+
+        return false;
     }
 
     private static string TruncateForError(string value, int maxLen = 2000)

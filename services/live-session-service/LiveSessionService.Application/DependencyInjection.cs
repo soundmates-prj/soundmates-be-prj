@@ -20,15 +20,25 @@ using LiveSessionService.Application.Features.Playlists.Commands.RemoveMediaFrom
 using LiveSessionService.Application.Features.Playlists.Commands.SyncPlaylists;
 using LiveSessionService.Application.Features.Playlists.Queries.GetPlaylistsByStation;
 using LiveSessionService.Application.Features.Playlists.Queries.GetPlaylistTracks;
+using LiveSessionService.Application.Features.Podcasts.Commands.CreatePodcast;
+using LiveSessionService.Application.Features.Podcasts.Commands.DeletePodcast;
+using LiveSessionService.Application.Features.Podcasts.Commands.UpdatePodcast;
+using LiveSessionService.Application.Features.Podcasts.Queries.GetPodcast;
+using LiveSessionService.Application.Features.Podcasts.Queries.GetPodcasts;
 using LiveSessionService.Application.Features.Results;
 using LiveSessionService.Application.Features.Results.LiveSessions;
 using LiveSessionService.Application.Features.Results.Music;
 using LiveSessionService.Application.Features.Results.NowPlaying;
 using LiveSessionService.Application.Features.Results.Playlists;
+using LiveSessionService.Application.Features.Results.Podcasts;
 using LiveSessionService.Application.Features.Results.Stations;
 using LiveSessionService.Application.Features.Stations.Commands.SyncStations;
 using LiveSessionService.Application.Features.Stations.Queries.GetAllStations;
 using LiveSessionService.Application.Features.Stations.Queries.GetStationNowPlaying;
+using LiveSessionService.Application.Features.SongRequests.Commands.CreateSongRequest;
+using LiveSessionService.Application.Features.SongRequests.Commands.ReviewSongRequest;
+using LiveSessionService.Application.Features.SongRequests.Queries.GetSongRequestsBySession;
+using LiveSessionService.Application.Features.Results.SongRequests;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Generic;
 
@@ -83,6 +93,22 @@ public static class DependencyInjection
         // Register Playlist Query Handlers
         services.AddScoped<IQueryHandler<GetPlaylistsByStationQuery, List<PlaylistResult>>, GetPlaylistsByStationHandler>();
         services.AddScoped<IQueryHandler<GetPlaylistTracksQuery, List<PlaylistMediaResult>>, GetPlaylistTracksHandler>();
+
+        // Register Podcast Command Handlers
+        services.AddScoped<ICommandHandler<CreatePodcastCommand, PodcastResult>, CreatePodcastHandler>();
+        services.AddScoped<ICommandHandler<UpdatePodcastCommand, PodcastResult>, UpdatePodcastHandler>();
+        services.AddScoped<ICommandHandler<DeletePodcastCommand>, DeletePodcastHandler>();
+
+        // Register Podcast Query Handlers
+        services.AddScoped<IQueryHandler<GetPodcastQuery, PodcastResult>, GetPodcastHandler>();
+        services.AddScoped<IQueryHandler<GetPodcastsQuery, List<PodcastResult>>, GetPodcastsHandler>();
+
+        // Register SongRequest Command Handlers
+        services.AddScoped<ICommandHandler<CreateSongRequestCommand, SongRequestResult>, CreateSongRequestHandler>();
+        services.AddScoped<ICommandHandler<ReviewSongRequestCommand, SongRequestResult>, ReviewSongRequestHandler>();
+
+        // Register SongRequest Query Handlers
+        services.AddScoped<IQueryHandler<GetSongRequestsBySessionQuery, List<SongRequestResult>>, GetSongRequestsBySessionHandler>();
 
         return services;
     }

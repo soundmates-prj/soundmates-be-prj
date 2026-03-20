@@ -8,6 +8,8 @@ using AuthService.Application.Features.Auth.Handlers;
 using AuthService.Application.Features.Common;
 using AuthService.Application.Features.Role.Commands;
 using AuthService.Application.Features.Role.Handlers;
+using AuthService.Application.Features.SpotifyItems.Commands;
+using AuthService.Application.Features.SpotifyItems.Handlers;
 using AuthService.Application.Features.Users.Commands;
 using AuthService.Application.Features.Users.Handlers;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,6 +31,10 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<BanUserCommand, bool>, BanUserHandler>();
         services.AddScoped<ICommandHandler<UnbanUserCommand, bool>, UnbanUserHandler>();
         services.AddScoped<ICommandHandler<DeactivateUserCommand, bool>, DeactivateUserHandler>();
+        services.AddScoped<ICommandHandler<CreateUserFavouriteCommand, Guid>, CreateUserFavouriteHandler>();
+        services.AddScoped<ICommandHandler<DeleteUserFavouriteCommand, bool>, DeleteUserFavouriteHandler>();
+        services.AddScoped<ICommandHandler<CreateSpotifyItemCommand, Guid>, CreateSpotifyItemHandler>();
+        services.AddScoped<ICommandHandler<DeleteSpotifyItemCommand, bool>, DeleteSpotifyItemHandler>();
         
         // Role handlers
         services.AddScoped<ICommandHandler<CreateRoleCommand, Guid>, CreateRoleHandler>();

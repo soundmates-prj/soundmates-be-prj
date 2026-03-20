@@ -8,11 +8,6 @@ public class MediaFile
 {
     public Guid Id { get; set; }
 
-    /// <summary>
-    /// Station that this media file belongs to in our catalog.
-    /// </summary>
-    public Guid StationId { get; set; }
-
     public string Title { get; set; } = null!;
 
     public string? Artist { get; set; }
@@ -38,4 +33,5 @@ public class MediaFile
     public DateTime? UpdatedAt { get; set; }
 
     public virtual ICollection<PlaylistMedia> PlaylistMedias { get; set; } = new List<PlaylistMedia>();
+    public virtual ICollection<UserPlaylistMedia> UserPlaylistMedias { get; set; } = new List<UserPlaylistMedia>();
 }
