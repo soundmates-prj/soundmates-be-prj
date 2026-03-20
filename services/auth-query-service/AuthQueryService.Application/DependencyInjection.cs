@@ -10,10 +10,19 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddAuthApplication(this IServiceCollection services)
     {
-        // Query Dispatcher (registered in Infrastructure layer with Query Handlers)
+        // Register Query Dispatcher
         services.AddScoped<IQueryDispatcher, QueryDispatcher>();
-        // This layer is for Application-specific services only
-        
+
+        // Auto-register all query handlers using Scrutor assembly scanning
+        // This eliminates manual registration in Infrastructure layer
+        services.Scan(scan => scan
+            .FromAssemblies(Assembly.GetExecutingAssembly())
+            .AddClasses(classes => classes
+                .AssignableTo(typeof(IQueryHandler<,>))
+                .Where(c => !c.IsAbstract && !c.IsInterface))
+            .AsImplementedInterfaces()
+            .WithScopedLifetime());
+
         return services;
     }
 }

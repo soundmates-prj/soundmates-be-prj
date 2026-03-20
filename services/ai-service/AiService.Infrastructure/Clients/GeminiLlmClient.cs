@@ -87,7 +87,8 @@ public class GeminiLlmClient : ILlmClient
 
         var result = await response.Content.ReadFromJsonAsync<GeminiResponse>(JsonOptions, cancellationToken);
         
-        var generatedText = result?.Candidates?.FirstOrDefault()?.Content?.Parts?.FirstOrDefault()?.Text;
+        var parts = result?.Candidates?.FirstOrDefault()?.Content?.Parts;
+        var generatedText = parts != null ? string.Join("", parts.Select(p => p.Text)) : null;
         
         if (string.IsNullOrWhiteSpace(generatedText))
         {

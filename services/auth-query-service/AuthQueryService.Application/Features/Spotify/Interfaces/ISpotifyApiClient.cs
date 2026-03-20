@@ -12,7 +12,7 @@ namespace AuthQueryService.Application.Abstractions
         Task<SpotifySearchResult> SearchAsync(
             string query,
             string type = "track",
-            int limit = 20,
+            int limit = 10,
             int offset = 0,
             CancellationToken ct = default,
             string? userAccessToken = null);

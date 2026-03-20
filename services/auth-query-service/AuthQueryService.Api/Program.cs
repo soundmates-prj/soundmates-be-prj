@@ -10,8 +10,12 @@ using AuthQueryService.Infrastructure.Middlewares;
 using AuthQueryService.Application;
 using AuthQueryService.Infrastructure;
 using Microsoft.OpenApi.Models;
+using AuthQueryService.Api.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Load .env + map env vars → IConfiguration (no secrets in appsettings files)
+builder.AddEnvironmentConfig();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -99,20 +103,6 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddAuthorization();
-
-// ── Spotify configuration ──────────────────────────────────────────────
-// Reads SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET from environment variables
-// and exposes them as Spotify:ClientId / Spotify:ClientSecret in IConfiguration
-// so that SpotifyApiClient (registered via AddHttpClient) can consume them.
-var spotifyClientId = Environment.GetEnvironmentVariable("SPOTIFY_CLIENT_ID")
-    ?? builder.Configuration["Spotify:ClientId"];
-var spotifyClientSecret = Environment.GetEnvironmentVariable("SPOTIFY_CLIENT_SECRET")
-    ?? builder.Configuration["Spotify:ClientSecret"];
-
-if (!string.IsNullOrWhiteSpace(spotifyClientId))
-    builder.Configuration["Spotify:ClientId"] = spotifyClientId;
-if (!string.IsNullOrWhiteSpace(spotifyClientSecret))
-    builder.Configuration["Spotify:ClientSecret"] = spotifyClientSecret;
 
 builder.Services.AddAuthApplication();
 builder.Services.AddAuthInfrastructure(builder.Configuration);
