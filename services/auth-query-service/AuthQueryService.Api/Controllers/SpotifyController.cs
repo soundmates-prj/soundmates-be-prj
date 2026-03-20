@@ -32,7 +32,7 @@ namespace AuthQueryService.Api.Controllers
         /// </summary>
         /// <param name="q">Free-text search query (required)</param>
         /// <param name="type">Comma-separated types: track, artist, album (default: track)</param>
-        /// <param name="limit">1-50, default 20</param>
+        /// <param name="limit">1-10, default 10 (app is in Spotify Developer Mode — max 10)</param>
         /// <param name="offset">Pagination offset, default 0</param>
         [HttpGet("search")]
         [ProducesResponseType(typeof(ApiResponse<SpotifySearchResult>), StatusCodes.Status200OK)]
@@ -42,12 +42,29 @@ namespace AuthQueryService.Api.Controllers
         public async Task<IActionResult> Search(
             [FromQuery] string q,
             [FromQuery] string type = "track",
-            [FromQuery] int limit = 20,
+            [FromQuery] int limit = 10,
             [FromQuery] int offset = 0,
             CancellationToken ct = default)
         {
             if (string.IsNullOrWhiteSpace(q))
                 return BadRequest(ApiResponse<object>.FailureResponse("Query parameter 'q' is required.", 400));
+
+            // Spotify Developer Mode apps: max limit = 10
+            if (limit < 1 || limit > 10)
+                return BadRequest(ApiResponse<object>.FailureResponse("'limit' must be between 1 and 10 (Spotify Developer Mode cap).", 400));
+
+            if (offset < 0)
+                return BadRequest(ApiResponse<object>.FailureResponse("'offset' must be >= 0.", 400));
+
+            // Validate type values
+            var validTypes = new HashSet<string> { "track", "artist", "album", "playlist", "podcast", "episode", "show" };
+            var requestedTypes = type.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(t => t.Trim().ToLowerInvariant())
+                .ToList();
+            var invalidTypes = requestedTypes.Where(t => !validTypes.Contains(t)).ToList();
+            if (invalidTypes.Count > 0)
+                return BadRequest(ApiResponse<object>.FailureResponse(
+                    $"Invalid type(s): {string.Join(", ", invalidTypes)}. Valid: track, artist, album, playlist, podcast, episode, show.", 400));
 
             var userAccessToken = Request.Headers["X-Spotify-Access-Token"].FirstOrDefault();
 

@@ -1,20 +1,6 @@
-using System;
 using AuthQueryService.Application.Abstractions;
-using AuthQueryService.Application.Abstractions.Messaging;
-using AuthQueryService.Application.DTOs.Response;
-using AuthQueryService.Application.DTOs;
-using AuthQueryService.Application.Services.ActivityLogs.Queries.GetRecentActivityLogs;
-using AuthQueryService.Application.Services.ActivityLogs.Queries.GetUserActivityLogs;
-using AuthQueryService.Application.Services.Favourites.Queries.GetMyFavourites;
-using AuthQueryService.Application.Services.Roles.Queries.GetAllRoles;
-using AuthQueryService.Application.Services.Roles.Queries.GetRoleById;
-using AuthQueryService.Application.Services.Roles.Queries.GetRoleByName;
-using AuthQueryService.Application.Services.Roles.Queries.SearchRoles;
-using AuthQueryService.Application.Services.Users.Queries.GetFullUserProfile;
-using AuthQueryService.Application.Services.Users.Queries.GetUserById;
-using AuthQueryService.Application.Services.Users.Queries.GetUserByUsername;
-using AuthQueryService.Application.Services.Users.Queries.GetUserRole;
-using AuthQueryService.Application.Services.Users.Queries.SearchUsers;
+using AuthQueryService.Application.Abstractions.Messaging.Dispatcher;
+using AuthQueryService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
 using AuthQueryService.Domain.Interfaces;
 using AuthQueryService.Infrastructure.ExternalServices;
 using AuthQueryService.Infrastructure.Messaging;
@@ -26,8 +12,6 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
-using AuthQueryService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
-using AuthQueryService.Application.Abstractions.Messaging.Dispatcher;
 
 namespace AuthQueryService.Infrastructure;
 
@@ -83,40 +67,16 @@ public static class DependencyInjection
         services.AddScoped<IFavouriteReadRepository, FavouriteReadRepository>();
 
         // Spotify API Client (HttpClient managed by IHttpClientFactory)
-        services.AddHttpClient<ISpotifyApiClient, SpotifyApiClient>(client =>
+        services.AddHttpClient<AuthQueryService.Application.Abstractions.ISpotifyApiClient, SpotifyApiClient>(client =>
         {
             client.Timeout = TimeSpan.FromSeconds(30);
         });
 
-        // Query dispatcher
+        // Query dispatcher (handlers are auto-registered in Application layer via Scrutor)
         services.AddScoped<IQueryDispatcher, QueryDispatcher>();
 
-        // Query handlers - Users
-        services.AddScoped<IQueryHandler<GetUserByIdQuery, UserReadDto>, GetUserByIdQueryHandler>();
-        services.AddScoped<IQueryHandler<GetUserByUsernameQuery, UserReadDto>, GetUserByUsernameQueryHandler>();
-        services.AddScoped<IQueryHandler<SearchUsersQuery, PagedResult<UserReadDto>>, SearchUsersQueryHandler>();
-        services.AddScoped<IQueryHandler<GetUserRoleQuery, RoleDto>, GetUserRoleQueryHandler>();
-        services.AddScoped<IQueryHandler<GetFullUserProfileQuery, UserFullProfileDto>, GetFullUserProfileQueryHandler>();
-
-        // Query handlers - Roles
-        services.AddScoped<IQueryHandler<GetAllRolesQuery, List<RoleDto>>, GetAllRolesQueryHandler>();
-        services.AddScoped<IQueryHandler<GetRoleByIdQuery, RoleDto>, GetRoleByIdQueryHandler>();
-        services.AddScoped<IQueryHandler<GetRoleByNameQuery, RoleDto>, GetRoleByNameQueryHandler>();
-        services.AddScoped<IQueryHandler<SearchRolesQuery, PagedResult<RoleDto>>, SearchRolesQueryHandler>();
-
-        // Query handlers - Activity Logs
-        services.AddScoped<IQueryHandler<GetUserActivityLogsQuery, List<UserActivityLogDto>>, 
-            GetUserActivityLogsQueryHandler>();
-        services.AddScoped<IQueryHandler<GetRecentActivityLogsQuery, List<UserActivityLogDto>>,
-            GetRecentActivityLogsQueryHandler>();
-
-        // Query handlers - Favourites
-        services.AddScoped<IQueryHandler<GetMyFavouritesQuery, List<UserFavouriteDto>>,
-            GetMyFavouritesQueryHandler>();
-
-
         // ============================================
-        // Event Handlers (Clean Architecture) 
+        // Event Handlers (Clean Architecture)
         // ============================================
         
         // User Data Sync Handlers
