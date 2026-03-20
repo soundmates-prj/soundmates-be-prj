@@ -258,17 +258,18 @@ public sealed class AzuraCastClient : IAzuraCastClient
         int stationId,
         string name,
         bool isAutoPlay,
+        bool includeInRequests,
         CancellationToken cancellationToken = default)
     {
         var body = new
         {
             name,
-            type   = "default",
+            type = "default",
             source = "songs",
-            order  = isAutoPlay ? "shuffle" : "sequential",
+            order = isAutoPlay ? "shuffle" : "sequential",
             is_enabled = true,
-            include_in_requests   = false,
-            include_in_on_demand  = false,
+            include_in_requests = includeInRequests,
+            include_in_on_demand = false,
             weight = 3
         };
 
@@ -283,6 +284,44 @@ public sealed class AzuraCastClient : IAzuraCastClient
 
         _logger.LogInformation(
             "Created AzuraCast playlist '{Name}' (id: {Id}) for station {StationId}",
+            result.Name, result.Id, stationId);
+
+        return new AzuraCastPlaylistData { Id = result.Id, Name = result.Name ?? name };
+    }
+
+    public async Task<AzuraCastPlaylistData?> UpdatePlaylistAsync(
+        int stationId,
+        int playlistId,
+        string name,
+        bool isAutoPlay,
+        bool includeInRequests,
+        bool includeInOnDemand,
+        bool isEnabled,
+        CancellationToken cancellationToken = default)
+    {
+        var body = new
+        {
+            name,
+            type = "default",
+            source = "songs",
+            order = isAutoPlay ? "shuffle" : "sequential",
+            is_enabled = isEnabled,
+            include_in_requests = includeInRequests,
+            include_in_on_demand = includeInOnDemand
+        };
+
+        using var response = await _httpClient.PutAsJsonAsync(
+            $"api/station/{stationId}/playlist/{playlistId}", body, cancellationToken);
+
+        await EnsureAzuraCastSuccessAsync(response, $"update playlist {playlistId} on station {stationId}", cancellationToken);
+
+        var result = await response.Content
+            .ReadFromJsonAsync<AzuraCastApiPlaylistResponse>(cancellationToken);
+
+        if (result == null) return null;
+
+        _logger.LogInformation(
+            "Updated AzuraCast playlist '{Name}' (id: {Id}) for station {StationId}",
             result.Name, result.Id, stationId);
 
         return new AzuraCastPlaylistData { Id = result.Id, Name = result.Name ?? name };

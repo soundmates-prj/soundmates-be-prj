@@ -54,6 +54,7 @@ public sealed class GetPlaylistsByStationHandler : IQueryHandler<GetPlaylistsByS
                 PlaylistName = p.PlaylistName,
                 Description = null,
                 IsAutoPlay = p.Type == Domain.Enums.PlaylistType.Default,
+                IncludeInRequests = p.IncludeInRequests,
                 TotalTracks = p.Media?.Count ?? 0,
                 TotalDuration = p.Media?.Sum(m => m.DurationSeconds) ?? 0,
                 CreatedAt = p.CreatedAt

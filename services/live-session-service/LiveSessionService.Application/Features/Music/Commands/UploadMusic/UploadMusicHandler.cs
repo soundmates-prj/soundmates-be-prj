@@ -13,23 +13,23 @@ public sealed class UploadMusicHandler
     : ICommandHandler<UploadMusicCommand, MusicResult>
 {
     private readonly IAzuraCastStationRepository _stationRepo;
-    private readonly IMediaFileRepository        _mediaFileRepo;
-    private readonly IAzuraCastClient            _azuraCast;
-    private readonly IDateTimeProvider           _dateTime;
+    private readonly IMediaFileRepository _mediaFileRepo;
+    private readonly IAzuraCastClient _azuraCast;
+    private readonly IDateTimeProvider _dateTime;
     private readonly ILogger<UploadMusicHandler> _logger;
 
     public UploadMusicHandler(
         IAzuraCastStationRepository stationRepo,
-        IMediaFileRepository        mediaFileRepo,
-        IAzuraCastClient            azuraCast,
-        IDateTimeProvider           dateTime,
+        IMediaFileRepository mediaFileRepo,
+        IAzuraCastClient azuraCast,
+        IDateTimeProvider dateTime,
         ILogger<UploadMusicHandler> logger)
     {
-        _stationRepo   = stationRepo;
+        _stationRepo = stationRepo;
         _mediaFileRepo = mediaFileRepo;
-        _azuraCast     = azuraCast;
-        _dateTime      = dateTime;
-        _logger        = logger;
+        _azuraCast = azuraCast;
+        _dateTime = dateTime;
+        _logger = logger;
     }
 
     public async Task<Result<MusicResult>> Handle(
@@ -81,7 +81,6 @@ public sealed class UploadMusicHandler
         return Result<MusicResult>.Success(new MusicResult
         {
             Id          = mediaFile.Id,
-            StationId   = station.Id,
             Title       = mediaFile.Title,
             Artist      = mediaFile.Artist ?? string.Empty,
             Album       = mediaFile.Album,

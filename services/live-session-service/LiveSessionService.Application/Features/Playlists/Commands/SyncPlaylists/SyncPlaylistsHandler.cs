@@ -232,6 +232,7 @@ public sealed class SyncPlaylistsHandler : ICommandHandler<SyncPlaylistsCommand,
                     PlaylistName = playlist.PlaylistName,
                     Description = null,
                     IsAutoPlay = playlist.Type == Domain.Enums.PlaylistType.Default,
+                    IncludeInRequests = playlist.IncludeInRequests,
                     TotalTracks = playlistMedias.Count,
                     TotalDuration = totalDuration,
                     CreatedAt = playlist.CreatedAt

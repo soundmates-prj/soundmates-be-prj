@@ -7,9 +7,6 @@ namespace LiveSessionService.Api.Models.Requests.LiveSessions;
 /// </summary>
 public sealed class CreateLiveSessionRequest
 {
-    [Required(ErrorMessage = "User ID is required")]
-    public Guid UserId { get; set; }
-
     [Required(ErrorMessage = "Station ID is required")]
     public Guid StationId { get; set; }
 

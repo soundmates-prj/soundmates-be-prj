@@ -31,16 +31,17 @@ public sealed class StopSessionHandler : ICommandHandler<StopSessionCommand, Liv
         try
         {
             var session = await _sessionRepository.GetByIdWithStationAsync(command.SessionId, cancellationToken);
-            
             if (session == null)
             {
-                return Result<LiveSessionResult>.Failure(
-                    "Session not found",
-                    ErrorCode.NotFound);
+                return Result<LiveSessionResult>.Failure("Session not found", ErrorCode.NotFound);
             }
 
             session.Stop(_dateTimeProvider);
             await _sessionRepository.UpdateAsync(session, cancellationToken);
+            await _sessionRepository.EndSessionCleanupAsync(
+                session.Id,
+                session.EndedAt ?? _dateTimeProvider.UtcNow,
+                cancellationToken);
 
             _logger.LogInformation("Stopped session {SessionId}", command.SessionId);
 

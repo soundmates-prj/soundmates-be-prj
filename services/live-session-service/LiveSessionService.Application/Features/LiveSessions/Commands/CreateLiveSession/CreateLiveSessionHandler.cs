@@ -3,21 +3,13 @@ using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Features.Results;
 using LiveSessionService.Application.Features.Results.LiveSessions;
 using LiveSessionService.Domain.Entities;
+using LiveSessionService.Domain.Enums;
 using LiveSessionService.Domain.Exceptions;
 using LiveSessionService.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace LiveSessionService.Application.Features.LiveSessions.Commands.CreateLiveSession;
 
-/// <summary>
-/// Handler for creating a new live session
-/// 
-/// BUSINESS RULES:
-/// - User must exist (validate via userId)
-/// - Station must exist and be enabled
-/// - Session name is required
-/// - User can only have limited active sessions (optional)
-/// </summary>
 public sealed class CreateLiveSessionHandler : ICommandHandler<CreateLiveSessionCommand, LiveSessionResult>
 {
     private readonly ILiveSessionRepository _sessionRepository;
@@ -51,9 +43,7 @@ public sealed class CreateLiveSessionHandler : ICommandHandler<CreateLiveSession
             var station = await _stationRepository.GetByIdAsync(command.StationId, cancellationToken);
             if (station == null)
             {
-                return Result<LiveSessionResult>.Failure(
-                    "Station not found",
-                    ErrorCode.NotFound);
+                return Result<LiveSessionResult>.Failure("Station not found", ErrorCode.NotFound);
             }
 
             if (!station.IsEnabled)
@@ -72,14 +62,15 @@ public sealed class CreateLiveSessionHandler : ICommandHandler<CreateLiveSession
                 maxListeners: 100,
                 isPublic: true,
                 genre: null,
+                scheduledStartAt: null,
                 dateTimeProvider: _dateTimeProvider);
 
             // 3. Save to database
             await _sessionRepository.AddAsync(session, cancellationToken);
 
             _logger.LogInformation(
-                "Created live session {SessionId} for user {UserId}",
-                session.Id, command.UserId);
+                "Created live session {SessionId} for user {UserId} with status {Status}",
+                session.Id, command.UserId, session.Status);
 
             // 4. Map to result
             var result = new LiveSessionResult
@@ -91,7 +82,10 @@ public sealed class CreateLiveSessionHandler : ICommandHandler<CreateLiveSession
                 SessionName = session.SessionName,
                 Description = session.Description,
                 Status = session.Status.ToString(),
-                StartedAt = session.StartedAt,
+                ScheduledStartAt = null,
+                StartedAt = session.Status is SessionStatus.Live or SessionStatus.Paused or SessionStatus.Ended
+                    ? session.StartedAt
+                    : null,
                 EndedAt = session.EndedAt,
                 TotalListeners = 0,
                 PeakListeners = 0,

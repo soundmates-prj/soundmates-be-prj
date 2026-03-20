@@ -12,6 +12,7 @@ public sealed class LiveSessionResult
     public string SessionName { get; init; } = null!;
     public string? Description { get; init; }
     public string Status { get; init; } = null!;
+    public DateTime? ScheduledStartAt { get; init; }
     public DateTime? StartedAt { get; init; }
     public DateTime? EndedAt { get; init; }
     public int TotalListeners { get; init; }

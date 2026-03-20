@@ -1,6 +1,7 @@
 ﻿using AccountContentService.Api.Common;
 using AccountContentService.Api.Constants;
 using AccountContentService.Api.Contracts.Requests;
+using AccountContentService.Api.Contracts.Responses;
 using AccountContentService.Application.Features.Payments.Commands;
 using AccountContentService.Application.Features.Payments.Commands.CallbackCommand;
 using AccountContentService.Application.Features.Payments.Commands.CreatePayment;
@@ -98,7 +99,8 @@ namespace AccountContentService.Api.Controllers
                 Data = data
             });
 
-            return Ok(result);
+            var response = _mapper.Map<TransactionResponse>(result);
+            return Ok(ApiResponse<TransactionResponse>.Ok(response, "Create post successfully"));
         }
 
         /// <summary>

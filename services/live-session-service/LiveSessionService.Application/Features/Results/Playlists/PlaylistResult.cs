@@ -10,6 +10,7 @@ public sealed class PlaylistResult
     public string PlaylistName { get; init; } = null!;
     public string? Description { get; init; }
     public bool IsAutoPlay { get; init; }
+    public bool IncludeInRequests { get; init; }
     public int TotalTracks { get; init; }
     public int TotalDuration { get; init; }
     public DateTime CreatedAt { get; init; }

@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace LiveSessionService.Application.Features.Results.Music;
 
 /// <summary>
@@ -6,7 +8,6 @@ namespace LiveSessionService.Application.Features.Results.Music;
 public sealed class MusicResult
 {
     public Guid Id { get; init; }
-    public Guid StationId { get; init; }
     public string Title { get; init; } = null!;
     public string Artist { get; init; } = null!;
     public string? Album { get; init; }

@@ -30,6 +30,20 @@ public sealed class MediaFileRepository : IMediaFileRepository
             .OrderByDescending(f => f.UploadedAt)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<MediaFile>> GetByFilePathsAsync(IReadOnlyCollection<string> filePaths, CancellationToken cancellationToken = default)
+    {
+        if (filePaths.Count == 0)
+        {
+            return Array.Empty<MediaFile>();
+        }
+
+        return await _db.MediaFiles
+            .AsNoTracking()
+            .Where(f => filePaths.Contains(f.FilePath))
+            .OrderByDescending(f => f.UploadedAt)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<MediaFile>> GetByStationIdAsync(Guid stationId, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation(
