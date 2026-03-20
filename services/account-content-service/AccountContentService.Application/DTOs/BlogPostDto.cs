@@ -31,10 +31,23 @@ namespace AccountContentService.Application.DTOs
         public DateTime UpdatedAt { get; set; }
         public DateTime? PublishedAt { get; set; }
 
+        public string? PostType { get; set; }
+        public ShareMusicDto? ShareMusic { get; set; }
+
         public UserProfileDto userProfile { get; set; } = null!;
 
         //public List<CommentDto> Comments { get; set; } = new();
         //public List<ReactionDto> Reactions { get; set; } = new();
 
+    }
+
+    public class ShareMusicDto
+    {
+        public string TrackId { get; set; } = string.Empty;
+        public string Title { get; set; } = string.Empty;
+        public string Artist { get; set; } = string.Empty;
+        public string AlbumImage { get; set; } = string.Empty;
+        public string? PreviewUrl { get; set; }
+        public string Template { get; set; } = "gradient";
     }
 }

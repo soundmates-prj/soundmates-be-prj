@@ -329,56 +329,6 @@
     //   Circuit Breaker : opens after 5 errors, stays open 30 s
     //   Timeout         : 8 s (AzuraCast calls may be slower)
     // ═══════════════════════════════════════════════════════════
-    // === LIVE SESSION: Music Catalog ===
-    {
-      "DownstreamPathTemplate": "/api/v1/MusicCatalog",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "live-session-service",
-          "Port": 8080
-        }
-        // scale: add { "Host": "live-session-service-2", "Port": 8080 }
-      ],
-      "UpstreamPathTemplate": "/api/v1/live-session/music",
-      "UpstreamHttpMethod": [
-        "GET",
-        "OPTIONS"
-      ],
-      "LoadBalancerOptions": {
-        "Type": "RoundRobin"
-      },
-      "QoSOptions": {
-        "ExceptionsAllowedBeforeBreaking": 5,
-        "DurationOfBreak": 30000,
-        "TimeoutValue": 8000
-      }
-    },
-    {
-      "DownstreamPathTemplate": "/api/v1/MusicCatalog/{everything}",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "live-session-service",
-          "Port": 8080
-        }
-      ],
-      "UpstreamPathTemplate": "/api/v1/live-session/music/{everything}",
-      "UpstreamHttpMethod": [
-        "GET",
-        "POST",
-        "DELETE",
-        "OPTIONS"
-      ],
-      "LoadBalancerOptions": {
-        "Type": "RoundRobin"
-      },
-      "QoSOptions": {
-        "ExceptionsAllowedBeforeBreaking": 5,
-        "DurationOfBreak": 30000,
-        "TimeoutValue": 8000
-      }
-    },
     // === LIVE SESSION: Station ===
     {
       "DownstreamPathTemplate": "/api/v1/Station",
@@ -584,6 +534,34 @@
       "LoadBalancerOptions": { "Type": "RoundRobin" },
       "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
     },
+    {
+      "DownstreamPathTemplate": "/api/v1/me/subscriptions",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-content-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/me/subscriptions",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
+      "LoadBalancerOptions": { "Type": "RoundRobin" },
+      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/me/subscriptions/history",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-content-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/me/subscriptions/history",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
+      "LoadBalancerOptions": { "Type": "RoundRobin" },
+      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+    },
     // === SUBSCRIPTIONS & PAYMENTS ===
     {
       "DownstreamPathTemplate": "/api/v1/subscription-plans",
@@ -744,32 +722,117 @@
       "LoadBalancerOptions": { "Type": "RoundRobin" },
       "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 60000 }
     },
-    // === LIVE SESSION: Podcast ===
+    // ═══════════════════════════════════════════════════════════
+    // LIVE SESSION SERVICE — Direct routes (no prefix)
+    //   Timeout: 8s (AzuraCast calls may be slower)
+    //   Upload:  30s (music file uploads)
+    // ═══════════════════════════════════════════════════════════
+
+    // === PLAYLIST ===
     {
-      "DownstreamPathTemplate": "/api/v1/Podcast/{everything}",
+      "DownstreamPathTemplate": "/api/v1/Playlist",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
-        {
-          "Host": "live-session-service",
-          "Port": 8080
-        }
+        { "Host": "live-session-service", "Port": 8080 }
       ],
-      "UpstreamPathTemplate": "/api/v1/live-session/podcast/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ],
+      "UpstreamPathTemplate": "/api/v1/playlist",
+      "UpstreamHttpMethod": [ "GET", "POST", "OPTIONS" ],
       "LoadBalancerOptions": { "Type": "RoundRobin" },
       "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
     },
     {
+      "DownstreamPathTemplate": "/api/v1/Playlist/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        { "Host": "live-session-service", "Port": 8080 }
+      ],
+      "UpstreamPathTemplate": "/api/v1/playlist/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ],
+      "LoadBalancerOptions": { "Type": "RoundRobin" },
+      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+    },
+
+    // === MUSIC CATALOG (direct /musiccatalog) ===
+    {
+      "DownstreamPathTemplate": "/api/v1/MusicCatalog",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        { "Host": "live-session-service", "Port": 8080 }
+      ],
+      "UpstreamPathTemplate": "/api/v1/musiccatalog",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
+      "LoadBalancerOptions": { "Type": "RoundRobin" },
+      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/MusicCatalog/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        { "Host": "live-session-service", "Port": 8080 }
+      ],
+      "UpstreamPathTemplate": "/api/v1/musiccatalog/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "DELETE", "OPTIONS" ],
+      "LoadBalancerOptions": { "Type": "RoundRobin" },
+      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 30000 }
+    },
+
+    // === LIVE SESSION ===
+    {
+      "DownstreamPathTemplate": "/api/v1/LiveSession",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        { "Host": "live-session-service", "Port": 8080 }
+      ],
+      "UpstreamPathTemplate": "/api/v1/livesession",
+      "UpstreamHttpMethod": [ "GET", "POST", "OPTIONS" ],
+      "LoadBalancerOptions": { "Type": "RoundRobin" },
+      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/LiveSession/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        { "Host": "live-session-service", "Port": 8080 }
+      ],
+      "UpstreamPathTemplate": "/api/v1/livesession/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ],
+      "LoadBalancerOptions": { "Type": "RoundRobin" },
+      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+    },
+
+    // === PODCAST (direct /podcast) ===
+    {
       "DownstreamPathTemplate": "/api/v1/Podcast",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
-        {
-          "Host": "live-session-service",
-          "Port": 8080
-        }
+        { "Host": "live-session-service", "Port": 8080 }
       ],
-      "UpstreamPathTemplate": "/api/v1/live-session/podcast",
+      "UpstreamPathTemplate": "/api/v1/podcast",
       "UpstreamHttpMethod": [ "GET", "POST", "OPTIONS" ],
+      "LoadBalancerOptions": { "Type": "RoundRobin" },
+      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/Podcast/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        { "Host": "live-session-service", "Port": 8080 }
+      ],
+      "UpstreamPathTemplate": "/api/v1/podcast/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ],
+      "LoadBalancerOptions": { "Type": "RoundRobin" },
+      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+    },
+
+    // === AZURACAST HEALTH ===
+    {
+      "DownstreamPathTemplate": "/api/v1/AzuraCastHealth/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        { "Host": "live-session-service", "Port": 8080 }
+      ],
+      "UpstreamPathTemplate": "/api/v1/azuracast/{everything}",
+      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
       "LoadBalancerOptions": { "Type": "RoundRobin" },
       "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
     }

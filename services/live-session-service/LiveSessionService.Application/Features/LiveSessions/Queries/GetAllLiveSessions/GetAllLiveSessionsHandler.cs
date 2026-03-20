@@ -64,6 +64,17 @@ public sealed class GetAllLiveSessionsHandler : IQueryHandler<GetAllLiveSessions
                 EndedAt = s.Status == SessionStatus.Ended
                     ? s.EndedAt
                     : null,
+                TotalListeners = s.Listeners
+                    .Select(l => l.UserId.HasValue
+                        ? $"u:{l.UserId.Value}"
+                        : $"a:{l.AnonymousIdentifier ?? l.Id.ToString()}")
+                    .Distinct()
+                    .Count(),
+                PeakListeners = s.Listeners.Count(l => l.IsConnected),
+                ListenersCount = s.Listeners.Count(l => l.IsConnected),
+                StreamUrl = s.AzuraCastStation?.StreamUrl,
+                ThumbnailUrl = s.ThumbnailUrl,
+                Genre = s.Genre,
                 CreatedAt = s.CreatedAt
             };
         }).ToList();

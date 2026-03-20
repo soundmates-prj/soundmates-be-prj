@@ -19,4 +19,8 @@ public sealed class LiveSessionResult
     public int PeakListeners { get; init; }
     public int TotalDuration { get; init; }
     public DateTime CreatedAt { get; init; }
+    public string? StreamUrl { get; init; }
+    public string? ThumbnailUrl { get; init; }
+    public string? Genre { get; init; }
+    public int ListenersCount { get; init; }
 }

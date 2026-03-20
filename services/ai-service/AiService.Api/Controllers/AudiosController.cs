@@ -38,7 +38,7 @@ public class AudiosController : ControllerBase
             cancellationToken);
 
         return result.IsSuccess
-            ? Ok(ApiResponse<object>.SuccessResponse(new { audio = result.Data }))
+            ? Ok(ApiResponse<object>.SuccessResponse(new { audio = MapToAudioResponse(result.Data) }))
             : BadRequest(ApiResponse<string>.Error(ApiStatusCode.HB40001, result.ErrorMessage ?? "Failed"));
     }
 
@@ -47,7 +47,7 @@ public class AudiosController : ControllerBase
     {
         var result = await _queries.Send<GetAudioByIdQuery, Domain.Entities.ScriptAudio>(new GetAudioByIdQuery(audioId), cancellationToken);
         return result.IsSuccess
-            ? Ok(ApiResponse<object>.SuccessResponse(new { audio = result.Data }))
+            ? Ok(ApiResponse<object>.SuccessResponse(new { audio = MapToAudioResponse(result.Data) }))
             : NotFound(ApiResponse<string>.Error(ApiStatusCode.HB40401, result.ErrorMessage ?? "Not found"));
     }
 
@@ -72,6 +72,24 @@ public class AudiosController : ControllerBase
             Response.ContentLength = len;
 
         return File(openResult.Data.Stream, openResult.Data.ContentType, enableRangeProcessing: true);
+    }
+
+    private static AudioResponse MapToAudioResponse(Domain.Entities.ScriptAudio audio)
+    {
+        return new AudioResponse
+        {
+            Id = audio.AudioId,
+            FileName = Path.GetFileName(audio.AudioPath),
+            ContentType = "audio/mpeg", // Default to MP3
+            ContentLength = 0, // Not available in entity
+            StoragePath = audio.AudioPath,
+            ScriptId = audio.ScriptId,
+            VoiceId = audio.VoiceId,
+            Speed = (float)(audio.Speed ?? 1.0m),
+            Pitch = (float)(audio.Pitch ?? 1.0m),
+            CreatedAtUtc = audio.CreatedAt,
+            UpdatedAtUtc = audio.UpdatedAt ?? audio.CreatedAt
+        };
     }
 }
 

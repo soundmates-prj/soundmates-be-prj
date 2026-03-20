@@ -9,8 +9,10 @@ using LiveSessionService.Application.Features.LiveSessions.Commands.PauseSession
 using LiveSessionService.Application.Features.LiveSessions.Commands.ResumeSession;
 using LiveSessionService.Application.Features.LiveSessions.Commands.StartSession;
 using LiveSessionService.Application.Features.LiveSessions.Commands.StopSession;
+using LiveSessionService.Application.Features.LiveSessions.Queries.GetActiveLiveSessions;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetAllLiveSessions;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSession;
+using LiveSessionService.Application.Features.LiveSessions.Queries.GetStaffDashboardOverview;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetSessionSchedules;
 using LiveSessionService.Application.Features.Results;
 using LiveSessionService.Application.Features.Results.LiveSessions;
@@ -74,6 +76,54 @@ public class LiveSessionController : ControllerBase
     }
 
     /// <summary>
+    /// Get all currently active (Live/Paused) sessions
+    /// </summary>
+    [HttpGet("active")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResponse<List<LiveSessionResult>>), 200)]
+    public async Task<IActionResult> GetActive(CancellationToken ct)
+    {
+        var query = new GetActiveLiveSessionsQuery();
+        var result = await _queries.Send<GetActiveLiveSessionsQuery, List<LiveSessionResult>>(query, ct);
+
+        if (!result.IsSuccess)
+        {
+            return StatusCode(
+                (int)(result.ErrorCode ?? ErrorCode.InternalServerError),
+                result.ToApiResponse());
+        }
+
+        return Ok(ApiResponse<List<LiveSessionResult>>.SuccessResponse(
+            result.Data!,
+            $"Retrieved {result.Data!.Count} active session(s)"));
+    }
+
+    /// <summary>
+    /// Get staff dashboard overview metrics
+    /// </summary>
+    [HttpGet("dashboard/overview")]
+    [Authorize(Roles = "STAFF,ADMIN")]
+    [ProducesResponseType(typeof(ApiResponse<StaffDashboardOverviewResult>), 200)]
+    public async Task<IActionResult> GetDashboardOverview(
+        [FromQuery] int days = 7,
+        CancellationToken ct = default)
+    {
+        var query = new GetStaffDashboardOverviewQuery(days);
+        var result = await _queries.Send<GetStaffDashboardOverviewQuery, StaffDashboardOverviewResult>(query, ct);
+
+        if (!result.IsSuccess)
+        {
+            return StatusCode(
+                (int)(result.ErrorCode ?? ErrorCode.InternalServerError),
+                result.ToApiResponse());
+        }
+
+        return Ok(ApiResponse<StaffDashboardOverviewResult>.SuccessResponse(
+            result.Data!,
+            "Dashboard overview retrieved"));
+    }
+
+    /// <summary>
     /// Get a specific live session by ID
     /// </summary>
     [HttpGet("{id:guid}")]
@@ -121,7 +171,7 @@ public class LiveSessionController : ControllerBase
         }
 
         var command = new CreateLiveSessionCommand(
-            currentUserId,
+            request.HostUserId ?? currentUserId,
             request.StationId,
             request.SessionName,
             request.Description);
@@ -281,6 +331,18 @@ public class LiveSessionController : ControllerBase
         }
 
         return Ok(ApiResponse<LiveSessionResult>.SuccessResponse(result.Data!, "Session resumed"));
+    }
+
+    /// <summary>
+    /// End a live session (alias for stop)
+    /// </summary>
+    [HttpPost("{id:guid}/end")]
+    [ProducesResponseType(typeof(ApiResponse<LiveSessionResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> End(Guid id, CancellationToken ct)
+    {
+        return await Stop(id, ct);
     }
 
     /// <summary>

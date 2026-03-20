@@ -40,4 +40,14 @@ namespace AccountContentService.Api.Contracts.Requests
 
         public string? MoodTag { get; set; }
     }
+
+    public class ShareMusicPostRequest
+    {
+        public required string TrackId { get; set; }
+        public required string Title { get; set; }
+        public required string Artist { get; set; }
+        public required string AlbumImage { get; set; }
+        public string? PreviewUrl { get; set; }
+        public required string Template { get; set; }
+    }
 }
