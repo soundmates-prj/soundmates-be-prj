@@ -25,13 +25,17 @@ namespace AccountContentService.Application.Features.Payments.Commands.CreatePay
 
         public async Task<string> Handle(CreatePaymentCommand request, CancellationToken cancellationToken)
         {
-            // 🔥 1. Check user đã có subscription active chưa
+            
             var existing = await _subscriptionRepo.GetActiveByUserIdAsync(request.UserId, cancellationToken);
+            var subscription = await _subscriptionRepo.GetPlanByIdAsync(request.TargetId, cancellationToken);
 
             if (existing != null)
                 throw new Exception("User already has active subscription");
+            if (subscription == null)
+                throw new Exception("Subscription plan not found");
 
-            // 🔥 2. Tạo Payment (pending)
+            request.TotalAmount = subscription.Price;
+
             var payment = new Payment
             {
                 Id = Guid.NewGuid(),

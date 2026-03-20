@@ -31,6 +31,8 @@ namespace AccountContentService.Application.DTOs
         public DateTime UpdatedAt { get; set; }
         public DateTime? PublishedAt { get; set; }
 
+        public UserProfileDto userProfile { get; set; } = null!;
+
         //public List<CommentDto> Comments { get; set; } = new();
         //public List<ReactionDto> Reactions { get; set; } = new();
 

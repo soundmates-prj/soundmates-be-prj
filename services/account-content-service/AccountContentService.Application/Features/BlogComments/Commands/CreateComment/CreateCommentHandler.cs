@@ -1,6 +1,7 @@
 ﻿using AccountContentService.Application.DTOs;
 using AccountContentService.Application.Exceptions;
 using AccountContentService.Application.Interfaces.Repositories;
+using AccountContentService.Application.Interfaces.Services;
 using AccountContentService.Domain.Entities;
 using AccountContentService.Domain.Enums;
 using AutoMapper;
@@ -16,16 +17,19 @@ namespace AccountContentService.Application.Features.BlogComments.Commands.Creat
     {
         private readonly ICommentRepository _repository;
         private readonly IBlogPostRepository _postRepository;
-        private readonly IMapper _mapper;
+        private readonly IMapper _mapper;   
+        private readonly IUserServiceClient _userClient;
 
         public CreateCommentHandler(
             ICommentRepository repository,
             IBlogPostRepository postRepository,
-            IMapper mapper)
+            IMapper mapper,
+            IUserServiceClient userClient)
         {
             _repository = repository;
             _postRepository = postRepository;
             _mapper = mapper;
+            _userClient = userClient;
         }
 
         public async Task<CommentDto> Handle(
@@ -45,7 +49,11 @@ namespace AccountContentService.Application.Features.BlogComments.Commands.Creat
 
             await _repository.AddAsync(comment);
 
-            return _mapper.Map<CommentDto>(comment);
+            var userProfile = await _userClient.GetMyProfile();
+            var respose = _mapper.Map<CommentDto>(comment);
+            respose.userProfile = userProfile;
+
+            return respose;
         }
     }
 }
