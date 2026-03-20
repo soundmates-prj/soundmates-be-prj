@@ -1,5 +1,6 @@
 using AiService.Application.Interfaces;
 using AiService.Application.Results;
+using AiService.Application.Enums;
 using AiService.Domain.Entities;
 using AiService.Domain.Enums;
 using AiService.Domain.Interfaces;
@@ -69,6 +70,7 @@ public class AudioService : IAudioService
                 new TtsSynthesizeRequest(
                     Text: script.ContentText,
                     VoiceCode: voice.VoiceCode,
+                    Model: voice.Model,
                     Speed: request.Speed,
                     Pitch: request.Pitch),
                 cancellationToken);
@@ -122,6 +124,19 @@ public class AudioService : IAudioService
         return audio is null
             ? Result<ScriptAudio>.Failure("audio not found")
             : Result<ScriptAudio>.Success(audio);
+    }
+
+    public async Task<Result<AudioFileStreamResult>> OpenReadForUserAsync(Guid userId, Guid audioId, CancellationToken cancellationToken)
+    {
+        var audio = await _audios.GetByIdAsync(audioId, cancellationToken);
+        if (audio is null)
+            return Result<AudioFileStreamResult>.Failure("audio not found", (int)ApiStatusCode.HB40401);
+
+        if (audio.Script.AuthorId != userId)
+            return Result<AudioFileStreamResult>.Failure("forbidden", (int)ApiStatusCode.HB40301);
+
+        var (stream, contentType, contentLength) = await _storage.OpenReadAsync(audio.AudioPath, cancellationToken);
+        return Result<AudioFileStreamResult>.Success(new AudioFileStreamResult(stream, contentType, contentLength));
     }
 }
 

@@ -22,4 +22,7 @@ public class AccountContentDbContext : DbContext
     public DbSet<PaymentWebhookLog> PaymentWebhookLogs => Set<PaymentWebhookLog>();
 
     public DbSet<Notification> Notifications => Set<Notification>();
+
+    public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
+
 }

@@ -12,37 +12,49 @@ namespace AuthQueryService.Infrastructure.Repositories
     {
         private readonly IMongoCollection<UserActivityLog> _collection;
 
+        private static bool _indexesEnsured;
+        private static readonly object _indexLock = new();
+
         public UserActivityLogRepository(IMongoDatabase database)
         {
             _collection = database.GetCollection<UserActivityLog>("user_activity_logs");
             
-            // Create indexes for better query performance
-            var indexModels = new[]
+            if (!_indexesEnsured)
             {
-                new CreateIndexModel<UserActivityLog>(
-                    Builders<UserActivityLog>.IndexKeys.Ascending(x => x.UserId),
-                    new CreateIndexOptions { Name = "ix_user_activity_logs_user_id" }),
-                new CreateIndexModel<UserActivityLog>(
-                    Builders<UserActivityLog>.IndexKeys.Ascending(x => x.ActivityType),
-                    new CreateIndexOptions { Name = "ix_user_activity_logs_activity_type" }),
-                new CreateIndexModel<UserActivityLog>(
-                    Builders<UserActivityLog>.IndexKeys.Descending(x => x.OccurredAt),
-                    new CreateIndexOptions { Name = "ix_user_activity_logs_occurred_at" }),
-                new CreateIndexModel<UserActivityLog>(
-                    Builders<UserActivityLog>.IndexKeys.Ascending(x => x.Email),
-                    new CreateIndexOptions { Name = "ix_user_activity_logs_email" }),
-                new CreateIndexModel<UserActivityLog>(
-                    Builders<UserActivityLog>.IndexKeys.Ascending(x => x.Username),
-                    new CreateIndexOptions { Name = "ix_user_activity_logs_username" })
-            };
-            
-            try
-            {
-                _collection.Indexes.CreateMany(indexModels);
-            }
-            catch
-            {
-                // Indexes might already exist, ignore
+                lock (_indexLock)
+                {
+                    if (!_indexesEnsured)
+                    {
+                        var indexModels = new[]
+                        {
+                            new CreateIndexModel<UserActivityLog>(
+                                Builders<UserActivityLog>.IndexKeys.Ascending(x => x.UserId),
+                                new CreateIndexOptions { Name = "ix_user_activity_logs_user_id" }),
+                            new CreateIndexModel<UserActivityLog>(
+                                Builders<UserActivityLog>.IndexKeys.Ascending(x => x.ActivityType),
+                                new CreateIndexOptions { Name = "ix_user_activity_logs_activity_type" }),
+                            new CreateIndexModel<UserActivityLog>(
+                                Builders<UserActivityLog>.IndexKeys.Descending(x => x.OccurredAt),
+                                new CreateIndexOptions { Name = "ix_user_activity_logs_occurred_at" }),
+                            new CreateIndexModel<UserActivityLog>(
+                                Builders<UserActivityLog>.IndexKeys.Ascending(x => x.Email),
+                                new CreateIndexOptions { Name = "ix_user_activity_logs_email" }),
+                            new CreateIndexModel<UserActivityLog>(
+                                Builders<UserActivityLog>.IndexKeys.Ascending(x => x.Username),
+                                new CreateIndexOptions { Name = "ix_user_activity_logs_username" })
+                        };
+                        
+                        try
+                        {
+                            _collection.Indexes.CreateMany(indexModels);
+                        }
+                        catch
+                        {
+                            // Indexes might already exist, ignore
+                        }
+                        _indexesEnsured = true;
+                    }
+                }
             }
         }
 
@@ -116,14 +128,16 @@ namespace AuthQueryService.Infrastructure.Repositories
                 filter = builder.And(filter, builder.Eq(x => x.IsSuccess, isSuccess.Value));
             }
 
-            var total = (int)await _collection.CountDocumentsAsync(filter);
-            var items = await _collection.Find(filter)
+            var countTask = _collection.CountDocumentsAsync(filter);
+            var itemsTask = _collection.Find(filter)
                 .SortByDescending(x => x.OccurredAt)
                 .Skip((page - 1) * size)
                 .Limit(size)
                 .ToListAsync();
 
-            return (items, total);
+            await Task.WhenAll(countTask, itemsTask);
+
+            return (itemsTask.Result, (int)countTask.Result);
         }
     }
 }

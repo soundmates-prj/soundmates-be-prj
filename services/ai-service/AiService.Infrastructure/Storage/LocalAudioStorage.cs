@@ -9,7 +9,7 @@ public class LocalAudioStorage : IAudioStorage
 
     public LocalAudioStorage(IOptions<StorageOptions> options)
     {
-        _audioRoot = options.Value.AudioRoot?.Trim();
+        _audioRoot = options.Value.AudioRoot?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(_audioRoot) || _audioRoot.StartsWith("${"))
         {
             _audioRoot = Path.Combine(AppContext.BaseDirectory, "data", "audios");
@@ -45,7 +45,7 @@ public class LocalAudioStorage : IAudioStorage
 
     public Task<(Stream Stream, string ContentType, long? ContentLength)> OpenReadAsync(string relativePath, CancellationToken cancellationToken)
     {
-        _ = cancellationToken;
+        cancellationToken.ThrowIfCancellationRequested();
 
         if (string.IsNullOrWhiteSpace(relativePath))
             throw new ArgumentException("relativePath is required", nameof(relativePath));
@@ -58,7 +58,8 @@ public class LocalAudioStorage : IAudioStorage
         if (!File.Exists(fullPath))
             throw new FileNotFoundException("audio file not found", fullPath);
 
-        var stream = File.OpenRead(fullPath);
+        // Open as async-capable stream so ASP.NET can stream efficiently (CopyToAsync, range reads, etc.).
+        var stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 81920, useAsync: true);
         var ext = Path.GetExtension(fullPath).ToLowerInvariant();
         var contentType = ext switch
         {

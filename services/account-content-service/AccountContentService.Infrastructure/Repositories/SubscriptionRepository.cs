@@ -37,9 +37,11 @@ namespace AccountContentService.Infrastructure.Repositories
 
         public async Task<Subscription> GetActiveByUserIdAsync(Guid userId, CancellationToken cancellationToken)
         {
+            var activeStatus = SubscriptionStatus.Active.ToString().ToLower();
+
             return await _context.Subscriptions
                 .AsNoTracking()
-                .Where(x => x.UserId == userId && x.Status.ToLower() == SubscriptionStatus.Active.ToString())
+                .Where(x => x.UserId == userId && x.Status.ToLower() == activeStatus)
                 .FirstOrDefaultAsync(cancellationToken);
         }
 

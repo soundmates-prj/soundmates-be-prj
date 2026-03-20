@@ -32,13 +32,27 @@ public class VieNeuTtsClient : ITtsClient
             ? "/v1/tts/synthesize"
             : _options.SynthesizePath!;
 
+        // This container may be either:
+        // - a custom TTS endpoint returning audio bytes/base64 (legacy /v1/tts/synthesize style)
+        // - a LMDeploy/FastAPI server exposing OpenAI-like chat endpoints (e.g. /v1/chat/completions)
+        // We support both; if the server returns non-decodable "audio" (speech tokens),
+        // we can fall back to silent WAV in demo mode.
+        if (string.Equals(synthesizePath, "/v1/chat/completions", StringComparison.OrdinalIgnoreCase))
+        {
+            return await SynthesizeViaChatCompletionsAsync(request, cancellationToken);
+        }
+
+        // Legacy: POST {baseUrl}{synthesizePath} with {text, voice, speed, pitch, model, format, prompt}
         var payload = new Dictionary<string, object?>
         {
             ["text"] = request.Text,
             ["voice"] = request.VoiceCode,
             ["speed"] = request.Speed,
             ["pitch"] = request.Pitch,
-            ["model"] = _options.Model,
+            // Prefer per-voice model stored in DB; fallback to global config.
+            ["model"] = string.IsNullOrWhiteSpace(request.Model) || request.Model.StartsWith("${")
+                ? _options.Model
+                : request.Model,
             ["format"] = string.IsNullOrWhiteSpace(_options.AudioFormat) ? "mp3" : _options.AudioFormat,
             ["prompt"] = BuildPrompt(request)
         };
@@ -49,9 +63,7 @@ public class VieNeuTtsClient : ITtsClient
         };
 
         if (!string.IsNullOrWhiteSpace(_options.ApiKey) && !_options.ApiKey.StartsWith("${"))
-        {
             httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.ApiKey);
-        }
 
         using var response = await _http.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         response.EnsureSuccessStatusCode();
@@ -100,6 +112,176 @@ public class VieNeuTtsClient : ITtsClient
             ContentType: contentType,
             DurationSeconds: duration,
             RawProviderResponse: raw);
+    }
+
+    private async Task<TtsSynthesizeResponse> SynthesizeViaChatCompletionsAsync(TtsSynthesizeRequest request, CancellationToken cancellationToken)
+    {
+        var ttsModel = string.IsNullOrWhiteSpace(request.Model) || request.Model.StartsWith("${")
+            ? _options.Model
+            : request.Model;
+
+        // Build a chat prompt; some servers may ignore it but it won't break.
+        // If response_format is supported, request JSON output with audioBase64.
+        var messageContent = BuildChatPrompt(request);
+
+        var payload = new
+        {
+            model = ttsModel,
+            messages = new[]
+            {
+                new { role = "user", content = messageContent }
+            },
+            max_completion_tokens = 512,
+            response_format = new
+            {
+                type = "json_schema",
+                json_schema = new
+                {
+                    name = "tts",
+                    strict = true,
+                    schema = new
+                    {
+                        type = "object",
+                        properties = new
+                        {
+                            audioBase64 = new { type = "string" }
+                        },
+                        required = new[] { "audioBase64" },
+                        additionalProperties = false
+                    }
+                }
+            }
+        };
+
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, BuildUri(_options.BaseUrl, "/v1/chat/completions"))
+        {
+            Content = JsonContent.Create(payload, options: JsonOptions)
+        };
+
+        if (!string.IsNullOrWhiteSpace(_options.ApiKey) && !_options.ApiKey.StartsWith("${"))
+            httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.ApiKey);
+
+        using var response = await _http.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        var raw = await response.Content.ReadAsStringAsync(cancellationToken);
+        using var document = JsonDocument.Parse(raw);
+
+        // Extract choices[0].message.content
+        var content =
+            document.RootElement
+                .GetProperty("choices")[0]
+                .GetProperty("message")
+                .GetProperty("content")
+                .GetString();
+
+        if (string.IsNullOrWhiteSpace(content))
+            return DemoFallback(raw);
+
+        // content can be:
+        // - a JSON string (because we requested json_schema)
+        // - plain text
+        try
+        {
+            using var contentDoc = JsonDocument.Parse(content);
+            if (contentDoc.RootElement.TryGetProperty("audioBase64", out var audioBase64El))
+            {
+                var audioBase64 = audioBase64El.GetString();
+                if (!string.IsNullOrWhiteSpace(audioBase64))
+                {
+                    try
+                    {
+                        var normalizedBase64 = ExtractBase64(audioBase64);
+                        var audioBytes = Convert.FromBase64String(normalizedBase64);
+                        return new TtsSynthesizeResponse(
+                            audioBytes,
+                            "audio/wav",
+                            DurationSeconds: 1,
+                            RawProviderResponse: raw);
+                    }
+                    catch (FormatException)
+                    {
+                        // Often the server returns speech tokens like <|speech_...|> instead of base64.
+                        return DemoFallback(raw);
+                    }
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            // Content isn't JSON; can't extract audio.
+        }
+
+        return DemoFallback(raw);
+    }
+
+    private string BuildChatPrompt(TtsSynthesizeRequest request)
+    {
+        // If PromptTemplate exists, reuse it as prompt for the chat model.
+        var templated = BuildPrompt(request);
+        if (!string.IsNullOrWhiteSpace(templated))
+            return templated;
+
+        return
+            $"Tạo audio từ text tiếng Việt. " +
+            $"Text: '{request.Text}'. Voice: '{request.VoiceCode}'. " +
+            $"Speed: {request.Speed?.ToString(CultureInfo.InvariantCulture)}. " +
+            $"Pitch: {request.Pitch?.ToString(CultureInfo.InvariantCulture)}. " +
+            $"Yêu cầu: trả về JSON {{\"audioBase64\":\"<base64>\"}}.";
+    }
+
+    private TtsSynthesizeResponse DemoFallback(string rawProviderResponse)
+    {
+        if (!_options.DemoMode)
+            throw new InvalidOperationException("VieNeuTTS did not return decodable audio; enable TTS_DEMO_MODE to use a silent WAV fallback.");
+
+        // 1 second silent WAV.
+        var wavBytes = BuildSilentWavBytes(seconds: 1, sampleRate: 16000, channels: 1);
+        return new TtsSynthesizeResponse(
+            AudioBytes: wavBytes,
+            ContentType: "audio/wav",
+            DurationSeconds: 1,
+            RawProviderResponse: rawProviderResponse);
+    }
+
+    private static byte[] BuildSilentWavBytes(int seconds, int sampleRate, int channels)
+    {
+        // PCM 16-bit little-endian silence.
+        const short bitsPerSample = 16;
+        int numSamples = checked(sampleRate * seconds);
+        int blockAlign = channels * (bitsPerSample / 8);
+        int byteRate = sampleRate * blockAlign;
+        int dataSize = numSamples * blockAlign;
+        int chunkSize = 36 + dataSize;
+
+        using var ms = new System.IO.MemoryStream(44 + dataSize);
+        using var bw = new System.IO.BinaryWriter(ms);
+
+        // RIFF header
+        bw.Write(System.Text.Encoding.ASCII.GetBytes("RIFF"));
+        bw.Write(chunkSize);
+        bw.Write(System.Text.Encoding.ASCII.GetBytes("WAVE"));
+
+        // fmt subchunk
+        bw.Write(System.Text.Encoding.ASCII.GetBytes("fmt "));
+        bw.Write(16); // PCM
+        bw.Write((short)1); // AudioFormat = PCM
+        bw.Write((short)channels);
+        bw.Write(sampleRate);
+        bw.Write(byteRate);
+        bw.Write((short)blockAlign);
+        bw.Write(bitsPerSample);
+
+        // data subchunk
+        bw.Write(System.Text.Encoding.ASCII.GetBytes("data"));
+        bw.Write(dataSize);
+
+        // Write silence frames
+        for (int i = 0; i < numSamples * channels; i++)
+            bw.Write((short)0);
+
+        bw.Flush();
+        return ms.ToArray();
     }
 
     private static string BuildUri(string baseUrl, string path)

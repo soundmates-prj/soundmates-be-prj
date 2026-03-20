@@ -1,6 +1,8 @@
+using AuthService.Application.Abstractions;
 using AuthService.Application.Configuration;
 using AuthService.Application.Features.Common;
 using AuthService.Domain.Interfaces;
+using AuthService.Infrastructure.ExternalServices;
 using AuthService.Infrastructure.Messaging.MessageBus;
 using AuthService.Infrastructure.Messaging.Outbox;
 using AuthService.Infrastructure.Persistence;
@@ -10,6 +12,7 @@ using AuthService.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace AuthService.Infrastructure;
 
@@ -32,9 +35,19 @@ public static class DependencyInjection
         services.AddScoped<IProfileRepository, ProfileRepository>();
         services.AddScoped<IUserFavouriteRepository, UserFavouriteRepository>();
         services.AddScoped<ISpotifyItemRepository, SpotifyItemRepository>();
+        services.AddScoped<ISpotifyTokenRepository, SpotifyTokenRepository>();
         services.AddScoped<IOtpRepository, OtpRepository>();
         services.AddScoped<IOutboxRepository, OutboxRepository>();
 
+        // Dual-write: sync favourites to MongoDB read-side (auth-query-service)
+        services.AddSingleton<IFavouriteSyncRepository, FavouriteSyncRepository>();
+
+        // Spotify integration
+        // Binds Spotify:ClientId, Spotify:ClientSecret, etc. from IConfiguration
+        // (env vars are mapped to Spotify:* keys in ConfigurationExtensions.cs)
+        services.Configure<SpotifyOptions>(configuration.GetSection(SpotifyOptions.SectionName));
+        services.AddHttpClient<ISpotifyApiClient, SpotifyApiClient>();
+        services.AddHttpClient<ISpotifyUserApiClient, SpotifyUserApiClient>();
         // JWT token generator
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 

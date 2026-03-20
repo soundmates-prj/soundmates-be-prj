@@ -12,28 +12,40 @@ namespace AuthQueryService.Infrastructure.Repositories
     {
         private readonly IMongoCollection<UserReadModel> _collection;
 
+        private static bool _indexesEnsured;
+        private static readonly object _indexLock = new();
+
         public UserReadRepository(IMongoDatabase database)
         {
             _collection = database.GetCollection<UserReadModel>("users_read");
             
-            // Ensure indexes for better query performance
-            var indexModels = new[]
+            if (!_indexesEnsured)
             {
-                new CreateIndexModel<UserReadModel>(
-                    Builders<UserReadModel>.IndexKeys.Ascending(x => x.Username),
-                    new CreateIndexOptions { Unique = true, Name = "ux_users_read_username" }),
-                new CreateIndexModel<UserReadModel>(
-                    Builders<UserReadModel>.IndexKeys.Ascending(x => x.Email),
-                    new CreateIndexOptions { Unique = true, Name = "ux_users_read_email" })
-            };
-            
-            try
-            {
-                _collection.Indexes.CreateMany(indexModels);
-            }
-            catch
-            {
-                // Indexes might already exist, ignore
+                lock (_indexLock)
+                {
+                    if (!_indexesEnsured)
+                    {
+                        var indexModels = new[]
+                        {
+                            new CreateIndexModel<UserReadModel>(
+                                Builders<UserReadModel>.IndexKeys.Ascending(x => x.Username),
+                                new CreateIndexOptions { Unique = true, Name = "ux_users_read_username" }),
+                            new CreateIndexModel<UserReadModel>(
+                                Builders<UserReadModel>.IndexKeys.Ascending(x => x.Email),
+                                new CreateIndexOptions { Unique = true, Name = "ux_users_read_email" })
+                        };
+                        
+                        try
+                        {
+                            _collection.Indexes.CreateMany(indexModels);
+                        }
+                        catch
+                        {
+                            // Indexes might already exist, ignore
+                        }
+                        _indexesEnsured = true;
+                    }
+                }
             }
         }
 
@@ -52,14 +64,17 @@ namespace AuthQueryService.Infrastructure.Repositories
             size = size <= 0 ? 20 : size;
 
             var filter = FilterDefinition<UserReadModel>.Empty;
-            var total = (int)await _collection.CountDocumentsAsync(filter);
-            var items = await _collection.Find(filter)
+            
+            var countTask = _collection.CountDocumentsAsync(filter);
+            var itemsTask = _collection.Find(filter)
                 .SortBy(x => x.Username)
                 .Skip((page - 1) * size)
                 .Limit(size)
                 .ToListAsync();
 
-            return (items, total);
+            await Task.WhenAll(countTask, itemsTask);
+
+            return (itemsTask.Result, (int)countTask.Result);
         }
 
         public async Task<(List<UserReadModel> Items, int TotalCount)> SearchAsync(
@@ -83,14 +98,16 @@ namespace AuthQueryService.Infrastructure.Repositories
                 );
             }
 
-            var total = (int)await _collection.CountDocumentsAsync(filter);
-            var items = await _collection.Find(filter)
+            var countTask = _collection.CountDocumentsAsync(filter);
+            var itemsTask = _collection.Find(filter)
                 .SortBy(x => x.Username)
                 .Skip((page - 1) * size)
                 .Limit(size)
                 .ToListAsync();
 
-            return (items, total);
+            await Task.WhenAll(countTask, itemsTask);
+
+            return (itemsTask.Result, (int)countTask.Result);
         }
 
         public async Task UpsertAsync(UserReadModel model)

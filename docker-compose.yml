@@ -89,10 +89,16 @@ services:
       - EMAIL_USERNAME=${EMAIL_USERNAME}
       - EMAIL_PASSWORD=${EMAIL_PASSWORD}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
+      - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
+      - MONGODB_CONNECTION_STRING=${MONGODB_CONNECTION_STRING:-mongodb://mongodb:27017}
+      - MONGODB_DATABASE=${MONGODB_DATABASE:-auth_query}
     ports:
       - "8001:8080"
     depends_on:
       postgres:
+        condition: service_healthy
+      mongodb:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -125,6 +131,8 @@ services:
       - JWT_ISSUER=${JWT_ISSUER:-Soundmates.Auth}
       - JWT_AUDIENCE=${JWT_AUDIENCE:-Soundmates.Users}
       - JWT_EXPIRES_IN_HOURS=${JWT_EXPIRES_IN_HOURS:-48}
+      - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
+      - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
     ports:
       - "8002:8080"
     depends_on:
@@ -156,10 +164,14 @@ services:
       - LLM_PROVIDER=${LLM_PROVIDER:-openai}
       - LLM_BASE_URL=${LLM_BASE_URL:-https://api.openai.com}
       - LLM_API_KEY=${LLM_API_KEY}
-      - LLM_MODEL=${LLM_MODEL:-gpt-4.1-mini}
+      - LLM_MODEL=${LLM_MODEL:-gemini-2.5-flash}
       - TTS_PROVIDER=${TTS_PROVIDER:-vienetts}
-      - TTS_BASE_URL=${TTS_BASE_URL:-http://vienetts:8080}
+      - TTS_BASE_URL=${TTS_BASE_URL:-http://host.docker.internal:23333}
       - TTS_API_KEY=${TTS_API_KEY}
+      - TTS_SYNTHESIZE_PATH=${TTS_SYNTHESIZE_PATH:-/v1/chat/completions}
+      - TTS_AUDIO_FORMAT=${TTS_AUDIO_FORMAT:-mp3}
+      - TTS_TIMEOUT_SECONDS=${TTS_TIMEOUT_SECONDS:-60}
+      - TTS_DEMO_MODE=${TTS_DEMO_MODE:-true}
       - AUDIO_STORAGE_ROOT=/app/data/audios
       - PUBLIC_BASE_URL=${AI_PUBLIC_BASE_URL:-http://localhost:8067}
     ports:
@@ -184,7 +196,7 @@ services:
       - ASPNETCORE_HTTP_PORTS=8080
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=${POSTGRES_PORT:-5432}
-      - POSTGRES_DATABASE=${LIVE_SESSION_POSTGRES_DATABASE:-livesession_db}
+      - POSTGRES_DATABASE=${LIVE_SESSION_POSTGRES_DATABASE:-live_session_db}
       - POSTGRES_USERNAME=${POSTGRES_USERNAME:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
       - RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
@@ -213,6 +225,10 @@ services:
     build:
       context: ./services/account-content-service
       dockerfile: AccountContentService.Api/Dockerfile
+
+    env_file:
+      - ./services/account-content-service/AccountContentService.Api/.env
+
     container_name: soundmates-account-content-service
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
@@ -230,8 +246,10 @@ services:
       - JWT_KEY=${JWT_KEY}
       - JWT_ISSUER=${JWT_ISSUER:-Soundmates.Auth}
       - JWT_AUDIENCE=${JWT_AUDIENCE:-Soundmates.Users}
-      - AZURACAST_BASE_URL=${AZURACAST_BASE_URL:-http://azuracast:8080}
-      - AZURACAST_API_KEY=${AZURACAST_API_KEY}
+      - VNPAY_TMN_CODE=${VNPAY_TMN_CODE}
+      - VNPAY_HASH_SECRET=${VNPAY_HASH_SECRET}
+      - VNPAY_BASE_URL=${VNPAY_BASE_URL}
+      - VNPAY_RETURN_URL=${VNPAY_RETURN_URL}
     ports:
       - "8004:8080"
     depends_on:

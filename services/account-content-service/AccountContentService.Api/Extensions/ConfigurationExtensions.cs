@@ -14,6 +14,7 @@ public static class ConfigurationExtensions
         MapGoogle(builder.Configuration);
         MapEmail(builder.Configuration);
         MapVNPay(builder.Configuration);
+        MapAESEncryption(builder.Configuration);
         MapApp(builder.Configuration);
 
         return builder;
@@ -123,17 +124,31 @@ public static class ConfigurationExtensions
 
     private static void MapVNPay(IConfiguration configuration)
     {
-        configuration["VNPay:TmnCode"] =
-            Environment.GetEnvironmentVariable("VNPAY_TMN_CODE");
+        var tmnCode = Environment.GetEnvironmentVariable("VNPAY_TMN_CODE");
+        var hashSecret = Environment.GetEnvironmentVariable("VNPAY_HASH_SECRET");
+        var baseUrl = Environment.GetEnvironmentVariable("VNPAY_BASE_URL");
+        var returnUrl = Environment.GetEnvironmentVariable("VNPAY_RETURN_URL");
 
-        configuration["VNPay:HashSecret"] =
-            Environment.GetEnvironmentVariable("VNPAY_HASH_SECRET");
+        if (!string.IsNullOrWhiteSpace(tmnCode))
+            configuration["VNPay:TmnCode"] = tmnCode;
 
-        configuration["VNPay:BaseUrl"] =
-            Environment.GetEnvironmentVariable("VNPAY_BASE_URL");
+        if (!string.IsNullOrWhiteSpace(hashSecret))
+            configuration["VNPay:HashSecret"] = hashSecret;
 
-        configuration["VNPay:ReturnUrl"] =
-            Environment.GetEnvironmentVariable("VNPAY_RETURN_URL");
+        if (!string.IsNullOrWhiteSpace(baseUrl))
+            configuration["VNPay:BaseUrl"] = baseUrl;
+
+        if (!string.IsNullOrWhiteSpace(returnUrl))
+            configuration["VNPay:ReturnUrl"] = returnUrl;
+    }
+
+    private static void MapAESEncryption(IConfiguration configuration)
+    {
+        configuration["AESEncryption:Key"] =
+            Environment.GetEnvironmentVariable("AES_KEY");
+
+        configuration["AESEncryption:IV"] =
+            Environment.GetEnvironmentVariable("AES_IV");
     }
 
     private static void MapApp(IConfiguration configuration)
