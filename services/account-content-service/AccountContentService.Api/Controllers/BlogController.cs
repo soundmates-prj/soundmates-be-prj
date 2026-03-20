@@ -111,6 +111,7 @@ public class BlogController : ControllerBase
     /// Can be filtered by moodTag, authorName, search keyword, and date range using query parameters.
     /// </remarks>
     /// <response code="200">Get published posts successfully</response>
+    [AllowAnonymous]
     [HttpGet(ApiRoutes.Posts.GetAllPublished)]
     public async Task<IActionResult> GetPublishedPosts([FromQuery] PaginationRequest request)
     {
@@ -137,6 +138,7 @@ public class BlogController : ControllerBase
     /// Can be filtered by moodTag, authorName, search keyword, and date range using query parameters.
     /// </remarks>
     /// <response code="200">Get trending posts successfully</response>
+    [AllowAnonymous]
     [HttpGet(ApiRoutes.Posts.Trending)]
     public async Task<IActionResult> GetTrendingPosts(
   [FromQuery] PaginationRequest request)
@@ -162,6 +164,7 @@ public class BlogController : ControllerBase
     /// Can be filtered by moodTag, authorName, search keyword, and date range using query parameters.
     /// </remarks>
     /// <response code="200">Get popular posts successfully</response>
+    [AllowAnonymous]
     [HttpGet(ApiRoutes.Posts.Popular)]
     public async Task<IActionResult> GetPopularPosts(
   [FromQuery] PaginationRequest request)
@@ -209,6 +212,7 @@ public class BlogController : ControllerBase
     /// <param name="postId">Post identifier</param>
     /// <response code="200">Get post successfully</response>
     /// <response code="404">Post not found</response>
+    [AllowAnonymous]
     [HttpGet(ApiRoutes.Posts.GetPublishedById)]
     public async Task<IActionResult> GetPublisedPostById([FromRoute] Guid postId)
     {

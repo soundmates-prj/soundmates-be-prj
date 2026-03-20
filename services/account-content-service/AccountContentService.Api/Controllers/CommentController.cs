@@ -124,8 +124,9 @@ namespace AccountContentService.Api.Controllers
         /// <param name="request"></param>
         /// <response code="200">Get comments successfully</response>
         /// <response code="404">Post not found</response>
+        [AllowAnonymous]
         [HttpGet(ApiRoutes.Comments.GetByPost)]
-        public async Task<IActionResult> GetPostByPostId([FromRoute] Guid postId, [FromQuery] PaginationNoFilterRequest request)
+        public async Task<IActionResult> GetCommentByPostId([FromRoute] Guid postId, [FromQuery] PaginationNoFilterRequest request)
         {
             var query = _mapper.Map<GetCommentsQuery>(request);
             query.PostId = postId;
@@ -153,8 +154,9 @@ namespace AccountContentService.Api.Controllers
         /// <param name="request"></param>
         /// <response code="200">Get comments successfully</response>
         /// <response code="404">No comments found</response>
+        [AllowAnonymous]
         [HttpGet(ApiRoutes.Users.GetUserComments)]
-        public async Task<IActionResult> GetPostByUserId([FromRoute] Guid userId, [FromQuery] PaginationNoFilterRequest request)
+        public async Task<IActionResult> GetCommentByUserId([FromRoute] Guid userId, [FromQuery] PaginationNoFilterRequest request)
         {
             var query = _mapper.Map<GetUserCommentsQuery>(request);
             query.UserId = userId;
@@ -210,8 +212,9 @@ namespace AccountContentService.Api.Controllers
         /// <param name="commentId">Comment identifier</param>
         /// <response code="200">Get comments successfully</response>
         /// <response code="404">No comments found</response>
+        [AllowAnonymous]
         [HttpGet(ApiRoutes.Comments.GetById)]
-        public async Task<IActionResult> GetPostById([FromRoute] Guid commentId)
+        public async Task<IActionResult> GetCommentById([FromRoute] Guid commentId)
         {
             var query = new GetCommentDetailQuery(commentId);
             var result = await _mediator.Send(query);

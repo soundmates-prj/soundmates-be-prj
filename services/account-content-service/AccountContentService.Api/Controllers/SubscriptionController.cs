@@ -92,6 +92,7 @@ namespace AccountContentService.Api.Controllers
         /// <param name="planId">Subscription plan identifier</param>
         /// <response code="200">Subscription plan retrieved successfully</response>
         /// <response code="404">Subscription plan not found</response>
+        [AllowAnonymous]
         [HttpGet(ApiRoutes.Subscriptions.GetPlanById)]
         public async Task<IActionResult> GetPlanById([FromRoute] Guid planId)
         {
@@ -113,6 +114,7 @@ namespace AccountContentService.Api.Controllers
         /// </summary>
         /// <response code="200">Subscription plans retrieved successfully</response>
         /// <response code="404">No subscription plans found</response>
+        [AllowAnonymous]
         [HttpGet(ApiRoutes.Subscriptions.GetPlans)]
         public async Task<IActionResult> GetAllPlans()
         {
