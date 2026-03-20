@@ -1,5 +1,6 @@
 using AuthService.Api.Models.Requests.User;
 using AuthService.Api.Models.Responses;
+using AuthService.Api.Extensions;
 using AuthService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
 using AuthService.Application.Features.Users.Commands;
 using Microsoft.AspNetCore.Authorization;
@@ -7,6 +8,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AuthService.Api.Controllers
 {
+    /// <summary>
+    /// CRUD user account management endpoints.
+    /// </summary>
     [Route("api/v1/users")]
     [ApiController]
     [Authorize(Roles = "ADMIN")]
@@ -126,11 +130,7 @@ namespace AuthService.Api.Controllers
         public async Task<IActionResult> Deactivate(Guid id, CancellationToken ct)
         {
             // Get current user ID from JWT
-            var currentUserIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)
-                                   ?? User.FindFirst("sub")
-                                   ?? User.Claims.FirstOrDefault(c => c.Type == "user_id");
-
-            if (currentUserIdClaim == null || !Guid.TryParse(currentUserIdClaim.Value, out var currentUserId))
+            if (!User.TryGetCurrentUserId(out var currentUserId))
             {
                 return Unauthorized(ApiResponse<bool>.FailureResponse("Invalid or missing user token", 401));
             }

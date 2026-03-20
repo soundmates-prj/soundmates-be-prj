@@ -1,4 +1,5 @@
 using Microsoft.OpenApi.Models;
+using System.Reflection;
 
 namespace AuthService.Api.Extensions;
 
@@ -16,8 +17,16 @@ public static class SwaggerExtensions
             { 
                 Title = "AuthService API", 
                 Version = "v1",
-                Description = "Authentication and Authorization Service API"
+                Description = "SoundMates - Authentication and Authorization Service API"
             });
+
+            // Load XML comments để hiển thị summary/remarks từ Controllers/Models trong Swagger
+            var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+            var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+            if (File.Exists(xmlPath))
+            {
+                c.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
+            }
 
             // Add JWT security definition
             c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme

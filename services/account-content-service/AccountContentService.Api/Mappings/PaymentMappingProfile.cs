@@ -1,6 +1,14 @@
-﻿namespace AccountContentService.Api.Mappings
+﻿using AccountContentService.Api.Contracts.Requests;
+using AccountContentService.Application.Features.Payments.Commands.CreatePayment;
+using AutoMapper;
+
+namespace AccountContentService.Api.Mappings
 {
-    public class PaymentMappingProfile
+    public class PaymentMappingProfile : Profile
     {
+        public PaymentMappingProfile()
+        {
+            CreateMap<PaymentRequest, CreatePaymentCommand>();
+        }
     }
 }

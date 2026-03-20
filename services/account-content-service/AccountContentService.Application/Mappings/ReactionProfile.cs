@@ -1,4 +1,6 @@
 ﻿using AccountContentService.Application.DTOs;
+using AccountContentService.Application.Features.BlogPostReactions.Commands.CreateReaction;
+using AccountContentService.Application.Features.BlogPostReactions.Commands.UpdateReaction;
 using AccountContentService.Domain.Entities;
 using AutoMapper;
 using System;
@@ -12,6 +14,8 @@ namespace AccountContentService.Application.Mappings
         public ReactionProfile()
         {
             CreateMap<PostReaction, ReactionDto>();
+            CreateMap<CreateReactionCommand, PostReaction>();
+            CreateMap<UpdateReactionCommand, PostReaction>();
         }
     }
 }

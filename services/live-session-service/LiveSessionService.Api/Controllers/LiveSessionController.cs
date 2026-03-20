@@ -97,7 +97,7 @@ public class LiveSessionController : ControllerBase
     }
 
     /// <summary>
-    /// Create a new live session
+    /// Create a new live stream session
     /// </summary>
     [HttpPost]
     [ProducesResponseType(typeof(ApiResponse<LiveSessionResult>), 201)]
@@ -310,7 +310,7 @@ public class LiveSessionController : ControllerBase
     }
 
     /// <summary>
-    /// Get listener statistics for a live session
+    /// Get listener statistics for a live stream session
     /// </summary>
     [HttpGet("{id:guid}/listeners")]
     [ProducesResponseType(typeof(ApiResponse<ListenerStatsResult>), 200)]

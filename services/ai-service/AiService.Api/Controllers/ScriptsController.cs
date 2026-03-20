@@ -1,0 +1,89 @@
+using AiService.Api.Extensions;
+using AiService.Api.Models.Requests.Scripts;
+using AiService.Api.Models.Responses;
+using AiService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
+using AiService.Application.Enums;
+using AiService.Application.Features.Scripts.Commands.GeneratePodcastScript;
+using AiService.Application.Features.Scripts.Commands.SplitScript;
+using AiService.Application.Features.Scripts.Queries.GetMyScripts;
+using AiService.Application.Features.Scripts.Queries.GetScriptById;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace AiService.Api.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+[Authorize]
+public class ScriptsController : ControllerBase
+{
+    private readonly ICommandDispatcher _commands;
+    private readonly IQueryDispatcher _queries;
+
+    public ScriptsController(ICommandDispatcher commands, IQueryDispatcher queries)
+    {
+        _commands = commands;
+        _queries = queries;
+    }
+
+    [HttpPost("podcast:generate")]
+    public async Task<IActionResult> GeneratePodcast([FromBody] GeneratePodcastRequest request, CancellationToken cancellationToken)
+    {
+        if (!User.TryGetCurrentUserId(out var userId))
+            return Unauthorized(ApiResponse<string>.Error(ApiStatusCode.HB40101, "Invalid token"));
+
+        var result = await _commands.Send<GeneratePodcastScriptCommand, Domain.Entities.Script>(
+            new GeneratePodcastScriptCommand(
+                userId,
+                request.Topic,
+                request.Title,
+                request.ContextType,
+                request.ModelName,
+                request.Temperature,
+                request.MaxTokens),
+            cancellationToken);
+
+        return result.IsSuccess
+            ? Ok(ApiResponse<object>.SuccessResponse(new { script = result.Data }))
+            : BadRequest(ApiResponse<string>.Error(ApiStatusCode.HB40001, result.ErrorMessage ?? "Failed"));
+    }
+
+    [HttpPost("{scriptId:guid}/split")]
+    public async Task<IActionResult> Split([FromRoute] Guid scriptId, [FromBody] SplitScriptRequest request, CancellationToken cancellationToken)
+    {
+        if (!User.TryGetCurrentUserId(out var userId))
+            return Unauthorized(ApiResponse<string>.Error(ApiStatusCode.HB40101, "Invalid token"));
+
+        var result = await _commands.Send<SplitScriptPartsCommand, IReadOnlyList<Domain.Entities.Script>>(
+            new SplitScriptPartsCommand(userId, scriptId, request.MaxCharsPerPart),
+            cancellationToken);
+
+        return result.IsSuccess
+            ? Ok(ApiResponse<object>.SuccessResponse(new { parts = result.Data }))
+            : BadRequest(ApiResponse<string>.Error(ApiStatusCode.HB40001, result.ErrorMessage ?? "Failed"));
+    }
+
+    [HttpGet("{scriptId:guid}")]
+    public async Task<IActionResult> GetById([FromRoute] Guid scriptId, CancellationToken cancellationToken)
+    {
+        var result = await _queries.Send<GetScriptByIdQuery, Domain.Entities.Script>(new GetScriptByIdQuery(scriptId), cancellationToken);
+
+        return result.IsSuccess
+            ? Ok(ApiResponse<object>.SuccessResponse(new { script = result.Data }))
+            : NotFound(ApiResponse<string>.Error(ApiStatusCode.HB40401, result.ErrorMessage ?? "Not found"));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetMine([FromQuery] string? contextType, [FromQuery] string? status, CancellationToken cancellationToken)
+    {
+        if (!User.TryGetCurrentUserId(out var userId))
+            return Unauthorized(ApiResponse<string>.Error(ApiStatusCode.HB40101, "Invalid token"));
+
+        var result = await _queries.Send<GetMyScriptsQuery, IReadOnlyList<Domain.Entities.Script>>(
+            new GetMyScriptsQuery(userId, contextType, status),
+            cancellationToken);
+
+        return Ok(ApiResponse<object>.SuccessResponse(new { scripts = result.Data }));
+    }
+}
+

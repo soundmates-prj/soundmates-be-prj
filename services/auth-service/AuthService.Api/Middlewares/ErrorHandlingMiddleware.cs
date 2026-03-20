@@ -41,13 +41,13 @@ public class ErrorHandlingMiddleware
         switch (exception)
         {
             case AuthException authEx:
-                statusCode = HttpStatusCode.BadRequest;
-                apiStatusCode = authEx.ErrorCode switch
+                (statusCode, apiStatusCode) = authEx.ErrorCode switch
                 {
-                    AuthErrorCode.InvalidCredentials => ApiStatusCode.HB40001,
-                    AuthErrorCode.UserAlreadyExists => ApiStatusCode.HB40901,
-                    AuthErrorCode.RegistrationFailed => ApiStatusCode.HB40001,
-                    _ => ApiStatusCode.HB40001
+                    AuthErrorCode.InvalidCredentials => (HttpStatusCode.BadRequest, ApiStatusCode.HB40001),
+                    AuthErrorCode.UserAlreadyExists => (HttpStatusCode.Conflict, ApiStatusCode.HB40901),
+                    AuthErrorCode.RegistrationFailed => (HttpStatusCode.BadRequest, ApiStatusCode.HB40001),
+                    AuthErrorCode.EmailSendFailed => (HttpStatusCode.ServiceUnavailable, ApiStatusCode.HB50001),
+                    _ => (HttpStatusCode.BadRequest, ApiStatusCode.HB40001)
                 };
                 message = authEx.Message;
                 break;

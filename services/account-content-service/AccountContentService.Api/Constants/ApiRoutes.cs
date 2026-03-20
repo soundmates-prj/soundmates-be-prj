@@ -9,7 +9,7 @@
         /// <summary>
         /// Base API route prefix.
         /// </summary>
-        private const string Base = "v1/api";
+        private const string Base = "api/v1";
 
         // =====================================================
         // POSTS
@@ -156,6 +156,12 @@
 
             /// <summary>Retrieve current user's reactions.</summary>
             public const string MyReactions = $"{BaseRoute}/reactions";
+
+            /// <summary>Retrieve current user's subscription.</summary>
+            public const string MySubscription = $"{BaseRoute}/subscriptions";
+
+            /// <summary>Retrieve current user's subscription history.</summary>
+            public const string MySubscriptionHistory = $"{BaseRoute}/subscriptions/history";
         }
 
         // =====================================================
@@ -202,8 +208,10 @@
         {
             private const string BaseRoute = $"{Base}/reactions";
 
-            /// <summary>Add or update reaction.</summary>
-            public const string AddOrUpdate = $"{Base}/posts/{{postId:guid}}/reactions";
+            /// <summary>Add reaction to a post.</summary>
+            public const string Add = $"{Base}/posts/{{postId:guid}}/reactions";
+            /// <summary>Update reaction.</summary>
+            public const string Update = $"{Base}/reactions/{{reactionId:guid}}";
 
             /// <summary>Remove reaction.</summary>
             public const string Remove = $"{Base}/posts/{{postId:guid}}/reactions";
@@ -226,6 +234,15 @@
         {
             private const string BaseRoute = $"{Base}/subscriptions";
 
+            /// <summary>Create new subscription plans.</summary>
+            public const string CreatePlan = $"{Base}/subscription-plans";
+
+            /// <summary>Update subscription plan.</summary>
+            public const string UpdatePlan = $"{Base}/subscription-plans/{{planId:guid}}";
+
+            /// <summary>Update subscription plan.</summary>
+            public const string DeletePlan = $"{Base}/subscription-plans/{{planId:guid}}";
+
             /// <summary>Retrieve subscription plans.</summary>
             public const string GetPlans = $"{Base}/subscription-plans";
 
@@ -234,12 +251,6 @@
 
             /// <summary>Create subscription.</summary>
             public const string Subscribe = BaseRoute;
-
-            /// <summary>Retrieve current subscription.</summary>
-            public const string MySubscription = $"{BaseRoute}/me";
-
-            /// <summary>Retrieve subscription history.</summary>
-            public const string History = $"{BaseRoute}/history";
 
             /// <summary>Check subscription status.</summary>
             public const string Status = $"{BaseRoute}/status";
@@ -271,6 +282,12 @@
             /// <summary>Retrieve payment history.</summary>
             public const string GetAll = BaseRoute;
 
+            /// <summary>VNPay callback.</summary>
+            public const string VNPayCallBack = $"{BaseRoute}/vnpay/callback";
+
+            /// <summary>Payos webhook.</summary>
+            public const string PayOsWebhook = $"{BaseRoute}/payos/webhook";
+
             /// <summary>Confirm payment.</summary>
             public const string Confirm = $"{BaseRoute}/{{paymentId:guid}}/confirm";
 
@@ -279,6 +296,36 @@
 
             /// <summary>Check transaction status.</summary>
             public const string Status = $"{BaseRoute}/status/{{transactionId}}";
+        }
+
+        // =====================================================
+        // SYSTEM SETTING
+        // =====================================================
+
+        /// <summary>
+        /// Endpoints for payment processing.
+        /// </summary>
+        public static class Settings
+        {
+            private const string BaseRoute = $"{Base}/settings";
+
+            /// <summary>Create new setting value.</summary>
+            public const string Create = BaseRoute;
+
+            /// <summary>Update setting value.</summary>
+            public const string Update = $"{BaseRoute}/{{settingId:guid}}";
+
+            /// <summary>Delete setting value.</summary>
+            public const string Delete = $"{BaseRoute}/{{settingId:guid}}";
+
+            /// <summary>Retrieve setting details by Id.</summary>
+            public const string GetById = $"{BaseRoute}/{{settingId:guid}}";
+
+            /// <summary>Retrieve setting details by Id.</summary>
+            public const string GetByKey = $"{BaseRoute}/{{key}}";
+
+            /// <summary>Retrieve all setting values.</summary>
+            public const string GetAll = BaseRoute;
         }
     }
 }

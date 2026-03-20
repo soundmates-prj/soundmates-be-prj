@@ -188,8 +188,8 @@ namespace AccountContentService.Infrastructure.Migrations
                     b.Property<string>("ExternalReference")
                         .HasColumnType("text");
 
-                    b.Property<Guid>("PlanId")
-                        .HasColumnType("uuid");
+                    b.Property<long?>("OrderCode")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -339,6 +339,9 @@ namespace AccountContentService.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<DateTime>("SubscribeAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
@@ -383,6 +386,39 @@ namespace AccountContentService.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("SubscriptionPlans");
+                });
+
+            modelBuilder.Entity("AccountContentService.Domain.Entities.SystemSetting", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Descreption")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("SettingType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdateAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SystemSettings");
                 });
 
             modelBuilder.Entity("AccountContentService.Domain.Entities.Theme", b =>

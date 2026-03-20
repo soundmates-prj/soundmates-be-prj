@@ -4,7 +4,10 @@ using System.Text;
 
 namespace AccountContentService.Domain.Enums
 {
-    internal class TransactionStatus
+    public enum TransactionStatus
     {
+        Pending = 0,
+        Success = 1,
+        Failed = 2
     }
 }

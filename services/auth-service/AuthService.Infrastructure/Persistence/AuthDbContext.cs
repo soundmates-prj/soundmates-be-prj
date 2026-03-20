@@ -31,7 +31,9 @@ namespace AuthService.Infrastructure.Persistence
         public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
         public virtual DbSet<OtpCode> OtpCodes { get; set; }
         public virtual DbSet<Profile> Profiles { get; set; }
-
+        public virtual DbSet<UserFavourite> UserFavourites { get; set; }
+        public virtual DbSet<SpotifyItem> SpotifyItems { get; set; }
+        public virtual DbSet<SpotifyToken> SpotifyTokens { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             if (!optionsBuilder.IsConfigured)
@@ -318,6 +320,138 @@ namespace AuthService.Infrastructure.Persistence
                     .HasForeignKey<Profile>(d => d.UserId)
                     .OnDelete(DeleteBehavior.Cascade)
                     .HasConstraintName("profiles_user_id_fkey");
+            });
+
+            modelBuilder.Entity<UserFavourite>(entity =>
+            {
+                entity.HasKey(e => e.Id).HasName("user_favourites_pkey");
+                entity.ToTable("user_favourites");
+
+                entity.HasIndex(e => e.UserId, "user_favourites_user_id_idx");
+                entity.HasIndex(e => new { e.UserId, e.ItemType, e.ItemId, e.Source }, "user_favourites_user_item_source_key").IsUnique();
+
+                entity.Property(e => e.Id)
+                    .HasDefaultValueSql("uuid_generate_v4()")
+                    .HasColumnName("id");
+
+                entity.Property(e => e.UserId)
+                    .HasColumnName("user_id");
+
+                entity.Property(e => e.ItemType)
+                    .HasMaxLength(50)
+                    .HasColumnName("item_type");
+
+                entity.Property(e => e.ItemId)
+                    .HasMaxLength(200)
+                    .HasColumnName("item_id");
+
+                entity.Property(e => e.Source)
+                    .HasMaxLength(50)
+                    .HasColumnName("source");
+
+                entity.Property(e => e.CreatedAt)
+                    .HasDefaultValueSql("now() at time zone 'utc'")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("created_at");
+
+                entity.Property(e => e.UpdatedAt)
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("updated_at");
+
+                entity.HasOne(d => d.User)
+                    .WithMany(p => p.UserFavourites)
+                    .HasForeignKey(d => d.UserId)
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .HasConstraintName("user_favourites_user_id_fkey");
+            });
+
+            modelBuilder.Entity<SpotifyItem>(entity =>
+            {
+                entity.HasKey(e => e.Id).HasName("spotify_items_pkey");
+                entity.ToTable("spotify_items");
+
+                entity.HasIndex(e => new { e.SpotifyId, e.ItemType }, "spotify_items_spotify_id_item_type_key").IsUnique();
+
+                entity.Property(e => e.Id)
+                    .HasDefaultValueSql("uuid_generate_v4()")
+                    .HasColumnName("id");
+
+                entity.Property(e => e.SpotifyId)
+                    .HasMaxLength(200)
+                    .HasColumnName("spotify_id");
+
+                entity.Property(e => e.ItemType)
+                    .HasMaxLength(50)
+                    .HasColumnName("item_type");
+
+                entity.Property(e => e.Name)
+                    .HasMaxLength(255)
+                    .HasColumnName("name");
+
+                entity.Property(e => e.ArtistName)
+                    .HasMaxLength(255)
+                    .HasColumnName("artist_name");
+
+                entity.Property(e => e.AlbumName)
+                    .HasMaxLength(255)
+                    .HasColumnName("album_name");
+
+                entity.Property(e => e.ImgUrl)
+                    .HasMaxLength(500)
+                    .HasColumnName("img_url");
+
+                entity.Property(e => e.PreviewUrl)
+                    .HasMaxLength(500)
+                    .HasColumnName("preview_url");
+
+                entity.Property(e => e.RawJson)
+                    .HasColumnName("raw_json");
+
+                entity.Property(e => e.UpdatedAt)
+                    .HasDefaultValueSql("now() at time zone 'utc'")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("updated_at");
+            });
+
+            modelBuilder.Entity<SpotifyToken>(entity =>
+            {
+                entity.HasKey(e => e.Id).HasName("spotify_tokens_pkey");
+                entity.ToTable("spotify_tokens");
+
+                entity.HasIndex(e => e.UserId, "spotify_tokens_user_id_key").IsUnique();
+
+                entity.Property(e => e.Id)
+                    .HasDefaultValueSql("uuid_generate_v4()")
+                    .HasColumnName("id");
+
+                entity.Property(e => e.UserId)
+                    .HasColumnName("user_id");
+
+                entity.Property(e => e.AccessToken)
+                    .IsRequired()
+                    .HasColumnName("access_token");
+
+                entity.Property(e => e.RefreshToken)
+                    .HasColumnName("refresh_token");
+
+                entity.Property(e => e.ExpiresAt)
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("expires_at");
+                
+                entity.Property(e => e.CreatedAt)
+                    .HasDefaultValueSql("now() at time zone 'utc'")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("created_at");
+
+                entity.Property(e => e.UpdatedAt)
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("updated_at");
+
+                entity.HasOne(d => d.User)
+                    .WithOne(p => p.SpotifyToken)
+                    .HasForeignKey<SpotifyToken>(d => d.UserId)
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .HasConstraintName("spotify_tokens_user_id_fkey");
             });
 
             OnModelCreatingPartial(modelBuilder);

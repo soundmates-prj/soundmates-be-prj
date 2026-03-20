@@ -92,3 +92,19 @@ public sealed class RoleNotFoundException : DomainException
     }
 }
 
+public sealed class UserFavouriteValidationException : DomainException
+{
+    public UserFavouriteValidationException(string message, string errorCode)
+        : base(message, errorCode, 400)
+    {
+    }
+}
+
+public sealed class SpotifyItemValidationException : DomainException
+{
+    public SpotifyItemValidationException(string message, string errorCode)
+        : base(message, errorCode, 400)
+    {
+    }
+}
+

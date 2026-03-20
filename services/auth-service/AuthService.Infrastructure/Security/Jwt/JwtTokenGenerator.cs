@@ -37,7 +37,7 @@ namespace AuthService.Infrastructure.Security.Jwt
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
             // Access token expires in 15 minutes (shorter for security)
-            var accessTokenExpiry = DateTime.UtcNow.AddMinutes(15);
+            var accessTokenExpiry = DateTime.UtcNow.AddMinutes(59);
 
             var token = new JwtSecurityToken(
                 issuer: _configuration["Jwt:Issuer"],

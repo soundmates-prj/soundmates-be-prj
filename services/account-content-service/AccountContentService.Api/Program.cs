@@ -25,7 +25,7 @@ builder.Services.AddSwaggerDocs();
 // Application Layer
 builder.Services
     .AddApplication()
-    .AddInfrastructure();
+    .AddInfrastructure(builder.Configuration);
 
 
 
