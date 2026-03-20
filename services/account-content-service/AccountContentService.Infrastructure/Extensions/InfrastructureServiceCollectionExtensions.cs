@@ -23,6 +23,7 @@ namespace AccountContentService.Infrastructure.Extensions
             services.AddScoped<ISubscriptionRepository, SubscriptionRepository>();
             services.AddScoped<IPaymentRepository, PaymentRepository>();
             services.AddScoped<IPaymentTransactionRepository, PaymentTransactionRepository>();
+            services.AddScoped<ISystemSettingReposiotry, SystemSettingReposiotry>();
 
             // VNPay Config
             services.Configure<VNPayConfig>(configuration.GetSection("VNPay"));
@@ -36,6 +37,7 @@ namespace AccountContentService.Infrastructure.Extensions
 
             //Services
             services.AddScoped<IPaymentService, PaymentService>();
+            services.AddSingleton<IEncryptionService, EncryptionService>();
 
 
             return services;

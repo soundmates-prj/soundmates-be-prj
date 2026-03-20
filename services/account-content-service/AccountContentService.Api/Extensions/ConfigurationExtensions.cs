@@ -14,6 +14,7 @@ public static class ConfigurationExtensions
         MapGoogle(builder.Configuration);
         MapEmail(builder.Configuration);
         MapVNPay(builder.Configuration);
+        MapAESEncryption(builder.Configuration);
         MapApp(builder.Configuration);
 
         return builder;
@@ -134,6 +135,15 @@ public static class ConfigurationExtensions
 
         configuration["VNPay:ReturnUrl"] =
             Environment.GetEnvironmentVariable("VNPAY_RETURN_URL");
+    }
+
+    private static void MapAESEncryption(IConfiguration configuration)
+    {
+        configuration["AESEncryption:Key"] =
+            Environment.GetEnvironmentVariable("AES_KEY");
+
+        configuration["AESEncryption:IV"] =
+            Environment.GetEnvironmentVariable("AES_IV");
     }
 
     private static void MapApp(IConfiguration configuration)

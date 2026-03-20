@@ -297,5 +297,35 @@
             /// <summary>Check transaction status.</summary>
             public const string Status = $"{BaseRoute}/status/{{transactionId}}";
         }
+
+        // =====================================================
+        // SYSTEM SETTING
+        // =====================================================
+
+        /// <summary>
+        /// Endpoints for payment processing.
+        /// </summary>
+        public static class Settings
+        {
+            private const string BaseRoute = $"{Base}/settings";
+
+            /// <summary>Create new setting value.</summary>
+            public const string Create = BaseRoute;
+
+            /// <summary>Update setting value.</summary>
+            public const string Update = $"{BaseRoute}/{{settingId:guid}}";
+
+            /// <summary>Delete setting value.</summary>
+            public const string Delete = $"{BaseRoute}/{{settingId:guid}}";
+
+            /// <summary>Retrieve setting details by Id.</summary>
+            public const string GetById = $"{BaseRoute}/{{settingId:guid}}";
+
+            /// <summary>Retrieve setting details by Id.</summary>
+            public const string GetByKey = $"{BaseRoute}/{{key}}";
+
+            /// <summary>Retrieve all setting values.</summary>
+            public const string GetAll = BaseRoute;
+        }
     }
 }
