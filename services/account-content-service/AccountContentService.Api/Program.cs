@@ -46,6 +46,12 @@ builder.Services.AddDbContext<AccountContentDbContext>(options =>
 // Authentication
 builder.Services.AddJwtAuthentication(builder.Configuration);
 
+// HttpClient 
+builder.Services.AddHttpClient("UserService", client =>
+{
+    client.BaseAddress = new Uri("https://your-user-service-url/");
+});
+
 var app = builder.Build();
 
 
