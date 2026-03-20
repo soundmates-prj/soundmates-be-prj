@@ -14,23 +14,23 @@ public sealed class CreatePlaylistHandler
     : ICommandHandler<CreatePlaylistCommand, PlaylistResult>
 {
     private readonly IAzuraCastStationRepository _stationRepo;
-    private readonly IStationPlaylistRepository  _playlistRepo;
-    private readonly IAzuraCastClient            _azuraCast;
-    private readonly IDateTimeProvider           _dateTime;
+    private readonly IStationPlaylistRepository _playlistRepo;
+    private readonly IAzuraCastClient _azuraCast;
+    private readonly IDateTimeProvider _dateTime;
     private readonly ILogger<CreatePlaylistHandler> _logger;
 
     public CreatePlaylistHandler(
         IAzuraCastStationRepository stationRepo,
-        IStationPlaylistRepository  playlistRepo,
-        IAzuraCastClient            azuraCast,
-        IDateTimeProvider           dateTime,
+        IStationPlaylistRepository playlistRepo,
+        IAzuraCastClient azuraCast,
+        IDateTimeProvider dateTime,
         ILogger<CreatePlaylistHandler> logger)
     {
-        _stationRepo  = stationRepo;
+        _stationRepo = stationRepo;
         _playlistRepo = playlistRepo;
-        _azuraCast    = azuraCast;
-        _dateTime     = dateTime;
-        _logger       = logger;
+        _azuraCast = azuraCast;
+        _dateTime = dateTime;
+        _logger = logger;
     }
 
     public async Task<Result<PlaylistResult>> Handle(
@@ -46,6 +46,7 @@ public sealed class CreatePlaylistHandler
             station.ExternalStationId,
             command.PlaylistName,
             command.IsAutoPlay,
+            command.IncludeInRequests,
             cancellationToken);
 
         if (azPlaylist == null)
@@ -62,7 +63,7 @@ public sealed class CreatePlaylistHandler
             Type                = PlaylistType.Default,
             Source              = PlaylistSource.Songs,
             IsEnabled           = true,
-            IncludeInRequests   = false,
+            IncludeInRequests   = command.IncludeInRequests,
             IncludeInOnDemand   = false,
             Weight              = 3,
             CreatedAt           = _dateTime.UtcNow,
@@ -82,6 +83,7 @@ public sealed class CreatePlaylistHandler
             PlaylistName = playlist.PlaylistName,
             Description  = command.Description,
             IsAutoPlay   = command.IsAutoPlay,
+            IncludeInRequests = playlist.IncludeInRequests,
             TotalTracks  = 0,
             TotalDuration = 0,
             CreatedAt    = playlist.CreatedAt

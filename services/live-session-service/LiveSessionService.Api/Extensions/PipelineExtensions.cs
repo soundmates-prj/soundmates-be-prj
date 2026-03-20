@@ -51,6 +51,7 @@ public static class PipelineExtensions
         app.UseAuthorization();
         app.MapControllers();
         app.MapHub<NowPlayingHub>("/hubs/now-playing");
+        app.MapHub<LiveSessionHub>("/hubs/live-session");
 
         return app;
     }

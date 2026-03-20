@@ -2,9 +2,10 @@ namespace LiveSessionService.Domain.Enums;
 
 public enum SessionStatus
 {
-    Scheduled = 0,
-    Live = 1,
-    Paused = 2,
-    Ended = 3,
-    Cancelled = 4
+    Created = 0,
+    Scheduled = 1,
+    Live = 2,
+    Paused = 3,
+    Ended = 4,
+    Cancelled = 5
 }

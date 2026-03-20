@@ -78,4 +78,24 @@ public sealed class LiveSessionRepository : ILiveSessionRepository
         return await _context.LiveSessions
             .CountAsync(x => x.Status == Domain.Enums.SessionStatus.Live, cancellationToken);
     }
+
+    public async Task EndSessionCleanupAsync(Guid sessionId, DateTime endedAt, CancellationToken cancellationToken = default)
+    {
+        var listeners = await _context.SessionListeners
+            .Where(x => x.LiveSessionId == sessionId && x.IsConnected)
+            .ToListAsync(cancellationToken);
+
+        foreach (var listener in listeners)
+        {
+            listener.IsConnected = false;
+            listener.DisconnectedAt = endedAt;
+            listener.UpdatedAt = endedAt;
+            listener.DurationSeconds = Math.Max(0, (int)(endedAt - listener.ConnectedAt).TotalSeconds);
+        }
+
+        if (listeners.Count > 0)
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+    }
 }

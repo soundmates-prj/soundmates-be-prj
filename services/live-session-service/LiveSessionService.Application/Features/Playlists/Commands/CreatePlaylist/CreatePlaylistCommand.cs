@@ -10,4 +10,5 @@ public sealed record CreatePlaylistCommand(
     Guid StationId,
     string PlaylistName,
     string? Description,
-    bool IsAutoPlay) : ICommand<PlaylistResult>;
+    bool IsAutoPlay,
+    bool IncludeInRequests) : ICommand<PlaylistResult>;

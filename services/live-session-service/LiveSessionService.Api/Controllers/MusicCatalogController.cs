@@ -256,7 +256,6 @@ public class MusicCatalogController : ControllerBase
             var mediaFilesList = allMusic.Data?.Select(m => new
             {
                 m.Id,
-                m.StationId,
                 m.Title,
                 m.Artist,
                 m.FileUrl
@@ -265,10 +264,6 @@ public class MusicCatalogController : ControllerBase
             var stats = new
             {
                 TotalMediaFiles = allMusic.Data?.Count ?? 0,
-                StationIds = allMusic.Data?
-                    .Select(m => m.StationId)
-                    .Distinct()
-                    .ToList() ?? new List<Guid>(),
                 MediaFiles = (object?)(mediaFilesList) ?? new List<object>()
             };
 

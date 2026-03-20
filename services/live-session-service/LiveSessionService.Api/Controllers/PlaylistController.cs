@@ -4,6 +4,7 @@ using LiveSessionService.Application.Abstractions.Messaging.Dispatcher.Interface
 using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Features.Results.Playlists;
 using LiveSessionService.Application.Features.Playlists.Commands.CreatePlaylist;
+using LiveSessionService.Application.Features.Playlists.Commands.UpdatePlaylist;
 using LiveSessionService.Application.Features.Playlists.Commands.AddMediaToPlaylist;
 using LiveSessionService.Application.Features.Playlists.Commands.RemoveMediaFromPlaylist;
 using LiveSessionService.Application.Features.Playlists.Commands.SyncPlaylists;
@@ -57,7 +58,13 @@ public class PlaylistController : ControllerBase
         }
 
         var result = await _commands.Send<CreatePlaylistCommand, PlaylistResult>(
-            new CreatePlaylistCommand(request.StationId, request.PlaylistName, request.Description, request.IsAutoPlay), ct);
+            new CreatePlaylistCommand(
+                request.StationId,
+                request.PlaylistName,
+                request.Description,
+                request.IsAutoPlay,
+                request.IncludeInRequests),
+            ct);
 
         if (!result.IsSuccess)
             return BadRequest(result.ToApiResponse());
@@ -188,6 +195,48 @@ public class PlaylistController : ControllerBase
         return StatusCode(501, ApiResponse<object>.FailureResponse(
             "Delete playlist feature coming soon",
             501));
+    }
+
+    /// <summary>
+    /// Update an existing playlist
+    /// </summary>
+    [HttpPut("{playlistId:guid}")]
+    [ProducesResponseType(typeof(ApiResponse<PlaylistResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> UpdatePlaylist(
+        Guid playlistId,
+        [FromBody] UpdatePlaylistRequest request,
+        CancellationToken ct)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ApiResponse<object>.FailureResponse(
+                "Invalid input",
+                (int)ErrorCode.BadRequest));
+        }
+
+        var result = await _commands.Send<UpdatePlaylistCommand, PlaylistResult>(
+            new UpdatePlaylistCommand(
+                playlistId,
+                request.PlaylistName,
+                request.IsAutoPlay,
+                request.IncludeInRequests,
+                request.IncludeInOnDemand,
+                request.IsEnabled),
+            ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(result.ToApiResponse());
     }
 }
 

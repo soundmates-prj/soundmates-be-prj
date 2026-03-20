@@ -17,4 +17,5 @@ public interface ILiveSessionRepository
     Task UpdateAsync(LiveSession session, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
     Task<int> GetActiveSessionCountAsync(CancellationToken cancellationToken = default);
+    Task EndSessionCleanupAsync(Guid sessionId, DateTime endedAt, CancellationToken cancellationToken = default);
 }

@@ -2,10 +2,14 @@ using LiveSessionService.Application.Abstractions.Messaging;
 using LiveSessionService.Application.Abstractions.Messaging.Dispatcher;
 using LiveSessionService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
 using LiveSessionService.Application.Features.LiveSessions.Commands.CreateLiveSession;
+using LiveSessionService.Application.Features.LiveSessions.Commands.CreateSessionSchedule;
+using LiveSessionService.Application.Features.LiveSessions.Commands.PauseSession;
+using LiveSessionService.Application.Features.LiveSessions.Commands.ResumeSession;
 using LiveSessionService.Application.Features.LiveSessions.Commands.StartSession;
 using LiveSessionService.Application.Features.LiveSessions.Commands.StopSession;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetAllLiveSessions;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSession;
+using LiveSessionService.Application.Features.LiveSessions.Queries.GetSessionSchedules;
 using LiveSessionService.Application.Features.Music.Commands.DeleteMedia;
 using LiveSessionService.Application.Features.Music.Commands.SyncMediaFiles;
 using LiveSessionService.Application.Features.Music.Commands.UploadMusic;
@@ -18,6 +22,7 @@ using LiveSessionService.Application.Features.Playlists.Commands.AddMediaToPlayl
 using LiveSessionService.Application.Features.Playlists.Commands.CreatePlaylist;
 using LiveSessionService.Application.Features.Playlists.Commands.RemoveMediaFromPlaylist;
 using LiveSessionService.Application.Features.Playlists.Commands.SyncPlaylists;
+using LiveSessionService.Application.Features.Playlists.Commands.UpdatePlaylist;
 using LiveSessionService.Application.Features.Playlists.Queries.GetPlaylistsByStation;
 using LiveSessionService.Application.Features.Playlists.Queries.GetPlaylistTracks;
 using LiveSessionService.Application.Features.Podcasts.Commands.CreatePodcast;
@@ -31,16 +36,15 @@ using LiveSessionService.Application.Features.Results.Music;
 using LiveSessionService.Application.Features.Results.NowPlaying;
 using LiveSessionService.Application.Features.Results.Playlists;
 using LiveSessionService.Application.Features.Results.Podcasts;
+using LiveSessionService.Application.Features.Results.SongRequests;
 using LiveSessionService.Application.Features.Results.Stations;
-using LiveSessionService.Application.Features.Stations.Commands.SyncStations;
-using LiveSessionService.Application.Features.Stations.Queries.GetAllStations;
-using LiveSessionService.Application.Features.Stations.Queries.GetStationNowPlaying;
 using LiveSessionService.Application.Features.SongRequests.Commands.CreateSongRequest;
 using LiveSessionService.Application.Features.SongRequests.Commands.ReviewSongRequest;
 using LiveSessionService.Application.Features.SongRequests.Queries.GetSongRequestsBySession;
-using LiveSessionService.Application.Features.Results.SongRequests;
+using LiveSessionService.Application.Features.Stations.Commands.SyncStations;
+using LiveSessionService.Application.Features.Stations.Queries.GetAllStations;
+using LiveSessionService.Application.Features.Stations.Queries.GetStationNowPlaying;
 using Microsoft.Extensions.DependencyInjection;
-using System.Collections.Generic;
 
 namespace LiveSessionService.Application;
 
@@ -60,7 +64,10 @@ public static class DependencyInjection
 
         // Register LiveSession Command Handlers
         services.AddScoped<ICommandHandler<CreateLiveSessionCommand, LiveSessionResult>, CreateLiveSessionHandler>();
+        services.AddScoped<ICommandHandler<CreateSessionScheduleCommand, LiveSessionResult>, CreateSessionScheduleHandler>();
         services.AddScoped<ICommandHandler<StartSessionCommand, LiveSessionResult>, StartSessionHandler>();
+        services.AddScoped<ICommandHandler<PauseSessionCommand, LiveSessionResult>, PauseSessionHandler>();
+        services.AddScoped<ICommandHandler<ResumeSessionCommand, LiveSessionResult>, ResumeSessionHandler>();
         services.AddScoped<ICommandHandler<StopSessionCommand, LiveSessionResult>, StopSessionHandler>();
 
         // Register NowPlaying Query Handlers
@@ -73,6 +80,7 @@ public static class DependencyInjection
 
         // Register Playlist Command Handlers
         services.AddScoped<ICommandHandler<CreatePlaylistCommand, PlaylistResult>, CreatePlaylistHandler>();
+        services.AddScoped<ICommandHandler<UpdatePlaylistCommand, PlaylistResult>, UpdatePlaylistHandler>();
         services.AddScoped<ICommandHandler<AddMediaToPlaylistCommand, PlaylistMediaResult>, AddMediaToPlaylistHandler>();
         services.AddScoped<ICommandHandler<RemoveMediaFromPlaylistCommand>, RemoveMediaFromPlaylistHandler>();
         services.AddScoped<ICommandHandler<SyncPlaylistsCommand, SyncPlaylistsResult>, SyncPlaylistsHandler>();
@@ -89,6 +97,7 @@ public static class DependencyInjection
         // Register LiveSession Query Handlers
         services.AddScoped<IQueryHandler<GetLiveSessionQuery, LiveSessionResult>, GetLiveSessionHandler>();
         services.AddScoped<IQueryHandler<GetAllLiveSessionsQuery, PagedResult<LiveSessionResult>>, GetAllLiveSessionsHandler>();
+        services.AddScoped<IQueryHandler<GetSessionSchedulesQuery, List<SessionScheduleResult>>, GetSessionSchedulesHandler>();
 
         // Register Playlist Query Handlers
         services.AddScoped<IQueryHandler<GetPlaylistsByStationQuery, List<PlaylistResult>>, GetPlaylistsByStationHandler>();

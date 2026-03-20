@@ -6,18 +6,18 @@ using LiveSessionService.Domain.Exceptions;
 using LiveSessionService.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 
-namespace LiveSessionService.Application.Features.LiveSessions.Commands.StopSession;
+namespace LiveSessionService.Application.Features.LiveSessions.Commands.PauseSession;
 
-public sealed class StopSessionHandler : ICommandHandler<StopSessionCommand, LiveSessionResult>
+public sealed class PauseSessionHandler : ICommandHandler<PauseSessionCommand, LiveSessionResult>
 {
     private readonly ILiveSessionRepository _sessionRepository;
     private readonly IDateTimeProvider _dateTimeProvider;
-    private readonly ILogger<StopSessionHandler> _logger;
+    private readonly ILogger<PauseSessionHandler> _logger;
 
-    public StopSessionHandler(
+    public PauseSessionHandler(
         ILiveSessionRepository sessionRepository,
         IDateTimeProvider dateTimeProvider,
-        ILogger<StopSessionHandler> logger)
+        ILogger<PauseSessionHandler> logger)
     {
         _sessionRepository = sessionRepository;
         _dateTimeProvider = dateTimeProvider;
@@ -25,7 +25,7 @@ public sealed class StopSessionHandler : ICommandHandler<StopSessionCommand, Liv
     }
 
     public async Task<Result<LiveSessionResult>> Handle(
-        StopSessionCommand command,
+        PauseSessionCommand command,
         CancellationToken cancellationToken)
     {
         try
@@ -36,14 +36,10 @@ public sealed class StopSessionHandler : ICommandHandler<StopSessionCommand, Liv
                 return Result<LiveSessionResult>.Failure("Session not found", ErrorCode.NotFound);
             }
 
-            session.Stop(_dateTimeProvider);
+            session.Pause(_dateTimeProvider);
             await _sessionRepository.UpdateAsync(session, cancellationToken);
-            await _sessionRepository.EndSessionCleanupAsync(
-                session.Id,
-                session.EndedAt ?? _dateTimeProvider.UtcNow,
-                cancellationToken);
 
-            _logger.LogInformation("Stopped session {SessionId}", command.SessionId);
+            _logger.LogInformation("Paused session {SessionId}", command.SessionId);
 
             var result = new LiveSessionResult
             {
@@ -52,19 +48,18 @@ public sealed class StopSessionHandler : ICommandHandler<StopSessionCommand, Liv
                 StationId = session.AzuraCastStationId!.Value,
                 StationName = session.AzuraCastStation?.StationName,
                 SessionName = session.SessionName,
+                Description = session.Description,
                 Status = session.Status.ToString(),
                 StartedAt = session.StartedAt,
                 EndedAt = session.EndedAt,
-                TotalDuration = session.EndedAt.HasValue
-                    ? (int)(session.EndedAt.Value - session.StartedAt).TotalMinutes
-                    : 0
+                CreatedAt = session.CreatedAt
             };
 
             return Result<LiveSessionResult>.Success(result);
         }
         catch (DomainException ex)
         {
-            _logger.LogWarning(ex, "Failed to stop session");
+            _logger.LogWarning(ex, "Failed to pause session");
             return Result<LiveSessionResult>.Failure(ex.Message, (ErrorCode)ex.StatusCode);
         }
     }
