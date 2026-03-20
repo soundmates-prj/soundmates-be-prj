@@ -18,5 +18,7 @@
 
         public DateTime CreatedAt { get; set; }
 
+        public UserProfileResponse userProfile { get; set; } = null!;
+
     }
 }

@@ -52,7 +52,7 @@ namespace AccountContentService.Application.Features.Subscriptions.Queries.GetSu
         }
         public async Task<SubscriptionDto> Handle(GetUserSubscriptionQuery request, CancellationToken cancellationToken)
         {
-            var result = await _subscriptionRepository.GetSubscriptionByUserIdAsync(request.UserId, cancellationToken);
+            var result = await _subscriptionRepository.GetActiveByUserIdAsync(request.UserId, cancellationToken);
             var subscriptionDto = _mapper.Map<SubscriptionDto>(result);
             return subscriptionDto;
         }

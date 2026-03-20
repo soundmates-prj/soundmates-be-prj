@@ -21,5 +21,6 @@ namespace AccountContentService.Application.DTOs
         public string TransactionStatus { get; set; }
 
         public DateTime CreatedAt { get; set; }
+        public UserProfileDto userProfile { get; set; } = null!;
     }
 }

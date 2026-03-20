@@ -4,12 +4,14 @@ using AccountContentService.Application.DTOs;
 using AccountContentService.Application.Exceptions;
 using AccountContentService.Application.Features.BlogPosts.Queries.GetPopularPosts;
 using AccountContentService.Application.Interfaces.Repositories;
+using AccountContentService.Application.Interfaces.Services;
 using AutoMapper;
 using MediatR;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Text;
+using System.Xml.Linq;
 
 namespace AccountContentService.Application.Features.BlogComments.Queries.GetComments
 {
@@ -20,11 +22,13 @@ namespace AccountContentService.Application.Features.BlogComments.Queries.GetCom
     {
         private readonly ICommentRepository _commentRepository;
         private readonly IMapper _mapper;
+        private readonly IUserServiceClient _userClient;
 
-        public GetCommentsHandler(ICommentRepository commentRepository, IMapper mapper)
+        public GetCommentsHandler(ICommentRepository commentRepository, IMapper mapper, IUserServiceClient userClient)
         {
             _commentRepository = commentRepository;
             _mapper = mapper;
+            _userClient = userClient;
         }
 
         public async Task<PaginationResult<CommentDto>> Handle(
@@ -34,6 +38,7 @@ namespace AccountContentService.Application.Features.BlogComments.Queries.GetCom
             var result = await _commentRepository.GetByPostIdAsync(request.PostId, request.PageSize, request.Page, cancellationToken);
             var items = _mapper.Map<IEnumerable<CommentDto>>(result.Items).ToList();
             var comments = BuildCommentTree(items);
+            
 
             return new PaginationResult<CommentDto>
             {

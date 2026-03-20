@@ -1,6 +1,7 @@
 ﻿using AccountContentService.Application.Interfaces.Repositories;
 using AccountContentService.Application.Interfaces.Services;
 using AccountContentService.Infrastructure.Configurations;
+using AccountContentService.Infrastructure.Integrations.Services;
 using AccountContentService.Infrastructure.NotificationService.PaymentGateway;
 using AccountContentService.Infrastructure.Persistence;
 using AccountContentService.Infrastructure.Repositories;
@@ -38,6 +39,7 @@ namespace AccountContentService.Infrastructure.Extensions
             //Services
             services.AddScoped<IPaymentService, PaymentService>();
             services.AddSingleton<IEncryptionService, EncryptionService>();
+            services.AddScoped<IUserServiceClient, UserServiceClient>();
 
 
             return services;

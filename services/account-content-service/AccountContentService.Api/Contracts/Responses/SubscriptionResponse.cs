@@ -38,5 +38,7 @@
         public DateTime SubscribeAt { get; set; }
 
         public string Status { get; set; }
+
+        public UserProfileResponse userProfile { get; set; } = null!;
     }
 }

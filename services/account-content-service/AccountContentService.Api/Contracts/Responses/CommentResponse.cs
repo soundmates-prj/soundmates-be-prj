@@ -18,6 +18,8 @@ namespace AccountContentService.Api.Contracts.Responses
         public DateTime CreatedAt { get; set; }
 
         public DateTime UpdatedAt { get; set; }
+
+        public UserProfileResponse userProfile { get; set; } = null!;
         public List<CommentResponse> Replies { get; set; } = new();
     }
 }

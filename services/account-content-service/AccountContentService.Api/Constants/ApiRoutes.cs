@@ -135,6 +135,9 @@
 
             /// <summary>Retrieve reactions created by a user.</summary>
             public const string GetUserReactions = $"{BaseRoute}/{{userId:guid}}/reactions";
+
+            /// <summary>Retrieve Transaction follow a user.</summary>
+            public const string GetUserTransactions = $"{BaseRoute}/users/{{userId:guid}}";
         }
 
         // =====================================================
@@ -162,6 +165,9 @@
 
             /// <summary>Retrieve current user's subscription history.</summary>
             public const string MySubscriptionHistory = $"{BaseRoute}/subscriptions/history";
+
+            /// <summary>Retrieve current user's transaction history.</summary>
+            public const string MyTransctionHistory = $"{BaseRoute}/transaction/history";
         }
 
         // =====================================================
@@ -325,6 +331,33 @@
             public const string GetByKey = $"{BaseRoute}/{{key}}";
 
             /// <summary>Retrieve all setting values.</summary>
+            public const string GetAll = BaseRoute;
+        }
+
+        // =====================================================
+        // SYSTEM SETTING
+        // =====================================================
+
+        /// <summary>
+        /// Endpoints for payment processing.
+        /// </summary>
+        public static class Transaction
+        {
+            private const string BaseRoute = $"{Base}/transaction";
+
+            /// <summary>Create new transaction value.</summary>
+            public const string Create = BaseRoute;
+
+            /// <summary>Update transaction value.</summary>
+            public const string Update = $"{BaseRoute}/{{transactionId:guid}}";
+
+            /// <summary>Delete transaction value.</summary>
+            public const string Delete = $"{BaseRoute}/{{transactionId:guid}}";
+
+            /// <summary>Retrieve transaction details by Id.</summary>
+            public const string GetById = $"{BaseRoute}/{{transactionId:guid}}";
+
+            /// <summary>Retrieve all transaction values.</summary>
             public const string GetAll = BaseRoute;
         }
     }
