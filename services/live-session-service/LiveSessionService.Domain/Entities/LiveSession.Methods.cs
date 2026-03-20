@@ -25,7 +25,7 @@ public partial class LiveSession
     /// - Session name must be 3-100 characters
     /// - Host user ID cannot be empty
     /// - Max listeners must be between 1-10000
-    /// - Session starts in Active state
+    /// - Session starts in Created or Scheduled state
     /// </summary>
     /// <exception cref="LiveSessionValidationException">When validation fails</exception>
     public static LiveSession Create(
@@ -36,6 +36,7 @@ public partial class LiveSession
         int maxListeners,
         bool isPublic,
         string? genre,
+        DateTime? scheduledStartAt,
         IDateTimeProvider dateTimeProvider)
     {
         // Validate host user ID
@@ -74,6 +75,7 @@ public partial class LiveSession
                 LiveSessionErrorCodes.InvalidMaxListeners);
 
         var now = dateTimeProvider.UtcNow;
+        var isScheduled = scheduledStartAt.HasValue && scheduledStartAt.Value > now;
 
         return new LiveSession
         {
@@ -82,8 +84,8 @@ public partial class LiveSession
             AzuraCastStationId = azuraCastStationId,
             SessionName = trimmedName,
             Description = description?.Trim(),
-            Status = SessionStatus.Live,
-            StartedAt = now,
+            Status = isScheduled ? SessionStatus.Scheduled : SessionStatus.Created,
+            StartedAt = isScheduled ? scheduledStartAt!.Value : now,
             CreatedAt = now,
             MaxListeners = maxListeners,
             IsPublic = isPublic,
@@ -91,12 +93,35 @@ public partial class LiveSession
         };
     }
 
+    public void Schedule(DateTime startTime, IDateTimeProvider dateTimeProvider)
+    {
+        if (startTime <= dateTimeProvider.UtcNow)
+            throw new LiveSessionValidationException(
+                "Scheduled start time must be in the future",
+                LiveSessionErrorCodes.SessionNotActive);
+
+        if (Status == SessionStatus.Live || Status == SessionStatus.Paused)
+            throw new InvalidSessionStateException(
+                "Cannot schedule a session that is already running",
+                LiveSessionErrorCodes.SessionAlreadyActive);
+
+        if (Status == SessionStatus.Ended)
+            throw new InvalidSessionStateException(
+                "Cannot schedule an ended session",
+                LiveSessionErrorCodes.SessionAlreadyEnded);
+
+        if (Status == SessionStatus.Cancelled)
+            throw new InvalidSessionStateException(
+                "Cannot schedule a cancelled session",
+                LiveSessionErrorCodes.SessionNotActive);
+
+        Status = SessionStatus.Scheduled;
+        StartedAt = startTime;
+        UpdatedAt = dateTimeProvider.UtcNow;
+    }
+
     /// <summary>
-    /// Starts the live session
-    /// 
-    /// BUSINESS RULES:
-    /// - Session must not be already active
-    /// - Sets status to Live and records start time
+    /// Starts the live session.
     /// </summary>
     /// <exception cref="InvalidSessionStateException">When session is already active</exception>
     public void Start(IDateTimeProvider dateTimeProvider)
@@ -111,19 +136,47 @@ public partial class LiveSession
                 "Cannot restart an ended session",
                 LiveSessionErrorCodes.SessionAlreadyEnded);
 
+        if (Status == SessionStatus.Cancelled)
+            throw new InvalidSessionStateException(
+                "Cannot start a cancelled session",
+                LiveSessionErrorCodes.SessionNotActive);
+
         Status = SessionStatus.Live;
         StartedAt = dateTimeProvider.UtcNow;
         UpdatedAt = dateTimeProvider.UtcNow;
     }
 
     /// <summary>
-    /// Stops/Ends the live session
-    /// 
-    /// BUSINESS RULES:
-    /// - Session must be in Active state
-    /// - Cannot end a session that's already ended
+    /// Pause an active live session.
     /// </summary>
-    /// <exception cref="InvalidSessionStateException">When session is not active</exception>
+    public void Pause(IDateTimeProvider dateTimeProvider)
+    {
+        if (Status != SessionStatus.Live)
+            throw new InvalidSessionStateException(
+                "Only active sessions can be paused",
+                LiveSessionErrorCodes.SessionNotActive);
+
+        Status = SessionStatus.Paused;
+        UpdatedAt = dateTimeProvider.UtcNow;
+    }
+
+    /// <summary>
+    /// Resume a paused live session.
+    /// </summary>
+    public void Resume(IDateTimeProvider dateTimeProvider)
+    {
+        if (Status != SessionStatus.Paused)
+            throw new InvalidSessionStateException(
+                "Only paused sessions can be resumed",
+                LiveSessionErrorCodes.SessionNotActive);
+
+        Status = SessionStatus.Live;
+        UpdatedAt = dateTimeProvider.UtcNow;
+    }
+
+    /// <summary>
+    /// Stops/Ends the live session.
+    /// </summary>
     public void Stop(IDateTimeProvider dateTimeProvider)
     {
         End(dateTimeProvider);
@@ -137,6 +190,7 @@ public partial class LiveSession
     /// - Cannot end a session that's already ended
     /// </summary>
     /// <exception cref="InvalidSessionStateException">When session is not active</exception>
+
     public void End(IDateTimeProvider dateTimeProvider)
     {
         if (Status == SessionStatus.Ended)
@@ -144,9 +198,9 @@ public partial class LiveSession
                 "Session is already ended",
                 LiveSessionErrorCodes.SessionAlreadyEnded);
 
-        if (Status != SessionStatus.Live)
+        if (Status != SessionStatus.Live && Status != SessionStatus.Paused)
             throw new InvalidSessionStateException(
-                "Only active sessions can be ended",
+                "Only active or paused sessions can be ended",
                 LiveSessionErrorCodes.SessionNotActive);
 
         Status = SessionStatus.Ended;
@@ -156,10 +210,6 @@ public partial class LiveSession
 
     /// <summary>
     /// Updates session details
-    /// 
-    /// BUSINESS RULES:
-    /// - Session must be active
-    /// - Same validation rules as Create
     /// </summary>
     public void UpdateDetails(
         string sessionName,

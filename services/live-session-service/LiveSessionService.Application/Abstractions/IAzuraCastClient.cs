@@ -5,7 +5,7 @@ namespace LiveSessionService.Application.Abstractions;
 /// <summary>
 /// Interface for AzuraCast API client
 /// Defined in Application layer, implemented in Infrastructure
-/// Application không quan tâm HTTP/JSON details
+/// Application doesn't care about HTTP/JSON details
 /// </summary>
 public interface IAzuraCastClient
 {
@@ -37,6 +37,18 @@ public interface IAzuraCastClient
         int stationId,
         string name,
         bool isAutoPlay,
+        bool includeInRequests,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Updates a playlist in AzuraCast for the given station</summary>
+    Task<AzuraCastPlaylistData?> UpdatePlaylistAsync(
+        int stationId,
+        int playlistId,
+        string name,
+        bool isAutoPlay,
+        bool includeInRequests,
+        bool includeInOnDemand,
+        bool isEnabled,
         CancellationToken cancellationToken = default);
 
     /// <summary>Uploads an audio file to AzuraCast station media library</summary>
