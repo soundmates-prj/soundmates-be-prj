@@ -8,7 +8,7 @@ using LiveSessionService.Domain.Interfaces;
 
 namespace LiveSessionService.Application.Features.LiveSessions.Commands.CreateSessionSchedule;
 
-public sealed class CreateSessionScheduleHandler : ICommandHandler<CreateSessionScheduleCommand, LiveSessionResult>
+public sealed class CreateSessionScheduleHandler : ICommandHandler<CreateSessionScheduleCommand, SessionScheduleResult>
 {
     private readonly ILiveSessionRepository _sessionRepository;
     private readonly ISessionScheduleRepository _scheduleRepository;
@@ -24,7 +24,7 @@ public sealed class CreateSessionScheduleHandler : ICommandHandler<CreateSession
         _dateTimeProvider = dateTimeProvider;
     }
 
-    public async Task<Result<LiveSessionResult>> Handle(
+    public async Task<Result<SessionScheduleResult>> Handle(
         CreateSessionScheduleCommand command,
         CancellationToken cancellationToken)
     {
@@ -32,13 +32,13 @@ public sealed class CreateSessionScheduleHandler : ICommandHandler<CreateSession
         {
             if (command.EndTime <= command.StartTime)
             {
-                return Result<LiveSessionResult>.Failure("End time must be greater than start time", ErrorCode.BadRequest);
+                return Result<SessionScheduleResult>.Failure("End time must be greater than start time", ErrorCode.BadRequest);
             }
 
             var session = await _sessionRepository.GetByIdWithStationAsync(command.LiveSessionId, cancellationToken);
             if (session == null)
             {
-                return Result<LiveSessionResult>.Failure("Session not found", ErrorCode.NotFound);
+                return Result<SessionScheduleResult>.Failure("Session not found", ErrorCode.NotFound);
             }
 
             var schedule = new SessionSchedule
@@ -56,26 +56,23 @@ public sealed class CreateSessionScheduleHandler : ICommandHandler<CreateSession
             session.Schedule(command.StartTime, _dateTimeProvider);
             await _sessionRepository.UpdateAsync(session, cancellationToken);
 
-            var result = new LiveSessionResult
+            var result = new SessionScheduleResult
             {
-                Id = session.Id,
-                UserId = session.HostUserId,
-                StationId = session.AzuraCastStationId!.Value,
-                StationName = session.AzuraCastStation?.StationName,
-                SessionName = session.SessionName,
-                Description = session.Description,
-                Status = session.Status.ToString(),
-                ScheduledStartAt = schedule.StartTime,
-                StartedAt = null,
-                EndedAt = null,
-                CreatedAt = session.CreatedAt
+                Id = schedule.Id,
+                LiveSessionId = schedule.LiveSessionId,
+                StartTime = schedule.StartTime,
+                EndTime = schedule.EndTime,
+                Title = schedule.Title,
+                Status = schedule.Status,
+                CreatedByUserId = command.ActorUserId,
+                UpdatedByUserId = null
             };
 
-            return Result<LiveSessionResult>.Success(result);
+            return Result<SessionScheduleResult>.Success(result);
         }
         catch (DomainException ex)
         {
-            return Result<LiveSessionResult>.Failure(ex.Message, (ErrorCode)ex.StatusCode);
+            return Result<SessionScheduleResult>.Failure(ex.Message, (ErrorCode)ex.StatusCode);
         }
     }
 }

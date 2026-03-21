@@ -8,4 +8,6 @@ public sealed class SessionScheduleResult
     public DateTime EndTime { get; init; }
     public string Title { get; init; } = null!;
     public string? Status { get; init; }
+    public Guid? CreatedByUserId { get; init; }
+    public Guid? UpdatedByUserId { get; init; }
 }
