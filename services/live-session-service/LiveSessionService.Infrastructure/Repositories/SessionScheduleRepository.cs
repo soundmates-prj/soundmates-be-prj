@@ -20,12 +20,38 @@ public sealed class SessionScheduleRepository : ISessionScheduleRepository
         await _context.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<List<SessionSchedule>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        return await _context.SessionSchedules
+            .AsNoTracking()
+            .OrderBy(x => x.StartTime)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<SessionSchedule?> GetByIdAsync(Guid scheduleId, CancellationToken cancellationToken = default)
+    {
+        return await _context.SessionSchedules
+            .FirstOrDefaultAsync(x => x.Id == scheduleId, cancellationToken);
+    }
+
     public async Task<List<SessionSchedule>> GetByLiveSessionIdAsync(Guid liveSessionId, CancellationToken cancellationToken = default)
     {
         return await _context.SessionSchedules
             .Where(x => x.LiveSessionId == liveSessionId)
             .OrderBy(x => x.StartTime)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task UpdateAsync(SessionSchedule schedule, CancellationToken cancellationToken = default)
+    {
+        _context.SessionSchedules.Update(schedule);
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task DeleteAsync(SessionSchedule schedule, CancellationToken cancellationToken = default)
+    {
+        _context.SessionSchedules.Remove(schedule);
+        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<SessionSchedule?> GetLatestByLiveSessionIdAsync(Guid liveSessionId, CancellationToken cancellationToken = default)

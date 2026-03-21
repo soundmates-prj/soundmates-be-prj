@@ -3,11 +3,14 @@ using LiveSessionService.Application.Abstractions.Messaging.Dispatcher;
 using LiveSessionService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
 using LiveSessionService.Application.Features.LiveSessions.Commands.CreateLiveSession;
 using LiveSessionService.Application.Features.LiveSessions.Commands.CreateSessionSchedule;
+using LiveSessionService.Application.Features.LiveSessions.Commands.DeleteSessionSchedule;
 using LiveSessionService.Application.Features.LiveSessions.Commands.PauseSession;
 using LiveSessionService.Application.Features.LiveSessions.Commands.ResumeSession;
 using LiveSessionService.Application.Features.LiveSessions.Commands.StartSession;
 using LiveSessionService.Application.Features.LiveSessions.Commands.StopSession;
+using LiveSessionService.Application.Features.LiveSessions.Commands.UpdateSessionSchedule;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetAllLiveSessions;
+using LiveSessionService.Application.Features.LiveSessions.Queries.GetAllSessionSchedules;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSession;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetSessionSchedules;
 using LiveSessionService.Application.Features.Music.Commands.DeleteMedia;
@@ -64,7 +67,9 @@ public static class DependencyInjection
 
         // Register LiveSession Command Handlers
         services.AddScoped<ICommandHandler<CreateLiveSessionCommand, LiveSessionResult>, CreateLiveSessionHandler>();
-        services.AddScoped<ICommandHandler<CreateSessionScheduleCommand, LiveSessionResult>, CreateSessionScheduleHandler>();
+        services.AddScoped<ICommandHandler<CreateSessionScheduleCommand, SessionScheduleResult>, CreateSessionScheduleHandler>();
+        services.AddScoped<ICommandHandler<UpdateSessionScheduleCommand, SessionScheduleResult>, UpdateSessionScheduleHandler>();
+        services.AddScoped<ICommandHandler<DeleteSessionScheduleCommand>, DeleteSessionScheduleHandler>();
         services.AddScoped<ICommandHandler<StartSessionCommand, LiveSessionResult>, StartSessionHandler>();
         services.AddScoped<ICommandHandler<PauseSessionCommand, LiveSessionResult>, PauseSessionHandler>();
         services.AddScoped<ICommandHandler<ResumeSessionCommand, LiveSessionResult>, ResumeSessionHandler>();
@@ -98,6 +103,7 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<GetLiveSessionQuery, LiveSessionResult>, GetLiveSessionHandler>();
         services.AddScoped<IQueryHandler<GetAllLiveSessionsQuery, PagedResult<LiveSessionResult>>, GetAllLiveSessionsHandler>();
         services.AddScoped<IQueryHandler<GetSessionSchedulesQuery, List<SessionScheduleResult>>, GetSessionSchedulesHandler>();
+        services.AddScoped<IQueryHandler<GetAllSessionSchedulesQuery, List<SessionScheduleResult>>, GetAllSessionSchedulesHandler>();
 
         // Register Playlist Query Handlers
         services.AddScoped<IQueryHandler<GetPlaylistsByStationQuery, List<PlaylistResult>>, GetPlaylistsByStationHandler>();
