@@ -1,3 +1,4 @@
+using LiveSessionService.Application.Abstractions;
 using LiveSessionService.Application.Abstractions.Messaging;
 using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Features.Results;
@@ -16,15 +17,18 @@ public sealed class StartSessionHandler : ICommandHandler<StartSessionCommand, L
     private readonly ILiveSessionRepository _sessionRepository;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<StartSessionHandler> _logger;
+    private readonly ILiveSessionNotifier _notifier;
 
     public StartSessionHandler(
         ILiveSessionRepository sessionRepository,
         IDateTimeProvider dateTimeProvider,
-        ILogger<StartSessionHandler> logger)
+        ILogger<StartSessionHandler> logger,
+        ILiveSessionNotifier notifier)
     {
         _sessionRepository = sessionRepository;
         _dateTimeProvider = dateTimeProvider;
         _logger = logger;
+        _notifier = notifier;
     }
 
     public async Task<Result<LiveSessionResult>> Handle(
@@ -58,8 +62,13 @@ public sealed class StartSessionHandler : ICommandHandler<StartSessionCommand, L
                 Status = session.Status.ToString(),
                 StartedAt = session.StartedAt,
                 EndedAt = session.EndedAt,
-                CreatedAt = session.CreatedAt
+                CreatedAt = session.CreatedAt,
+                StreamUrl = session.AzuraCastStation?.StreamUrl,
+                ThumbnailUrl = session.ThumbnailUrl,
+                Genre = session.Genre
             };
+
+            await _notifier.NotifySessionStarted(result, cancellationToken);
 
             return Result<LiveSessionResult>.Success(result);
         }

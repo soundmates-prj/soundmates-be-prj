@@ -9,6 +9,7 @@ using LiveSessionService.Application.Features.LiveSessions.Commands.StartSession
 using LiveSessionService.Application.Features.LiveSessions.Commands.StopSession;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetAllLiveSessions;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSession;
+using LiveSessionService.Application.Features.LiveSessions.Queries.GetStaffDashboardOverview;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetSessionSchedules;
 using LiveSessionService.Application.Features.Music.Commands.DeleteMedia;
 using LiveSessionService.Application.Features.Music.Commands.SyncMediaFiles;
@@ -98,6 +99,7 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<GetLiveSessionQuery, LiveSessionResult>, GetLiveSessionHandler>();
         services.AddScoped<IQueryHandler<GetAllLiveSessionsQuery, PagedResult<LiveSessionResult>>, GetAllLiveSessionsHandler>();
         services.AddScoped<IQueryHandler<GetSessionSchedulesQuery, List<SessionScheduleResult>>, GetSessionSchedulesHandler>();
+        services.AddScoped<IQueryHandler<GetStaffDashboardOverviewQuery, StaffDashboardOverviewResult>, GetStaffDashboardOverviewHandler>();
 
         // Register Playlist Query Handlers
         services.AddScoped<IQueryHandler<GetPlaylistsByStationQuery, List<PlaylistResult>>, GetPlaylistsByStationHandler>();

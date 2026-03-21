@@ -43,6 +43,7 @@ public sealed class GetAllStationsHandler : IQueryHandler<GetAllStationsQuery, L
                 StreamUrl = s.StreamUrl,
                 PublicPlayerUrl = s.PublicPlayerUrl,
                 IsEnabled = s.IsEnabled,
+                CreatedAt = s.CreatedAt,
                 LastSyncedAt = s.LastSyncedAt,
                 SyncStatus = s.SyncStatus.ToString(),
                 Mounts = s.Mounts.Select(m => new MountResult

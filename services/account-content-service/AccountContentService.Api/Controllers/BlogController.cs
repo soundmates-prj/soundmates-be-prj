@@ -5,6 +5,7 @@ using AccountContentService.Api.Contracts.Responses;
 using AccountContentService.Application.Features.BlogPosts.Commands.CreatePost;
 using AccountContentService.Application.Features.BlogPosts.Commands.DeletePost;
 using AccountContentService.Application.Features.BlogPosts.Commands.PublishPost;
+using AccountContentService.Application.Features.BlogPosts.Commands.ShareMusicPost;
 using AccountContentService.Application.Features.BlogPosts.Commands.SetPostArchived;
 using AccountContentService.Application.Features.BlogPosts.Commands.SetPostDraft;
 using AccountContentService.Application.Features.BlogPosts.Commands.UpdatePost;
@@ -52,6 +53,23 @@ public class BlogController : ControllerBase
         var response = _mapper.Map<PostResponse>(result);
 
         return Ok(ApiResponse<PostResponse>.Ok(response, "Create post successfully"));
+    }
+
+    /// <summary>
+    /// Share a music card to current user's blog wall.
+    /// </summary>
+    [HttpPost(ApiRoutes.Posts.ShareMusic)]
+    public async Task<IActionResult> ShareMusicPost(ShareMusicPostRequest request)
+    {
+        var userId = UserContext.GetUserId(HttpContext);
+
+        var command = _mapper.Map<ShareMusicPostCommand>(request);
+        command.UserId = userId;
+
+        var result = await _mediator.Send(command);
+        var response = _mapper.Map<PostResponse>(result);
+
+        return Ok(ApiResponse<PostResponse>.Ok(response, "Share music post successfully"));
     }
 
     /// <summary>

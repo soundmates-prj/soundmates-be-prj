@@ -10,6 +10,7 @@ public sealed class StationResult
     public string StreamUrl { get; init; } = null!;
     public string? PublicPlayerUrl { get; init; }
     public bool IsEnabled { get; init; }
+    public DateTime CreatedAt { get; init; }
     public DateTime? LastSyncedAt { get; init; }
     public string SyncStatus { get; init; } = null!;
     public List<MountResult> Mounts { get; init; } = [];

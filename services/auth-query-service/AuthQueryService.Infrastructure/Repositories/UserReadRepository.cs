@@ -58,6 +58,31 @@ namespace AuthQueryService.Infrastructure.Repositories
         public async Task<List<UserReadModel>> GetAllAsync()
             => await _collection.Find(FilterDefinition<UserReadModel>.Empty).ToListAsync();
 
+        public async Task<(List<UserReadModel> Items, int TotalCount)> GetByRoleAsync(
+            string roleName,
+            int page,
+            int size)
+        {
+            page = page <= 0 ? 1 : page;
+            size = size <= 0 ? 20 : size;
+
+            var normalizedRole = roleName.Trim();
+            var filter = Builders<UserReadModel>.Filter.Regex(
+                x => x.RoleName,
+                new MongoDB.Bson.BsonRegularExpression($"^{System.Text.RegularExpressions.Regex.Escape(normalizedRole)}$", "i"));
+
+            var countTask = _collection.CountDocumentsAsync(filter);
+            var itemsTask = _collection.Find(filter)
+                .SortBy(x => x.Username)
+                .Skip((page - 1) * size)
+                .Limit(size)
+                .ToListAsync();
+
+            await Task.WhenAll(countTask, itemsTask);
+
+            return (itemsTask.Result, (int)countTask.Result);
+        }
+
         public async Task<(List<UserReadModel> Items, int TotalCount)> GetPagedAsync(int page, int size)
         {
             page = page <= 0 ? 1 : page;

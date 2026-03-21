@@ -41,6 +41,9 @@
             /// <summary>Delete a blog post.</summary>
             public const string Delete = $"{BaseRoute}/{{postId:guid}}";
 
+            /// <summary>Create a music share card post.</summary>
+            public const string ShareMusic = $"{BaseRoute}/share-music";
+
             // ===============================
             // PUBLISHED POSTS
             // ===============================

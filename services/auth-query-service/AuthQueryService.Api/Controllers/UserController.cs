@@ -4,6 +4,7 @@ using AuthQueryService.Application.DTOs;
 using AuthQueryService.Application.DTOs.Response;
 using AuthQueryService.Application.Services.Users.Queries.GetUserById;
 using AuthQueryService.Application.Services.Users.Queries.GetUserByUsername;
+using AuthQueryService.Application.Services.Users.Queries.GetUsersByRole;
 using AuthQueryService.Application.Services.Users.Queries.SearchUsers;
 using AuthQueryService.Application.Services.Users.Queries.GetFullUserProfile;
 using AuthQueryService.Infrastructure.Messaging;
@@ -234,6 +235,48 @@ namespace AuthQueryService.Api.Controllers
                 return NotFound(res);
             }
             
+            return Ok(res);
+        }
+
+        /// <summary>
+        /// Get users with STAFF role (Admin/Staff only)
+        /// </summary>
+        /// <param name="page">Page number (default: 1)</param>
+        /// <param name="pageSize">Page size (default: 20)</param>
+        /// <param name="ct">Cancellation token</param>
+        /// <returns>Paginated list of staff accounts</returns>
+        [Authorize(Roles = "ADMIN,STAFF")]
+        [HttpGet("staff")]
+        [ProducesResponseType(typeof(ApiResponse<PagedResult<UserReadDto>>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetStaffUsers(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20,
+            CancellationToken ct = default)
+        {
+            _logger.LogInformation("Retrieving STAFF accounts: Page={Page}, PageSize={PageSize}", page, pageSize);
+
+            var res = await _queries.Query(new GetUsersByRoleQuery("STAFF", page, pageSize), ct);
+            return Ok(res);
+        }
+
+        /// <summary>
+        /// Get users with HOST role (Admin/Staff only)
+        /// </summary>
+        /// <param name="page">Page number (default: 1)</param>
+        /// <param name="pageSize">Page size (default: 20)</param>
+        /// <param name="ct">Cancellation token</param>
+        /// <returns>Paginated list of host accounts</returns>
+        [Authorize(Roles = "ADMIN,STAFF")]
+        [HttpGet("hosts")]
+        [ProducesResponseType(typeof(ApiResponse<PagedResult<UserReadDto>>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetHostUsers(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20,
+            CancellationToken ct = default)
+        {
+            _logger.LogInformation("Retrieving HOST accounts: Page={Page}, PageSize={PageSize}", page, pageSize);
+
+            var res = await _queries.Query(new GetUsersByRoleQuery("HOST", page, pageSize), ct);
             return Ok(res);
         }
     }
