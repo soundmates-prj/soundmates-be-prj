@@ -37,7 +37,7 @@ public class PodcastPipelineService : IPodcastPipelineService
                 ContextType: request.ContextType,
                 ModelName: request.ModelName,
                 Temperature: null, // use default
-                MaxTokens: null // use default
+                MaxTokens: 2000 // increase for longer scripts
             ), ct);
 
         if (!scriptResult.IsSuccess)

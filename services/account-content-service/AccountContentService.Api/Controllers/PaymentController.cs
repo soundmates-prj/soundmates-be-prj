@@ -1,6 +1,7 @@
 ﻿using AccountContentService.Api.Common;
 using AccountContentService.Api.Constants;
 using AccountContentService.Api.Contracts.Requests;
+using AccountContentService.Api.Contracts.Responses;
 using AccountContentService.Application.Features.Payments.Commands;
 using AccountContentService.Application.Features.Payments.Commands.CallbackCommand;
 using AccountContentService.Application.Features.Payments.Commands.CreatePayment;
@@ -26,16 +27,19 @@ namespace AccountContentService.Api.Controllers
     {
         private readonly IMediator _mediator;
         private readonly IMapper _mapper;
+        private readonly IConfiguration _configuration;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PaymentsController"/>.
         /// </summary>
         /// <param name="mediator">MediatR instance used to dispatch commands.</param>
         /// <param name="mapper">AutoMapper instance for object mapping.</param>
-        public PaymentsController(IMediator mediator, IMapper mapper)
+        /// <param name="configuration">App configuration for reading FrontendUrl.</param>
+        public PaymentsController(IMediator mediator, IMapper mapper, IConfiguration configuration)
         {
             _mediator = mediator;
             _mapper = mapper;
+            _configuration = configuration;
         }
 
         /// <summary>
@@ -80,9 +84,9 @@ namespace AccountContentService.Api.Controllers
         /// 2. Validate secure hash/signature.
         /// 3. Add a transaction.
         /// 4. Update payment & subscription status.
-        /// 5. Return processing result.
+        /// 5. Redirect user to frontend result page.
         /// </remarks>
-        /// <response code="200">Callback processed successfully.</response>
+        /// <response code="302">Redirect to frontend payment result page.</response>
         /// <response code="400">Invalid or tampered VNPay data.</response>
         [AllowAnonymous]
         [HttpGet(ApiRoutes.Payments.VNPayCallBack)]
@@ -93,12 +97,33 @@ namespace AccountContentService.Api.Controllers
                 v => v.Value.ToString()
             );
 
-            var result = await _mediator.Send(new VNPayCallbackCommand
-            {
-                Data = data
-            });
+            var frontendUrl = _configuration["AppSettings:FrontendUrl"]?.TrimEnd('/') ?? "http://localhost:3000";
+            var returnPage = $"{frontendUrl}/payment/result";
 
-            return Ok(result);
+            try
+            {
+                var result = await _mediator.Send(new VNPayCallbackCommand { Data = data });
+
+                var query = System.Web.HttpUtility.ParseQueryString(string.Empty);
+                query["status"] = result.TransactionStatus.ToLower();
+                query["transactionId"] = result.Id.ToString();
+                query["paymentId"] = result.PaymentId.ToString();
+                query["amount"] = result.Amount.ToString();
+                query["provider"] = result.PaymentProvider;
+                query["vnp_ResponseCode"] = data.GetValueOrDefault("vnp_ResponseCode", "");
+                query["vnp_TransactionNo"] = data.GetValueOrDefault("vnp_TransactionNo", "");
+
+                return Redirect($"{returnPage}?{query}");
+            }
+            catch (Exception ex)
+            {
+                var query = System.Web.HttpUtility.ParseQueryString(string.Empty);
+                query["status"] = "failed";
+                query["message"] = ex.Message;
+                query["vnp_ResponseCode"] = data.GetValueOrDefault("vnp_ResponseCode", "");
+
+                return Redirect($"{returnPage}?{query}");
+            }
         }
 
         /// <summary>

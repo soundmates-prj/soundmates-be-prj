@@ -6,9 +6,18 @@ namespace AccountContentService.Api.Common
     {
         public static Guid GetUserId(HttpContext context)
         {
-            var userId = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userIdClaim =
+                context.User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? context.User.FindFirstValue("sub")
+                ?? context.User.FindFirstValue("nameid")
+                ?? context.User.FindFirstValue("userId");
 
-            return Guid.Parse(userId);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+            {
+                throw new UnauthorizedAccessException("Cannot resolve authenticated user id from token claims.");
+            }
+
+            return userId;
         }
     }
 }

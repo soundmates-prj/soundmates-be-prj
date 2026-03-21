@@ -1,32 +1,37 @@
-﻿using AccountContentService.Application.Interfaces.Repositories;
+﻿using AccountContentService.Application.DTOs;
+using AccountContentService.Application.Interfaces.Repositories;
 using AccountContentService.Application.Interfaces.Services;
 using AccountContentService.Domain.Entities;
 using AccountContentService.Domain.Enums;
+using AutoMapper;
 using MediatR;
 using System.Text.Json;
 
 namespace AccountContentService.Application.Features.Payments.Commands.CallbackCommand
 {
-    public class VNPayCallbackHandler : IRequestHandler<VNPayCallbackCommand, string>
+    public class VNPayCallbackHandler : IRequestHandler<VNPayCallbackCommand, TransactionDto>
     {
         private readonly IPaymentRepository _paymentRepo;
         private readonly IPaymentTransactionRepository _transactionRepo;
         private readonly ISubscriptionRepository _subscriptionRepo;
         private readonly IPaymentService _paymentService;
+        private readonly IMapper _mapper;   
 
         public VNPayCallbackHandler(
             IPaymentRepository paymentRepo,
             IPaymentTransactionRepository transactionRepo,
             ISubscriptionRepository subscriptionRepo,
-            IPaymentService paymentService)
+            IPaymentService paymentService,
+            IMapper mapper)
         {
             _paymentRepo = paymentRepo;
             _transactionRepo = transactionRepo;
             _subscriptionRepo = subscriptionRepo;
             _paymentService = paymentService;
+            _mapper = mapper;
         }
 
-        public async Task<string> Handle(VNPayCallbackCommand request, CancellationToken cancellationToken)
+        public async Task<TransactionDto> Handle(VNPayCallbackCommand request, CancellationToken cancellationToken)
         {
             var data = request.Data;
 
@@ -51,7 +56,7 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
 
             // 🔥 4. Idempotency
             if (payment.Status == PaymentStatus.Success.ToString())
-                return "Payment already processed";
+                throw new Exception("Payment already processed");
 
             var isSuccess = responseCode == "00";
 
@@ -96,7 +101,8 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
                 await _subscriptionRepo.AddAsync(subscription);
             }
 
-            return isSuccess ? "Success" : "Failed";
+            var respose = _mapper.Map<TransactionDto>(transaction);
+            return respose;
         }
     }
 }

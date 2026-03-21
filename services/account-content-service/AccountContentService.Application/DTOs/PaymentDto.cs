@@ -35,5 +35,7 @@ namespace AccountContentService.Application.DTOs
         public DateTime UpdatedAt { get; set; }
 
         public string? ExternalReference { get; set; }
+        public UserProfileDto userProfile { get; set; } = null!;
+
     }
 }

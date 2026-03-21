@@ -58,19 +58,28 @@ namespace AuthQueryService.Infrastructure.ExternalServices
         // ── Public surface ───────────────────────────────────────────────
 
         public async Task<SpotifySearchResult> SearchAsync(
-            string query, string type = "track", int limit = 20, int offset = 0, CancellationToken ct = default, string? userAccessToken = null)
+            string query, string type = "track", int limit = 10, int offset = 0, CancellationToken ct = default, string? userAccessToken = null)
         {
             if (string.IsNullOrWhiteSpace(query))
                 throw new ArgumentException("Search query is required.", nameof(query));
 
-            limit  = Math.Clamp(limit, 1, 50);
+            // Clamp to Spotify-accepted range
+            // NOTE: Spotify Developer Mode apps are capped at limit ≤ 10.
+            //       Increase to 50 only after requesting quota extension in Spotify Dashboard.
+            limit  = Math.Clamp(limit, 1, 10);
             offset = Math.Max(0, offset);
 
-            // NOTE: Do NOT Uri.EscapeDataString(type) — the type param can be comma-separated
-            // e.g. "track,artist,album". Spotify expects the raw comma, not %2C.
-            var url = $"{_apiBase}/search?q={Uri.EscapeDataString(query)}&type={type}&limit={limit}&offset={offset}";
+            // Normalize type: trim whitespace, lower-case, allow comma-separated values
+            // e.g. "track,artist,album" — Spotify expects raw comma, NOT %2C
+            var normalizedType = string.Join(",",
+                type.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Select(t => t.Trim().ToLowerInvariant()));
+            if (string.IsNullOrWhiteSpace(normalizedType))
+                normalizedType = "track";
 
-            _logger.LogDebug("Spotify search → {Url}", url);
+            var url = $"{_apiBase}/search?q={Uri.EscapeDataString(query)}&type={normalizedType}&limit={limit}&offset={offset}";
+
+            _logger.LogInformation("Spotify search → {Url}", url);
             return await GetAsync<SpotifySearchResult>(url, ct, userAccessToken) ?? new SpotifySearchResult();
         }
 

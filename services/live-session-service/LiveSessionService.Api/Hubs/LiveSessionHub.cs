@@ -73,7 +73,10 @@ public sealed class LiveSessionHub : Hub
             .CountAsync(x => x.LiveSessionId == sessionId && x.IsConnected, Context.ConnectionAborted);
 
         await Clients.Group(GetSessionGroup(sessionId))
-            .SendAsync("ListenerCountUpdated", sessionId, currentListeners, Context.ConnectionAborted);
+            .SendAsync("ListenersUpdated", sessionId, currentListeners, Context.ConnectionAborted);
+
+        await Clients.Group(GetSessionGroup(sessionId))
+            .SendAsync("UserJoined", sessionId, userId, currentListeners, Context.ConnectionAborted);
     }
 
     public async Task LeaveSession(Guid sessionId, Guid? userId = null, string? anonymousIdentifier = null)
@@ -95,7 +98,10 @@ public sealed class LiveSessionHub : Hub
             .CountAsync(x => x.LiveSessionId == sessionId && x.IsConnected, Context.ConnectionAborted);
 
         await Clients.Group(GetSessionGroup(sessionId))
-            .SendAsync("ListenerCountUpdated", sessionId, currentListeners, Context.ConnectionAborted);
+            .SendAsync("ListenersUpdated", sessionId, currentListeners, Context.ConnectionAborted);
+
+        await Clients.Group(GetSessionGroup(sessionId))
+            .SendAsync("UserLeft", sessionId, userId, currentListeners, Context.ConnectionAborted);
     }
 
     public async Task ReconnectSession(Guid sessionId, Guid? userId = null, string? anonymousIdentifier = null)
@@ -103,6 +109,9 @@ public sealed class LiveSessionHub : Hub
         await JoinSession(sessionId, userId, anonymousIdentifier);
         await Clients.Caller.SendAsync("SessionReconnected", sessionId, Context.ConnectionAborted);
     }
+
+    public async Task SendChat(Guid sessionId, Guid userId, string message) 
+        => await SendMessage(sessionId, userId, message);
 
     public async Task SendMessage(Guid sessionId, Guid userId, string message)
     {
@@ -134,7 +143,7 @@ public sealed class LiveSessionHub : Hub
         _dbContext.LiveSessionChats.Add(chat);
         await _dbContext.SaveChangesAsync(Context.ConnectionAborted);
 
-        await Clients.Group(GetSessionGroup(sessionId)).SendAsync("ChatMessageReceived", new
+        await Clients.Group(GetSessionGroup(sessionId)).SendAsync("ReceiveChat", new
         {
             chat.Id,
             chat.LiveSessionId,

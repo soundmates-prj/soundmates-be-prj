@@ -38,14 +38,15 @@ public static class DataSeeder
         context.Themes.AddRange(defaultTheme, darkTheme);
 
         // SUBSCRIPTION PLANS
+        // SUBSCRIPTION PLANS
         var freePlan = new SubscriptionPlan
         {
             Id = Guid.NewGuid(),
             PlanName = "Free",
             Price = 0,
             DurationDays = 30,
-            RequestLimit = 5,
-            Description = "Free tier",
+            RequestLimit = 20,
+            Description = "Gói miễn phí với các tính năng cơ bản, giới hạn số lần sử dụng mỗi tháng.",
             IsActive = true,
             CreatedAt = now,
             UpdatedAt = now
@@ -55,10 +56,23 @@ public static class DataSeeder
         {
             Id = Guid.NewGuid(),
             PlanName = "Premium",
-            Price = 9.99m,
+            Price = 59000, // VND
             DurationDays = 30,
-            RequestLimit = 100,
-            Description = "Premium plan",
+            RequestLimit = 200,
+            Description = "Gói Premium mở khóa nhiều tính năng nâng cao, tăng giới hạn sử dụng và ưu tiên xử lý.",
+            IsActive = true,
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+
+        var elitePlan = new SubscriptionPlan
+        {
+            Id = Guid.NewGuid(),
+            PlanName = "Elite",
+            Price = 159000, // VND
+            DurationDays = 30,
+            RequestLimit = 1000,
+            Description = "Gói Elite dành cho hội viên cao cấp với đầy đủ tính năng, không giới hạn trải nghiệm và ưu tiên cao nhất.",
             IsActive = true,
             CreatedAt = now,
             UpdatedAt = now

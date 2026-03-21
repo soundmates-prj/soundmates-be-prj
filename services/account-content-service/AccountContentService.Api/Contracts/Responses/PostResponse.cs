@@ -27,7 +27,22 @@
 
         public DateTime UpdatedAt { get; set; }
         public DateTime? PublishedAt { get; set; }
+
+        public string? PostType { get; set; }
+        public ShareMusicResponse? ShareMusic { get; set; }
+
+        public UserProfileResponse userProfile { get; set; } = null!;
         //public List<CommentResponse> Comments { get; set; } = new();
         //public List<ReactionResponse> Reactions { get; set; } = new();
+    }
+
+    public class ShareMusicResponse
+    {
+        public string TrackId { get; set; } = string.Empty;
+        public string Title { get; set; } = string.Empty;
+        public string Artist { get; set; } = string.Empty;
+        public string AlbumImage { get; set; } = string.Empty;
+        public string? PreviewUrl { get; set; }
+        public string Template { get; set; } = "gradient";
     }
 }

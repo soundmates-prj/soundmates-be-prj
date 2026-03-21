@@ -3,6 +3,7 @@ using AccountContentService.Api.Contracts.Requests;
 using AccountContentService.Api.Contracts.Responses;
 using AccountContentService.Application.DTOs;
 using AccountContentService.Application.Features.BlogPosts.Commands.CreatePost;
+using AccountContentService.Application.Features.BlogPosts.Commands.ShareMusicPost;
 using AccountContentService.Application.Features.BlogPosts.Commands.UpdatePost;
 using AccountContentService.Application.Features.BlogPosts.Queries.GetPopularPosts;
 using AccountContentService.Application.Features.BlogPosts.Queries.GetPosts;
@@ -24,7 +25,9 @@ namespace AccountContentService.Api.Mappings
             CreateMap <PaginationRequest, GetPopularPostsQuery>();
             CreateMap <PaginationRequest, GetPostsStatsQuery>();
             CreateMap<PostDto, PostResponse>();
+            CreateMap<ShareMusicDto, ShareMusicResponse>();
             CreateMap<CreatePostRequest, CreatePostCommand>();
+            CreateMap<ShareMusicPostRequest, ShareMusicPostCommand>();
             CreateMap<UpdatePostRequest, UpdatePostCommand>();
         }
     }

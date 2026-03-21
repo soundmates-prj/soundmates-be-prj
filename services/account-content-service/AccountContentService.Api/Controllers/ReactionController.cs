@@ -86,6 +86,7 @@ namespace AccountContentService.Api.Controllers
         /// </remarks>
         /// <response code="200">Change React successfully</response>
         /// <response code="400">Invalid request</response>
+        [AllowAnonymous]
         [HttpGet(ApiRoutes.Reactions.GetUsers)]
         public async Task<IActionResult> GetReactions([FromRoute] Guid postId)
         {

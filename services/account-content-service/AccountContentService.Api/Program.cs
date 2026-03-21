@@ -46,6 +46,13 @@ builder.Services.AddDbContext<AccountContentDbContext>(options =>
 // Authentication
 builder.Services.AddJwtAuthentication(builder.Configuration);
 
+// HttpClient 
+builder.Services.AddHttpClient("ApiGateway", client =>
+{
+    client.BaseAddress = new Uri("http://localhost:8080/");
+});
+builder.Services.AddHttpContextAccessor();
+
 var app = builder.Build();
 
 

@@ -1,3 +1,4 @@
+using LiveSessionService.Application.Abstractions;
 using LiveSessionService.Application.Abstractions.Messaging;
 using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Features.Results;
@@ -13,15 +14,18 @@ public sealed class StopSessionHandler : ICommandHandler<StopSessionCommand, Liv
     private readonly ILiveSessionRepository _sessionRepository;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<StopSessionHandler> _logger;
+    private readonly ILiveSessionNotifier _notifier;
 
     public StopSessionHandler(
         ILiveSessionRepository sessionRepository,
         IDateTimeProvider dateTimeProvider,
-        ILogger<StopSessionHandler> logger)
+        ILogger<StopSessionHandler> logger,
+        ILiveSessionNotifier notifier)
     {
         _sessionRepository = sessionRepository;
         _dateTimeProvider = dateTimeProvider;
         _logger = logger;
+        _notifier = notifier;
     }
 
     public async Task<Result<LiveSessionResult>> Handle(
@@ -52,13 +56,19 @@ public sealed class StopSessionHandler : ICommandHandler<StopSessionCommand, Liv
                 StationId = session.AzuraCastStationId!.Value,
                 StationName = session.AzuraCastStation?.StationName,
                 SessionName = session.SessionName,
+                Description = session.Description,
                 Status = session.Status.ToString(),
                 StartedAt = session.StartedAt,
                 EndedAt = session.EndedAt,
                 TotalDuration = session.EndedAt.HasValue
                     ? (int)(session.EndedAt.Value - session.StartedAt).TotalMinutes
-                    : 0
+                    : 0,
+                StreamUrl = session.AzuraCastStation?.StreamUrl,
+                ThumbnailUrl = session.ThumbnailUrl,
+                Genre = session.Genre
             };
+
+            await _notifier.NotifySessionEnded(result, cancellationToken);
 
             return Result<LiveSessionResult>.Success(result);
         }

@@ -87,7 +87,8 @@ public class GeminiLlmClient : ILlmClient
 
         var result = await response.Content.ReadFromJsonAsync<GeminiResponse>(JsonOptions, cancellationToken);
         
-        var generatedText = result?.Candidates?.FirstOrDefault()?.Content?.Parts?.FirstOrDefault()?.Text;
+        var parts = result?.Candidates?.FirstOrDefault()?.Content?.Parts;
+        var generatedText = parts != null ? string.Join("", parts.Select(p => p.Text)) : null;
         
         if (string.IsNullOrWhiteSpace(generatedText))
         {
@@ -106,7 +107,7 @@ public class GeminiLlmClient : ILlmClient
     {
         if (string.Equals(request.ContextType, "podcast", StringComparison.OrdinalIgnoreCase))
         {
-            return "Bạn là một người viết kịch bản podcast chuyên nghiệp. Hãy viết một kịch bản podcast hấp dẫn, bằng tiếng Việt, dựa trên chủ đề người dùng cung cấp. Kịch bản nên bao gồm lời dẫn (Intro), nội dung chính (Body) và lời kết (Outro). Hãy viết theo phong cách tự nhiên, dễ nghe.";
+            return "Bạn là một người viết kịch bản podcast chuyên nghiệp. Hãy viết một kịch bản podcast chi tiết và hấp dẫn, bằng tiếng Việt, dựa trên chủ đề người dùng cung cấp. Kịch bản nên dài ít nhất 500 từ và bao gồm: 1) Lời dẫn hấp dẫn (Intro) - 50-100 từ, 2) Nội dung chính chi tiết (Body) - 300-400 từ với các luận điểm, ví dụ, và câu chuyện, 3) Lời kết ấn tượng (Outro) - 50-100 từ. Hãy viết theo phong cách trò chuyện tự nhiên, dễ nghe, nhưng đảm bảo nội dung sâu sắc và有价值. Sử dụng ngôn ngữ phong phú, câu hỏi gợi mở và tạo sự kết nối với người nghe.";
         }
         
         return "Bạn là một trợ lý AI thông minh. Hãy trả lời yêu cầu sau bằng tiếng Việt.";

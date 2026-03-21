@@ -5,6 +5,7 @@ using AccountContentService.Api.Contracts.Responses;
 using AccountContentService.Application.Features.BlogPosts.Commands.CreatePost;
 using AccountContentService.Application.Features.BlogPosts.Commands.DeletePost;
 using AccountContentService.Application.Features.BlogPosts.Commands.PublishPost;
+using AccountContentService.Application.Features.BlogPosts.Commands.ShareMusicPost;
 using AccountContentService.Application.Features.BlogPosts.Commands.SetPostArchived;
 using AccountContentService.Application.Features.BlogPosts.Commands.SetPostDraft;
 using AccountContentService.Application.Features.BlogPosts.Commands.UpdatePost;
@@ -52,6 +53,23 @@ public class BlogController : ControllerBase
         var response = _mapper.Map<PostResponse>(result);
 
         return Ok(ApiResponse<PostResponse>.Ok(response, "Create post successfully"));
+    }
+
+    /// <summary>
+    /// Share a music card to current user's blog wall.
+    /// </summary>
+    [HttpPost(ApiRoutes.Posts.ShareMusic)]
+    public async Task<IActionResult> ShareMusicPost(ShareMusicPostRequest request)
+    {
+        var userId = UserContext.GetUserId(HttpContext);
+
+        var command = _mapper.Map<ShareMusicPostCommand>(request);
+        command.UserId = userId;
+
+        var result = await _mediator.Send(command);
+        var response = _mapper.Map<PostResponse>(result);
+
+        return Ok(ApiResponse<PostResponse>.Ok(response, "Share music post successfully"));
     }
 
     /// <summary>
@@ -111,6 +129,7 @@ public class BlogController : ControllerBase
     /// Can be filtered by moodTag, authorName, search keyword, and date range using query parameters.
     /// </remarks>
     /// <response code="200">Get published posts successfully</response>
+    [AllowAnonymous]
     [HttpGet(ApiRoutes.Posts.GetAllPublished)]
     public async Task<IActionResult> GetPublishedPosts([FromQuery] PaginationRequest request)
     {
@@ -137,6 +156,7 @@ public class BlogController : ControllerBase
     /// Can be filtered by moodTag, authorName, search keyword, and date range using query parameters.
     /// </remarks>
     /// <response code="200">Get trending posts successfully</response>
+    [AllowAnonymous]
     [HttpGet(ApiRoutes.Posts.Trending)]
     public async Task<IActionResult> GetTrendingPosts(
   [FromQuery] PaginationRequest request)
@@ -162,6 +182,7 @@ public class BlogController : ControllerBase
     /// Can be filtered by moodTag, authorName, search keyword, and date range using query parameters.
     /// </remarks>
     /// <response code="200">Get popular posts successfully</response>
+    [AllowAnonymous]
     [HttpGet(ApiRoutes.Posts.Popular)]
     public async Task<IActionResult> GetPopularPosts(
   [FromQuery] PaginationRequest request)
@@ -209,6 +230,7 @@ public class BlogController : ControllerBase
     /// <param name="postId">Post identifier</param>
     /// <response code="200">Get post successfully</response>
     /// <response code="404">Post not found</response>
+    [AllowAnonymous]
     [HttpGet(ApiRoutes.Posts.GetPublishedById)]
     public async Task<IActionResult> GetPublisedPostById([FromRoute] Guid postId)
     {

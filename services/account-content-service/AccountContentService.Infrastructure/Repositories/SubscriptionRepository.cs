@@ -41,7 +41,9 @@ namespace AccountContentService.Infrastructure.Repositories
 
             return await _context.Subscriptions
                 .AsNoTracking()
+                .Include(x => x.Plan)
                 .Where(x => x.UserId == userId && x.Status.ToLower() == activeStatus)
+                .OrderByDescending(x => x.SubscribeAt)
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
@@ -77,6 +79,7 @@ namespace AccountContentService.Infrastructure.Repositories
         {
             return await _context.Subscriptions
                 .AsNoTracking()
+                .OrderByDescending(x => x.SubscribeAt)
                 .Where(x => x.UserId == userId)
                 .Include(x => x.Plan)
                 .FirstOrDefaultAsync(cancellationToken);

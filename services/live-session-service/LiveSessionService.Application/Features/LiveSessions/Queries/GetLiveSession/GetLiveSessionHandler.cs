@@ -53,6 +53,17 @@ public sealed class GetLiveSessionHandler : IQueryHandler<GetLiveSessionQuery, L
             EndedAt = session.Status == SessionStatus.Ended
                 ? session.EndedAt
                 : null,
+            TotalListeners = session.Listeners
+                .Select(l => l.UserId.HasValue
+                    ? $"u:{l.UserId.Value}"
+                    : $"a:{l.AnonymousIdentifier ?? l.Id.ToString()}")
+                .Distinct()
+                .Count(),
+            PeakListeners = session.Listeners.Count(l => l.IsConnected),
+            ListenersCount = session.Listeners.Count(l => l.IsConnected),
+            StreamUrl = session.AzuraCastStation?.StreamUrl,
+            ThumbnailUrl = session.ThumbnailUrl,
+            Genre = session.Genre,
             CreatedAt = session.CreatedAt
         };
 

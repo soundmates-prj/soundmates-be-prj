@@ -131,26 +131,11 @@ public class VieNeuTtsClient : ITtsClient
             {
                 new { role = "user", content = messageContent }
             },
-            max_completion_tokens = 512,
-            response_format = new
-            {
-                type = "json_schema",
-                json_schema = new
-                {
-                    name = "tts",
-                    strict = true,
-                    schema = new
-                    {
-                        type = "object",
-                        properties = new
-                        {
-                            audioBase64 = new { type = "string" }
-                        },
-                        required = new[] { "audioBase64" },
-                        additionalProperties = false
-                    }
-                }
-            }
+            max_tokens = 2048,
+            temperature = 1.0,
+            top_k = 50,
+            stop = new[] { "<|SPEECH_GENERATION_END|>" },
+            stream = false
         };
 
         using var httpRequest = new HttpRequestMessage(HttpMethod.Post, BuildUri(_options.BaseUrl, "/v1/chat/completions"))
@@ -233,15 +218,31 @@ public class VieNeuTtsClient : ITtsClient
     private TtsSynthesizeResponse DemoFallback(string rawProviderResponse)
     {
         if (!_options.DemoMode)
-            throw new InvalidOperationException("VieNeuTTS did not return decodable audio; enable TTS_DEMO_MODE to use a silent WAV fallback.");
+            throw new InvalidOperationException("VieNeuTTS did not return decodable audio; enable TTS_DEMO_MODE to use a silent audio fallback.");
 
-        // 1 second silent WAV.
-        var wavBytes = BuildSilentWavBytes(seconds: 1, sampleRate: 16000, channels: 1);
-        return new TtsSynthesizeResponse(
-            AudioBytes: wavBytes,
-            ContentType: "audio/wav",
-            DurationSeconds: 1,
-            RawProviderResponse: rawProviderResponse);
+        // Check desired format
+        var format = string.IsNullOrWhiteSpace(_options.AudioFormat) ? "mp3" : _options.AudioFormat.ToLowerInvariant();
+        
+        if (format == "mp3")
+        {
+            // 1 second silent MP3 (minimal valid MP3 frame)
+            var mp3Bytes = BuildSilentMp3Bytes();
+            return new TtsSynthesizeResponse(
+                AudioBytes: mp3Bytes,
+                ContentType: "audio/mpeg",
+                DurationSeconds: 1,
+                RawProviderResponse: rawProviderResponse);
+        }
+        else
+        {
+            // 1 second silent WAV.
+            var wavBytes = BuildSilentWavBytes(seconds: 1, sampleRate: 16000, channels: 1);
+            return new TtsSynthesizeResponse(
+                AudioBytes: wavBytes,
+                ContentType: "audio/wav",
+                DurationSeconds: 1,
+                RawProviderResponse: rawProviderResponse);
+        }
     }
 
     private static byte[] BuildSilentWavBytes(int seconds, int sampleRate, int channels)
@@ -282,6 +283,31 @@ public class VieNeuTtsClient : ITtsClient
 
         bw.Flush();
         return ms.ToArray();
+    }
+
+    private static byte[] BuildSilentMp3Bytes()
+    {
+        // Minimal valid MP3 frame with silence (1 second at 44.1kHz)
+        // This is a very basic MP3 frame - in production you'd use a proper MP3 encoder
+        return new byte[] {
+            0xFF, 0xFB, 0x90, 0x00, // MP3 header
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Silent data
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+        };
     }
 
     private static string BuildUri(string baseUrl, string path)
