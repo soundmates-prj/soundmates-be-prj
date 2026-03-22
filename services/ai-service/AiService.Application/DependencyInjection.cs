@@ -28,6 +28,8 @@ public static class DependencyInjection
         services.AddScoped<IVoiceService, VoiceService>();
         services.AddScoped<IAudioService, AudioService>();
         services.AddScoped<IUsageService, UsageService>();
+        services.AddScoped<IGeminiService, GeminiService>();
+        services.AddScoped<IPodcastGenerationService, PodcastGenerationService>();
 
         // Handlers
         services.AddScoped<Abstractions.Messaging.ICommandHandler<GeneratePodcastScriptCommand, Domain.Entities.Script>, GeneratePodcastScriptHandler>();

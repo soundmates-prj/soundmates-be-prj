@@ -5,6 +5,7 @@ using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Features.Results.Music;
 using LiveSessionService.Application.Features.Music.Commands.SyncMediaFiles;
 using LiveSessionService.Application.Features.Music.Commands.UploadMusic;
+using LiveSessionService.Application.Features.Music.Commands.ImportSystemMediaBatch;
 using LiveSessionService.Application.Features.Music.Commands.DeleteMedia;
 using LiveSessionService.Application.Features.Music.Queries.GetAllMediaFiles;
 using LiveSessionService.Application.Features.Music.Queries.GetMediaFilesByStation;
@@ -67,11 +68,12 @@ public class MusicCatalogController : ControllerBase
     }
 
     /// <summary>
-    /// Upload a music file to station
+    /// Upload a music file to system media catalog
     /// </summary>
     /// <remarks>
     /// Supported formats: MP3, FLAC, WAV, OGG
     /// Max file size: 100MB
+    /// File is stored in standalone system media storage (not auto-pushed to AzuraCast station)
     /// </remarks>
     [HttpPost("upload")]
     [Consumes("multipart/form-data")]
@@ -100,7 +102,7 @@ public class MusicCatalogController : ControllerBase
                 (int)ErrorCode.BadRequest));
         }
 
-        // Copy to MemoryStream — IFormFile stream is not guaranteed to be seekable
+        // Copy to MemoryStream ï¿½ IFormFile stream is not guaranteed to be seekable
         var ms = new MemoryStream();
         await request.File.CopyToAsync(ms, ct);
         ms.Position = 0;
@@ -119,7 +121,7 @@ public class MusicCatalogController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Could not read tags from {FileName} — using request values or fallbacks",
+            _logger.LogWarning(ex, "Could not read tags from {FileName} ï¿½ using request values or fallbacks",
                 request.File.FileName);
         }
 
@@ -167,6 +169,44 @@ public class MusicCatalogController : ControllerBase
     {
         var result = await _commands.Send<SyncMediaFilesCommand, SyncMediaFilesResult>(
             new SyncMediaFilesCommand(stationId), ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.Unauthorized => Unauthorized(result.ToApiResponse()),
+                ErrorCode.Forbidden => StatusCode(403, result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                ErrorCode.UnprocessableEntity => StatusCode(422, result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(result.ToApiResponse());
+    }
+
+    /// <summary>
+    /// Explicit batch import of system media files into station media library
+    /// </summary>
+    [HttpPost("station/{stationId:guid}/import-system-media")]
+    [ProducesResponseType(typeof(ApiResponse<ImportSystemMediaBatchResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> ImportSystemMediaBatch(
+        Guid stationId,
+        [FromBody] ImportSystemMediaBatchRequest request,
+        CancellationToken ct)
+    {
+        if (request.MediaFileIds.Count == 0)
+        {
+            return BadRequest(ApiResponse<object>.FailureResponse(
+                "At least one media id is required",
+                (int)ErrorCode.BadRequest));
+        }
+
+        var result = await _commands.Send<ImportSystemMediaBatchCommand, ImportSystemMediaBatchResult>(
+            new ImportSystemMediaBatchCommand(stationId, request.MediaFileIds), ct);
 
         if (!result.IsSuccess)
         {

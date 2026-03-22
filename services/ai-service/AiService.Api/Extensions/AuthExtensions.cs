@@ -25,6 +25,12 @@ public static class AuthExtensions
             .AddJwtBearer(options =>
             {
                 var jwt = builder.Configuration.GetSection("Jwt");
+                var jwtSecret = jwt["Secret"] ?? jwt["Key"];
+                if (string.IsNullOrWhiteSpace(jwtSecret) || jwtSecret.StartsWith("${") || jwtSecret.Contains("<"))
+                {
+                    throw new InvalidOperationException("JWT secret is missing. Configure Jwt__Secret (or legacy JWT_KEY).");
+                }
+
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
@@ -33,7 +39,7 @@ public static class AuthExtensions
                     ValidateIssuerSigningKey = true,
                     ValidIssuer = jwt["Issuer"],
                     ValidAudience = jwt["Audience"],
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Key"]!)),
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
                     RoleClaimType = ClaimTypes.Role
                 };
 
@@ -48,7 +54,27 @@ public static class AuthExtensions
                                 ctx.Token = auth["Bearer ".Length..].Trim();
                             else
                                 ctx.Token = auth.Trim();
+
+                            return Task.CompletedTask;
                         }
+
+                        // Support browser/audio-tag streaming where custom Authorization header is hard to set.
+                        // Only allow query-token fallback for the audio file endpoint.
+                        if (ctx.Request.Path.StartsWithSegments("/api/audios", StringComparison.OrdinalIgnoreCase)
+                            && ctx.Request.Path.Value?.EndsWith("/file", StringComparison.OrdinalIgnoreCase) == true)
+                        {
+                            var queryToken = ctx.Request.Query["access_token"].ToString();
+                            if (string.IsNullOrWhiteSpace(queryToken))
+                            {
+                                queryToken = ctx.Request.Query["token"].ToString();
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(queryToken))
+                            {
+                                ctx.Token = queryToken.Trim();
+                            }
+                        }
+
                         return Task.CompletedTask;
                     },
                     OnChallenge = async context =>

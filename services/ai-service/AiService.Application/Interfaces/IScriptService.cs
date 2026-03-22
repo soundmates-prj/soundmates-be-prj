@@ -10,7 +10,10 @@ public record GeneratePodcastScriptRequest(
     string ContextType,
     string? ModelName,
     decimal? Temperature,
-    int? MaxTokens);
+    int? MaxTokens,
+    string? EditorInstruction = null,
+    bool UseAutoContext = true,
+    bool StrictFactMode = false);
 
 public record SplitScriptPartsRequest(
     Guid UserId,

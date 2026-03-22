@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿namespace AccountContentService.Domain.Common;
 
-namespace AccountContentService.Domain.Common
+public abstract class BaseEntity
 {
-    internal class BaseEntity
-    {
-    }
+    public Guid Id { get; set; }
+
+    public DateTime CreatedAt { get; set; }
 }

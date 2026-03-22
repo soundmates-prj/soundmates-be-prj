@@ -709,6 +709,62 @@
     },
     // === AI SERVICE (Gemini + TTS) ===
     {
+      "DownstreamPathTemplate": "/api/voices",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "ai-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/voices",
+      "UpstreamHttpMethod": [ "GET", "POST", "OPTIONS" ],
+      "LoadBalancerOptions": { "Type": "RoundRobin" },
+      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 60000 }
+    },
+    {
+      "DownstreamPathTemplate": "/api/scripts",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "ai-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/scripts",
+      "UpstreamHttpMethod": [ "GET", "POST", "OPTIONS" ],
+      "LoadBalancerOptions": { "Type": "RoundRobin" },
+      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 60000 }
+    },
+    {
+      "DownstreamPathTemplate": "/api/scripts/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "ai-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/scripts/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ],
+      "LoadBalancerOptions": { "Type": "RoundRobin" },
+      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 60000 }
+    },
+    {
+      "DownstreamPathTemplate": "/api/audios/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "ai-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/audios/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ],
+      "LoadBalancerOptions": { "Type": "RoundRobin" },
+      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 60000 }
+    },
+    {
       "DownstreamPathTemplate": "/api/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
@@ -718,7 +774,7 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/ai/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "OPTIONS" ],
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ],
       "LoadBalancerOptions": { "Type": "RoundRobin" },
       "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 60000 }
     },

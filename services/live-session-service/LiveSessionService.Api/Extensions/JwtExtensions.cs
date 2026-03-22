@@ -12,13 +12,13 @@ public static class JwtExtensions
     public static WebApplicationBuilder AddJwtAuthentication(this WebApplicationBuilder builder)
     {
         // Read from mapped configuration (appsettings + .env via AddEnvironmentConfig)
-        var secretKey = builder.Configuration["Jwt:Key"]
-            ?? throw new InvalidOperationException("JWT_KEY is not configured.");
+        var secretKey = builder.Configuration["Jwt:Secret"] ?? builder.Configuration["Jwt:Key"]
+            ?? throw new InvalidOperationException("JWT secret is not configured.");
 
         if (secretKey.StartsWith("${") || secretKey.Contains("<"))
             throw new InvalidOperationException(
                 "JWT_KEY is still a placeholder. " +
-                "Set JWT_KEY in your configuration (.env/appsettings/environment). ");
+                "Set Jwt__Secret (or legacy JWT_KEY) in your configuration (.env/appsettings/environment). ");
 
         var issuer = builder.Configuration["Jwt:Issuer"];
         

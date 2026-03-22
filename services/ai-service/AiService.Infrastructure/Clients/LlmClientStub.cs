@@ -21,7 +21,7 @@ public class LlmClientStub : ILlmClient
         if (string.IsNullOrWhiteSpace(_options.ApiKey) || _options.ApiKey.StartsWith("${") || _options.ApiKey.Contains("<"))
         {
             var content =
-                $"[Podcast Script - {request.ContextType}]\n\n" +
+                    $"[Podcast Script - {request.ContextType}]\n\n" +
                 $"Chủ đề: {request.InputText}\n\n" +
                 "Mở đầu:\n" +
                 "Xin chào mọi người, chào mừng bạn đến với SoundMates.\n\n" +

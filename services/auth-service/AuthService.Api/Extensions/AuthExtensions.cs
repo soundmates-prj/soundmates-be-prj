@@ -31,6 +31,12 @@ public static class AuthExtensions
         .AddJwtBearer(options =>
         {
             var jwtSettings = builder.Configuration.GetSection("Jwt");
+            var jwtSecret = jwtSettings["Secret"] ?? jwtSettings["Key"];
+            if (string.IsNullOrWhiteSpace(jwtSecret) || jwtSecret.StartsWith("${") || jwtSecret.Contains("<"))
+            {
+                throw new InvalidOperationException("JWT secret is missing. Configure Jwt__Secret (or legacy JWT_KEY).");
+            }
+
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuer = true,
@@ -40,7 +46,7 @@ public static class AuthExtensions
                 ValidIssuer = jwtSettings["Issuer"],
                 ValidAudience = jwtSettings["Audience"],
                 IssuerSigningKey = new SymmetricSecurityKey(
-                    Encoding.UTF8.GetBytes(jwtSettings["Key"]!)),
+                    Encoding.UTF8.GetBytes(jwtSecret)),
                 RoleClaimType = ClaimTypes.Role
             };
 

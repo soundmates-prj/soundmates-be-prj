@@ -71,6 +71,53 @@ namespace AiService.Infrastructure.Persistence.Migrations
                     b.ToTable("ai_prompts", (string)null);
                 });
 
+            modelBuilder.Entity("AiService.Domain.Entities.AiServiceConfig", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("uuid_generate_v4()");
+
+                    b.Property<string>("ApiKey")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("api_key");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("now() at time zone 'utc'");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("PromptTemplate")
+                        .HasColumnType("text")
+                        .HasColumnName("prompt_template");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("provider");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("ai_service_configs_pkey");
+
+                    b.HasIndex(new[] { "Provider", "IsActive" }, "ai_service_configs_provider_active_idx");
+
+                    b.ToTable("ai_service_configs", (string)null);
+                });
+
             modelBuilder.Entity("AiService.Domain.Entities.AiUsage", b =>
                 {
                     b.Property<Guid>("UsageId")

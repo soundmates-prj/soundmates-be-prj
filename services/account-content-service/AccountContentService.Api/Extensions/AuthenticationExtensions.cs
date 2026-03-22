@@ -16,7 +16,11 @@ namespace AccountContentService.Api.Extensions
 
             var issuer = jwtSection["Issuer"];
             var audience = jwtSection["Audience"];
-            var secret = jwtSection["Key"];
+            var secret = jwtSection["Secret"] ?? jwtSection["Key"];
+            if (string.IsNullOrWhiteSpace(secret) || secret.StartsWith("${") || secret.Contains("<"))
+            {
+                throw new InvalidOperationException("JWT secret is missing. Configure Jwt__Secret (or legacy JWT_KEY).");
+            }
 
             services
                 .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

@@ -12,11 +12,11 @@ namespace AiService.Api.Controllers;
 [Authorize]
 public class PodcastController : ControllerBase
 {
-    private readonly IPodcastPipelineService _pipeline;
+    private readonly IPodcastGenerationService _podcastGenerationService;
 
-    public PodcastController(IPodcastPipelineService pipeline)
+    public PodcastController(IPodcastGenerationService podcastGenerationService)
     {
-        _pipeline = pipeline;
+        _podcastGenerationService = podcastGenerationService;
     }
 
     [HttpPost("generate-full")]
@@ -25,39 +25,58 @@ public class PodcastController : ControllerBase
         if (!User.TryGetCurrentUserId(out var userId))
             return Unauthorized(ApiResponse<string>.Error(ApiStatusCode.HB40101, "Invalid token"));
 
-        var result = await _pipeline.GenerateAndSyncPodcastAsync(
-            new Application.Interfaces.GeneratePodcastRequest(
+        if (string.IsNullOrWhiteSpace(request.Topic))
+        {
+            return BadRequest(ApiResponse<string>.Error(ApiStatusCode.HB40001, "topic is required"));
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Voice))
+        {
+            return BadRequest(ApiResponse<string>.Error(ApiStatusCode.HB40001, "voice is required"));
+        }
+
+        var result = await _podcastGenerationService.GeneratePodcastAudioAsync(
+            new PodcastGenerateRequest(
                 UserId: userId,
                 Topic: request.Topic,
-                Title: request.Title,
-                ContextType: "podcast",
-                VoiceId: request.VoiceId,
-                Speed: request.Speed,
-                Pitch: request.Pitch,
-                ModelName: request.ModelName
+                Style: request.Style,
+                Duration: request.Duration,
+                Voice: request.Voice,
+                Language: request.Language,
+                ModelName: request.ModelName,
+                IncludeAudioBytes: request.IncludeAudioBytes
             ), ct);
 
         if (!result.IsSuccess)
         {
-            return BadRequest(ApiResponse<string>.Error(ApiStatusCode.HB40001, result.ErrorMessage ?? "Pipeline failed"));
+            var apiCode = result.ErrorCode switch
+            {
+                (int)ApiStatusCode.HB40401 => ApiStatusCode.HB40401,
+                (int)ApiStatusCode.HB50001 => ApiStatusCode.HB50001,
+                _ => ApiStatusCode.HB40001
+            };
+
+            var payload = ApiResponse<string>.Error(apiCode, result.ErrorMessage ?? "Podcast generation failed");
+
+            return apiCode switch
+            {
+                ApiStatusCode.HB40401 => NotFound(payload),
+                ApiStatusCode.HB50001 => StatusCode(StatusCodes.Status500InternalServerError, payload),
+                _ => BadRequest(payload)
+            };
         }
 
-        return Ok(ApiResponse<object>.SuccessResponse(new
-        {
-            script = result.Data!.Script,
-            audio = result.Data!.Audio,
-            synced = result.Data!.SyncedToLiveService,
-            externalId = result.Data!.LiveServicePodcastId
-        }));
+        return Ok(ApiResponse<PodcastGenerateResult>.SuccessResponse(result.Data!));
     }
 }
 
 public class GenerateFullPodcastRequest
 {
     public string Topic { get; set; } = null!;
-    public string? Title { get; set; }
-    public Guid VoiceId { get; set; }
-    public decimal? Speed { get; set; } = 1.0m;
-    public decimal? Pitch { get; set; } = 1.0m;
+    public string? Style { get; set; }
+    public string? Duration { get; set; }
+    public string Voice { get; set; } = null!;
+    public string? Language { get; set; }
     public string? ModelName { get; set; }
+    public bool IncludeAudioBytes { get; set; } = true;
 }

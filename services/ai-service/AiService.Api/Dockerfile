@@ -9,13 +9,14 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["AiService.Api/AiService.Api.csproj", "AiService.Api/"]
-COPY ["AiService.Application/AiService.Application.csproj", "AiService.Application/"]
-COPY ["AiService.Domain/AiService.Domain.csproj", "AiService.Domain/"]
-COPY ["AiService.Infrastructure/AiService.Infrastructure.csproj", "AiService.Infrastructure/"]
-RUN dotnet restore "./AiService.Api/AiService.Api.csproj"
+COPY ["services/ai-service/AiService.Api/AiService.Api.csproj", "services/ai-service/AiService.Api/"]
+COPY ["services/ai-service/AiService.Application/AiService.Application.csproj", "services/ai-service/AiService.Application/"]
+COPY ["services/ai-service/AiService.Domain/AiService.Domain.csproj", "services/ai-service/AiService.Domain/"]
+COPY ["services/ai-service/AiService.Infrastructure/AiService.Infrastructure.csproj", "services/ai-service/AiService.Infrastructure/"]
+COPY ["shared/shared.csproj", "shared/"]
+RUN dotnet restore "./services/ai-service/AiService.Api/AiService.Api.csproj"
 COPY . .
-WORKDIR "/src/AiService.Api"
+WORKDIR "/src/services/ai-service/AiService.Api"
 RUN dotnet build "./AiService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish

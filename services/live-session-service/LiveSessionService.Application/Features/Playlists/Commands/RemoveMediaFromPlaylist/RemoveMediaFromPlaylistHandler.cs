@@ -9,6 +9,7 @@ namespace LiveSessionService.Application.Features.Playlists.Commands.RemoveMedia
 
 public sealed class RemoveMediaFromPlaylistHandler : ICommandHandler<RemoveMediaFromPlaylistCommand>
 {
+    private const string SystemMediaPrefix = "system://";
     private readonly IStationPlaylistRepository _playlistRepo;
     private readonly IMediaFileRepository _mediaFileRepo;
     private readonly IPlaylistMediaRepository _playlistMediaRepo;
@@ -45,13 +46,23 @@ public sealed class RemoveMediaFromPlaylistHandler : ICommandHandler<RemoveMedia
             cancellationToken);
 
         if (playlistMedia == null)
+        {
+            var playlistTracks = await _playlistMediaRepo.GetByPlaylistIdAsync(command.PlaylistId, cancellationToken);
+            playlistMedia = playlistTracks.FirstOrDefault(pm => pm.MediaFileId == command.MediaFileId);
+        }
+
+        if (playlistMedia == null)
             return Result.Failure("Track is not in this playlist", ErrorCode.NotFound);
 
-        await _azuraCast.RemoveMediaFromPlaylistAsync(
-            playlist.AzuraCastStation.ExternalStationId,
-            mediaFile.FilePath,
-            playlist.ExternalPlaylistId,
-            cancellationToken);
+        if (!string.IsNullOrWhiteSpace(playlistMedia.MediaId)
+            && !playlistMedia.MediaId.StartsWith(SystemMediaPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            await _azuraCast.RemoveMediaFromPlaylistAsync(
+                playlist.AzuraCastStation.ExternalStationId,
+                playlistMedia.MediaId,
+                playlist.ExternalPlaylistId,
+                cancellationToken);
+        }
 
         await _playlistMediaRepo.DeleteAsync(playlistMedia, cancellationToken);
 

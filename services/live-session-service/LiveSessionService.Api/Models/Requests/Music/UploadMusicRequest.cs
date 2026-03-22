@@ -7,8 +7,10 @@ namespace LiveSessionService.Api.Models.Requests.Music;
 /// </summary>
 public sealed class UploadMusicRequest
 {
-    [Required(ErrorMessage = "Station ID is required")]
-    public Guid StationId { get; set; }
+    /// <summary>
+    /// Optional station context from UI. Media is stored as system media and not auto-added to station.
+    /// </summary>
+    public Guid? StationId { get; set; }
 
     /// <summary>Leave empty to auto-detect from file tags.</summary>
     [StringLength(200)]

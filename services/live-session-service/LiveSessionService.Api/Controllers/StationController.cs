@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using LiveSessionService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
 using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Features.Results.NowPlaying;
 using LiveSessionService.Application.Features.Results.Stations;
+using LiveSessionService.Application.Features.Stations.Commands.CreateStation;
 using LiveSessionService.Application.Features.Stations.Commands.SyncStations;
 using LiveSessionService.Application.Features.Stations.Queries.GetAllStations;
 using LiveSessionService.Application.Features.Stations.Queries.GetStationNowPlaying;
@@ -60,17 +62,23 @@ public class StationController : ControllerBase
     }
 
     /// <summary>
-    /// Create a new station (TODO: Push to AzuraCast)
+    /// Create a new station
     /// </summary>
     /// <remarks>
-    /// Currently creates station locally only.
-    /// Future: Will also create station in AzuraCast.
+    /// Creates a station in the local database.
+    /// Note: This currently creates station locally only.
+    /// Future enhancement: Will also create station in AzuraCast.
     /// </remarks>
     /// <response code="201">Station created successfully</response>
     /// <response code="400">Invalid input</response>
+    /// <response code="401">Unauthorized</response>
+    /// <response code="403">Forbidden - Admin role required</response>
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     [ProducesResponseType(typeof(ApiResponse<StationResult>), 201)]
     [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 403)]
     public async Task<IActionResult> CreateStation(
         [FromBody] CreateStationRequest request,
         CancellationToken ct)
@@ -82,9 +90,34 @@ public class StationController : ControllerBase
                 (int)ErrorCode.BadRequest));
         }
 
-        return StatusCode(501, ApiResponse<object>.FailureResponse(
-            "Create station feature coming soon. Currently use sync to get stations from AzuraCast.",
-            501));
+        try
+        {
+            var command = new CreateStationCommand(
+                request.StationName,
+                request.Description,
+                request.ShortCode);
+
+            var result = await _commands.Send<CreateStationCommand, StationResult>(command, ct);
+
+            if (!result.IsSuccess)
+            {
+                var statusCode = (int)(result.ErrorCode ?? ErrorCode.InternalServerError);
+                return StatusCode(statusCode, result.ToApiResponse());
+            }
+
+            return CreatedAtAction(
+                nameof(GetStations),
+                new { id = result.Data!.Id },
+                ApiResponse<StationResult>.SuccessResponse(
+                    result.Data!,
+                    "Station created successfully"));
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, ApiResponse<object>.FailureResponse(
+                "Failed to create station",
+                500));
+        }
     }
 
     /// <summary>

@@ -1,4 +1,5 @@
 using AiService.Application.Interfaces;
+using AiService.Application.Constants;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Json;
@@ -10,6 +11,7 @@ public class GeminiLlmClient : ILlmClient
 {
     private readonly HttpClient _http;
     private readonly LlmOptions _options;
+    private readonly IGeminiRuntimeConfigProvider _runtimeConfigProvider;
     private readonly ILogger<GeminiLlmClient> _logger;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -18,23 +20,41 @@ public class GeminiLlmClient : ILlmClient
         DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
     };
 
-    public GeminiLlmClient(HttpClient http, IOptions<LlmOptions> options, ILogger<GeminiLlmClient> logger)
+    public GeminiLlmClient(
+        HttpClient http,
+        IOptions<LlmOptions> options,
+        IGeminiRuntimeConfigProvider runtimeConfigProvider,
+        ILogger<GeminiLlmClient> logger)
     {
         _http = http;
         _options = options.Value;
+        _runtimeConfigProvider = runtimeConfigProvider;
         _logger = logger;
     }
 
     public async Task<LlmGenerateResponse> GenerateAsync(LlmGenerateRequest request, CancellationToken cancellationToken)
     {
-        var apiKey = _options.ApiKey;
-        if (string.IsNullOrWhiteSpace(apiKey) || apiKey.StartsWith("${"))
+        var apiKey = await _runtimeConfigProvider.GetActiveApiKeyAsync(cancellationToken);
+        if (string.IsNullOrWhiteSpace(apiKey))
         {
-            throw new InvalidOperationException("Gemini API Key is not configured.");
+            throw new InvalidOperationException("Gemini API key is not configured. Set Llm__ApiKey/LLM_API_KEY or provide an active Gemini key in ai_service_configs.");
+        }
+
+        if (string.IsNullOrWhiteSpace(_options.BaseUrl) || _options.BaseUrl.StartsWith("${"))
+        {
+            throw new InvalidOperationException("LLM BaseUrl is not configured.");
         }
 
         var model = string.IsNullOrWhiteSpace(request.ModelName) ? (_options.Model ?? "gemini-2.5-flash") : request.ModelName;
-        var url = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}";
+        var baseUrl = _options.BaseUrl.TrimEnd('/');
+        var url = $"{baseUrl}/v1beta/models/{model}:generateContent?key={apiKey}";
+
+        var promptParts = new List<object>();
+        if (!string.IsNullOrWhiteSpace(request.SystemPrompt))
+        {
+            promptParts.Add(new { text = request.SystemPrompt });
+        }
+        promptParts.Add(new { text = request.InputText });
 
         var payload = new
         {
@@ -42,11 +62,7 @@ public class GeminiLlmClient : ILlmClient
             {
                 new
                 {
-                    parts = new[]
-                    {
-                        new { text = BuildSystemPrompt(request) },
-                        new { text = request.InputText }
-                    }
+                    parts = promptParts
                 }
             },
             generationConfig = new
@@ -79,7 +95,7 @@ public class GeminiLlmClient : ILlmClient
                 (errorBody.Contains("API key not valid", StringComparison.OrdinalIgnoreCase) ||
                  errorBody.Contains("API_KEY_INVALID", StringComparison.OrdinalIgnoreCase)))
             {
-                throw new ArgumentException("Gemini API key is invalid. Please configure a valid LLM_API_KEY.");
+                throw new ArgumentException("Gemini API key is invalid. Please configure a valid Gemini key in account-content-service.");
             }
 
             throw new InvalidOperationException($"Gemini API error: {response.StatusCode}. {errorBody}");
@@ -101,16 +117,6 @@ public class GeminiLlmClient : ILlmClient
             TokensUsed: null, // Gemini REST doesn't always return this easily without extra parsing
             RawProviderResponse: JsonSerializer.Serialize(result)
         );
-    }
-
-    private string BuildSystemPrompt(LlmGenerateRequest request)
-    {
-        if (string.Equals(request.ContextType, "podcast", StringComparison.OrdinalIgnoreCase))
-        {
-            return "Bạn là một người viết kịch bản podcast chuyên nghiệp. Hãy viết một kịch bản podcast chi tiết và hấp dẫn, bằng tiếng Việt, dựa trên chủ đề người dùng cung cấp. Kịch bản nên dài ít nhất 500 từ và bao gồm: 1) Lời dẫn hấp dẫn (Intro) - 50-100 từ, 2) Nội dung chính chi tiết (Body) - 300-400 từ với các luận điểm, ví dụ, và câu chuyện, 3) Lời kết ấn tượng (Outro) - 50-100 từ. Hãy viết theo phong cách trò chuyện tự nhiên, dễ nghe, nhưng đảm bảo nội dung sâu sắc và有价值. Sử dụng ngôn ngữ phong phú, câu hỏi gợi mở và tạo sự kết nối với người nghe.";
-        }
-        
-        return "Bạn là một trợ lý AI thông minh. Hãy trả lời yêu cầu sau bằng tiếng Việt.";
     }
 
     private class GeminiResponse

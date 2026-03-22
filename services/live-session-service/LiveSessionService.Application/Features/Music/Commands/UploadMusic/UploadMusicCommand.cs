@@ -7,7 +7,7 @@ namespace LiveSessionService.Application.Features.Music.Commands.UploadMusic;
 /// Command to upload music file
 /// </summary>
 public sealed record UploadMusicCommand(
-Guid StationId,
+Guid? StationId,
 Guid UploadedByUserId,
 string Title,
 string Artist,

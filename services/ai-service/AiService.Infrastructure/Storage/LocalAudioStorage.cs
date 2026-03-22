@@ -37,7 +37,17 @@ public class LocalAudioStorage : IAudioStorage
         var relative = $"{safeName}{extensionWithDot}";
         var fullPath = Path.Combine(_audioRoot, relative);
 
-        await File.WriteAllBytesAsync(fullPath, bytes, cancellationToken);
+        var tempPath = Path.Combine(_audioRoot, $".{safeName}.{Guid.NewGuid():N}.tmp");
+        try
+        {
+            await File.WriteAllBytesAsync(tempPath, bytes, cancellationToken);
+            File.Move(tempPath, fullPath, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+                File.Delete(tempPath);
+        }
 
         var fi = new FileInfo(fullPath);
         return new StoredAudioFile(RelativePath: relative, SizeBytes: fi.Length, ContentType: contentType);

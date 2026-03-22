@@ -12,6 +12,7 @@ namespace LiveSessionService.Application.Features.Playlists.Commands.AddMediaToP
 public sealed class AddMediaToPlaylistHandler
     : ICommandHandler<AddMediaToPlaylistCommand, PlaylistMediaResult>
 {
+    private const string SystemMediaPrefix = "system://";
     private readonly IStationPlaylistRepository      _playlistRepo;
     private readonly IMediaFileRepository            _mediaFileRepo;
     private readonly IAzuraCastClient                _azuraCast;
@@ -46,10 +47,57 @@ public sealed class AddMediaToPlaylistHandler
         if (mediaFile == null)
             return Result<PlaylistMediaResult>.Failure("Media file not found", ErrorCode.NotFound);
 
+        var azuraMediaId = mediaFile.FilePath;
+        var title = mediaFile.Title;
+        var artist = mediaFile.Artist;
+        var album = mediaFile.Album;
+        var duration = mediaFile.DurationSeconds;
+
+        if (!string.IsNullOrWhiteSpace(mediaFile.FilePath)
+            && mediaFile.FilePath.StartsWith(SystemMediaPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            var relativePath = mediaFile.FilePath.Substring(SystemMediaPrefix.Length)
+                .Replace('/', Path.DirectorySeparatorChar)
+                .Replace('\\', Path.DirectorySeparatorChar);
+            var absolutePath = Path.Combine(AppContext.BaseDirectory, "storage", relativePath);
+
+            if (!File.Exists(absolutePath))
+            {
+                return Result<PlaylistMediaResult>.Failure(
+                    "System media file not found on server storage",
+                    ErrorCode.NotFound);
+            }
+
+            await using var fileStream = new FileStream(absolutePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var fileName = Path.GetFileName(absolutePath);
+            var uploaded = await _azuraCast.UploadMediaAsync(
+                playlist.AzuraCastStation.ExternalStationId,
+                fileStream,
+                fileName,
+                GetContentType(mediaFile.FileType),
+                mediaFile.Title,
+                mediaFile.Artist ?? "Unknown Artist",
+                mediaFile.Album,
+                cancellationToken);
+
+            if (uploaded == null || string.IsNullOrWhiteSpace(uploaded.UniqueId))
+            {
+                return Result<PlaylistMediaResult>.Failure(
+                    "Failed to import system media into station",
+                    ErrorCode.InternalServerError);
+            }
+
+            azuraMediaId = uploaded.UniqueId;
+            title = uploaded.Title;
+            artist = uploaded.Artist;
+            album = uploaded.Album;
+            duration = uploaded.DurationSeconds;
+        }
+
         // 3. Assign in AzuraCast (FilePath stores the AzuraCast unique_id)
         await _azuraCast.AssignMediaToPlaylistAsync(
             playlist.AzuraCastStation.ExternalStationId,
-            mediaFile.FilePath,                    // AzuraCast unique_id
+            azuraMediaId,
             playlist.ExternalPlaylistId,
             cancellationToken);
 
@@ -59,12 +107,12 @@ public sealed class AddMediaToPlaylistHandler
             Id                = Guid.NewGuid(),
             StationPlaylistId = playlist.Id,
             MediaFileId       = mediaFile.Id,
-            MediaId           = mediaFile.FilePath,  // AzuraCast unique_id
-            SongTitle         = mediaFile.Title,
-            SongArtist        = mediaFile.Artist,
-            SongAlbum         = mediaFile.Album,
-            DurationSeconds   = mediaFile.DurationSeconds,
-            FilePath          = mediaFile.FilePath,
+            MediaId           = azuraMediaId,
+            SongTitle         = title,
+            SongArtist        = artist,
+            SongAlbum         = album,
+            DurationSeconds   = duration,
+            FilePath          = azuraMediaId,
             IsEnabled         = true,
             Weight            = 1,
             CreatedAt         = _dateTime.UtcNow
@@ -81,11 +129,23 @@ public sealed class AddMediaToPlaylistHandler
             Id              = playlistMedia.Id,
             PlaylistId      = playlist.Id,
             MediaFileId     = mediaFile.Id,
-            Title           = mediaFile.Title,
-            Artist          = mediaFile.Artist,
-            Album           = mediaFile.Album,
-            DurationSeconds = mediaFile.DurationSeconds,
+            Title           = playlistMedia.SongTitle,
+            Artist          = playlistMedia.SongArtist,
+            Album           = playlistMedia.SongAlbum,
+            DurationSeconds = playlistMedia.DurationSeconds,
             AddedAt         = playlistMedia.CreatedAt
         });
+    }
+
+    private static string GetContentType(string fileType)
+    {
+        return fileType.ToLowerInvariant() switch
+        {
+            "mp3" => "audio/mpeg",
+            "flac" => "audio/flac",
+            "wav" => "audio/wav",
+            "ogg" => "audio/ogg",
+            _ => "application/octet-stream"
+        };
     }
 }

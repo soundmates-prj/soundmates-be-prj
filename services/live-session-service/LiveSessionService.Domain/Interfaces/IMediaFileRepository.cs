@@ -5,6 +5,7 @@ namespace LiveSessionService.Domain.Interfaces;
 public interface IMediaFileRepository
 {
     Task<MediaFile?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<MediaFile>> GetByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default);
     Task<MediaFile?> GetByFilePathAsync(string filePath, CancellationToken cancellationToken = default);
     Task AddAsync(MediaFile mediaFile, CancellationToken cancellationToken = default);
     Task UpdateAsync(MediaFile mediaFile, CancellationToken cancellationToken = default);
