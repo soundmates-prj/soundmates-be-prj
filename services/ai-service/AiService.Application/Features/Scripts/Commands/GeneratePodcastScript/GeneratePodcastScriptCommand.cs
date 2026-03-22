@@ -10,5 +10,8 @@ public record GeneratePodcastScriptCommand(
     string ContextType,
     string? ModelName,
     decimal? Temperature,
-    int? MaxTokens) : ICommand<Script>;
+    int? MaxTokens,
+    string? EditorInstruction,
+    bool UseAutoContext,
+    bool StrictFactMode) : ICommand<Script>;
 

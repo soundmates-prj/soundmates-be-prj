@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\AccountContentService.Domain\AccountContentService.Domain.csproj" />
 	  <ProjectReference Include="..\AccountContentService.Application\AccountContentService.Application.csproj" />
+	  <ProjectReference Include="..\..\..\shared\shared.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -18,6 +19,7 @@
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.5" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.5" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
+    <PackageReference Include="RabbitMQ.Client" Version="7.2.0" />
   </ItemGroup>
 
   <PropertyGroup>

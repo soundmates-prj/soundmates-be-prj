@@ -9,10 +9,18 @@ public static class PipelineExtensions
 {
     public static WebApplication UseHttpPipeline(this WebApplication app)
     {
-        if (app.Environment.IsDevelopment())
+        var swaggerEnabled = app.Configuration.GetValue<bool?>("Swagger:Enabled") ?? app.Environment.IsDevelopment();
+        var swaggerRoutePrefix = app.Configuration["Swagger:RoutePrefix"] ?? "swagger";
+
+        if (swaggerEnabled)
         {
             app.UseSwagger();
-            app.UseSwaggerUI();
+            app.UseSwaggerUI(options =>
+            {
+                options.RoutePrefix = swaggerRoutePrefix;
+                options.SwaggerEndpoint("/swagger/v1/swagger.json", "AiService API v1");
+                options.DocumentTitle = "AiService Swagger UI";
+            });
         }
 
         if (app.Environment.IsProduction())

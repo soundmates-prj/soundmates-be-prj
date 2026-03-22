@@ -5,7 +5,8 @@ public record LlmGenerateRequest(
     string? ModelName,
     decimal? Temperature,
     int? MaxTokens,
-    string ContextType);
+    string ContextType,
+    string? SystemPrompt = null);
 
 public record LlmGenerateResponse(
     string ContentText,

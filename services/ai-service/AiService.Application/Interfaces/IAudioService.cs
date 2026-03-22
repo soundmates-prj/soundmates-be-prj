@@ -25,5 +25,6 @@ public interface IAudioService
     /// Opens the underlying audio stream only if the caller owns the audio.
     /// </summary>
     Task<Result<AudioFileStreamResult>> OpenReadForUserAsync(Guid userId, Guid audioId, CancellationToken cancellationToken);
+    Task<Result<AudioFileStreamResult>> OpenReadAnonymousAsync(Guid audioId, CancellationToken cancellationToken);
 }
 

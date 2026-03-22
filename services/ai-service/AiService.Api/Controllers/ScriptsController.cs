@@ -26,6 +26,13 @@ public class ScriptsController : ControllerBase
         _queries = queries;
     }
 
+    /// <summary>
+    /// Generate a podcast script from topic and prompt options.
+    /// </summary>
+    /// <remarks>
+    /// Use <c>EditorInstruction</c> to customize writing style.
+    /// Set <c>UseAutoContext</c> and <c>StrictFactMode</c> to control generation behavior.
+    /// </remarks>
     [HttpPost("podcast:generate")]
     public async Task<IActionResult> GeneratePodcast([FromBody] GeneratePodcastRequest request, CancellationToken cancellationToken)
     {
@@ -40,7 +47,10 @@ public class ScriptsController : ControllerBase
                 request.ContextType,
                 request.ModelName,
                 request.Temperature,
-                request.MaxTokens),
+                request.MaxTokens,
+                request.EditorInstruction,
+                request.UseAutoContext,
+                request.StrictFactMode),
             cancellationToken);
 
         return result.IsSuccess
@@ -48,6 +58,9 @@ public class ScriptsController : ControllerBase
             : BadRequest(ApiResponse<string>.Error(ApiStatusCode.HB40001, result.ErrorMessage ?? "Failed"));
     }
 
+    /// <summary>
+    /// Split an existing script into smaller parts for audio processing.
+    /// </summary>
     [HttpPost("{scriptId:guid}/split")]
     public async Task<IActionResult> Split([FromRoute] Guid scriptId, [FromBody] SplitScriptRequest request, CancellationToken cancellationToken)
     {
@@ -63,6 +76,9 @@ public class ScriptsController : ControllerBase
             : BadRequest(ApiResponse<string>.Error(ApiStatusCode.HB40001, result.ErrorMessage ?? "Failed"));
     }
 
+    /// <summary>
+    /// Get a script by its ID.
+    /// </summary>
     [HttpGet("{scriptId:guid}")]
     public async Task<IActionResult> GetById([FromRoute] Guid scriptId, CancellationToken cancellationToken)
     {
@@ -73,6 +89,9 @@ public class ScriptsController : ControllerBase
             : NotFound(ApiResponse<string>.Error(ApiStatusCode.HB40401, result.ErrorMessage ?? "Not found"));
     }
 
+    /// <summary>
+    /// Get scripts created by the current user.
+    /// </summary>
     [HttpGet]
     public async Task<IActionResult> GetMine([FromQuery] string? contextType, [FromQuery] string? status, CancellationToken cancellationToken)
     {

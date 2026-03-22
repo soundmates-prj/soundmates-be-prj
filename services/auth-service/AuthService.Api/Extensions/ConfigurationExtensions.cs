@@ -10,122 +10,154 @@ public static class ConfigurationExtensions
 {
     public static WebApplicationBuilder AddEnvironmentConfig(this WebApplicationBuilder builder)
     {
-        // Load .env — prefer API project directory, then CWD, then output dir.
-        // In production, rely on real environment variables.
+        TryLoadRootEnv();
+        builder.Configuration.AddEnvironmentVariables();
+        ApplyLegacyAliases(builder.Configuration);
+
+        return builder;
+    }
+
+    private static void TryLoadRootEnv()
+    {
         try
         {
-            var envCandidates = new[]
+            var candidates = new[]
             {
-                // bin/Debug/<tfm> -> AuthService.Api
-                Path.Combine(AppContext.BaseDirectory, "../../..", ".env"),
-                // CWD (dotnet run from project dir)
                 Path.Combine(Directory.GetCurrentDirectory(), ".env"),
-                // Back-compat: one directory up (older layout)
-                Path.Combine(Directory.GetCurrentDirectory(), "..", ".env"),
-                // Published output dir
-                Path.Combine(AppContext.BaseDirectory, ".env"),
+                Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "../../..", ".env")),
+                Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../../.env")),
+                Path.Combine(AppContext.BaseDirectory, ".env")
             };
 
-            var envFile = envCandidates.FirstOrDefault(File.Exists);
+            var envFile = candidates.FirstOrDefault(File.Exists);
             if (envFile is not null)
             {
                 Env.Load(envFile);
             }
         }
-        catch (Exception)
+        catch
         {
-            // .env file not found, will use appsettings.json or environment variables
+            // Use injected environment variables when .env is unavailable.
         }
-
-        // Map environment variables to configuration
-        MapEnvironmentVariables(builder.Configuration);
-
-        return builder;
     }
 
-    private static void MapEnvironmentVariables(IConfiguration configuration)
+    private static void ApplyLegacyAliases(IConfiguration configuration)
     {
-        foreach (System.Collections.DictionaryEntry envVar in Environment.GetEnvironmentVariables())
+        var secret = Environment.GetEnvironmentVariable("Jwt__Secret")
+            ?? Environment.GetEnvironmentVariable("JWT_SECRET")
+            ?? Environment.GetEnvironmentVariable("JWT_KEY");
+        if (!string.IsNullOrWhiteSpace(secret))
         {
-            var key = envVar.Key?.ToString();
-            var value = envVar.Value?.ToString();
-            
-            if (string.IsNullOrEmpty(key) || string.IsNullOrEmpty(value))
-                continue;
-
-            // Map PostgreSQL environment variables
-            if (key.StartsWith("POSTGRES_"))
-            {
-                var host = Environment.GetEnvironmentVariable("POSTGRES_HOST");
-                var port = Environment.GetEnvironmentVariable("POSTGRES_PORT");
-                var database = Environment.GetEnvironmentVariable("POSTGRES_DATABASE");
-                var username = Environment.GetEnvironmentVariable("POSTGRES_USERNAME");
-                var password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD");
-                
-                if (!string.IsNullOrEmpty(host) && !string.IsNullOrEmpty(port))
-                {
-                    var connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={password};Ssl Mode=Disable;Trust Server Certificate=True;";
-                    configuration["ConnectionStrings:DefaultConnection"] = connectionString;
-                }
-            }
-            
-            // Map RabbitMQ environment variables
-            else if (key == "RABBITMQ_HOST")
-                configuration["RabbitMq:HostName"] = value;
-            else if (key == "RABBITMQ_PORT")
-                configuration["RabbitMq:Port"] = value;
-            else if (key == "RABBITMQ_USERNAME")
-                configuration["RabbitMq:UserName"] = value;
-            else if (key == "RABBITMQ_PASSWORD")
-                configuration["RabbitMq:Password"] = value;
-            else if (key == "RABBITMQ_VIRTUALHOST")
-                configuration["RabbitMq:VirtualHost"] = value;
-            
-            // Map JWT environment variables
-            else if (key == "JWT_KEY")
-                configuration["Jwt:Key"] = value;
-            else if (key == "JWT_ISSUER")
-                configuration["Jwt:Issuer"] = value;
-            else if (key == "JWT_AUDIENCE")
-                configuration["Jwt:Audience"] = value;
-            else if (key == "JWT_EXPIRES_IN_HOURS")
-                configuration["Jwt:ExpiresInHours"] = value;
-            
-            // Map Google OAuth environment variables
-            else if (key == "GOOGLE_CLIENT_ID")
-                configuration["GoogleOAuth:ClientId"] = value;
-            else if (key == "GOOGLE_CLIENT_SECRET")
-                configuration["GoogleOAuth:ClientSecret"] = value;
-            
-            // Map Email environment variables
-            else if (key == "EMAIL_HOST")
-                configuration["EmailSettings:Host"] = value;
-            else if (key == "EMAIL_PORT")
-                configuration["EmailSettings:Port"] = value;
-            else if (key == "EMAIL_FROM")
-                configuration["EmailSettings:From"] = value;
-            else if (key == "EMAIL_USERNAME")
-                configuration["EmailSettings:Username"] = value;
-            else if (key == "EMAIL_PASSWORD")
-                configuration["EmailSettings:Password"] = value;
-            
-            // Map App Settings environment variables
-            else if (key == "FRONTEND_URL")
-                configuration["AppSettings:FrontendUrl"] = value;
-            
-            // Map Spotify API credentials
-            else if (key == "SPOTIFY_CLIENT_ID")
-                configuration["Spotify:ClientId"] = value;
-            else if (key == "SPOTIFY_CLIENT_SECRET")
-                configuration["Spotify:ClientSecret"] = value;
-            else if (key == "SPOTIFY_REDIRECT_URI")
-                configuration["Spotify:RedirectUri"] = value;
-            
-            // Map MongoDB (for dual-write to read-side)
-            else if (key == "MONGODB_CONNECTION_STRING")
-                configuration["ConnectionStrings:MongoDb"] = value;
-            else if (key == "MONGODB_DATABASE")
-                configuration["Mongo:Database"] = value;
+            configuration["Jwt:Secret"] = secret;
+            configuration["Jwt:Key"] = secret;
         }
+
+        var issuer = Environment.GetEnvironmentVariable("Jwt__Issuer")
+            ?? Environment.GetEnvironmentVariable("JWT_ISSUER");
+        if (!string.IsNullOrWhiteSpace(issuer))
+            configuration["Jwt:Issuer"] = issuer;
+
+        var audience = Environment.GetEnvironmentVariable("Jwt__Audience")
+            ?? Environment.GetEnvironmentVariable("JWT_AUDIENCE");
+        if (!string.IsNullOrWhiteSpace(audience))
+            configuration["Jwt:Audience"] = audience;
+
+        var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
+        if (!string.IsNullOrWhiteSpace(connectionString))
+        {
+            configuration["ConnectionStrings:DefaultConnection"] = connectionString;
+        }
+        else
+        {
+            var host = Environment.GetEnvironmentVariable("DB_HOST") ?? Environment.GetEnvironmentVariable("POSTGRES_HOST");
+            var port = Environment.GetEnvironmentVariable("DB_PORT") ?? Environment.GetEnvironmentVariable("POSTGRES_PORT");
+            var database = Environment.GetEnvironmentVariable("DB_NAME") ?? Environment.GetEnvironmentVariable("POSTGRES_DATABASE");
+            var username = Environment.GetEnvironmentVariable("DB_USER") ?? Environment.GetEnvironmentVariable("POSTGRES_USERNAME");
+            var password = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? Environment.GetEnvironmentVariable("POSTGRES_PASSWORD");
+
+            if (!string.IsNullOrWhiteSpace(host) && !string.IsNullOrWhiteSpace(port) &&
+                !string.IsNullOrWhiteSpace(database) && !string.IsNullOrWhiteSpace(username) && !string.IsNullOrWhiteSpace(password))
+            {
+                configuration["ConnectionStrings:DefaultConnection"] =
+                    $"Host={host};Port={port};Database={database};Username={username};Password={password};Ssl Mode=Disable;Trust Server Certificate=True;";
+            }
+        }
+
+        configuration["RabbitMq:HostName"] = Environment.GetEnvironmentVariable("RabbitMq__HostName")
+            ?? Environment.GetEnvironmentVariable("RabbitMQ__Host")
+            ?? Environment.GetEnvironmentVariable("RABBITMQ_HOST")
+            ?? configuration["RabbitMq:HostName"];
+
+        configuration["RabbitMq:Port"] = Environment.GetEnvironmentVariable("RabbitMq__Port")
+            ?? Environment.GetEnvironmentVariable("RabbitMQ__Port")
+            ?? Environment.GetEnvironmentVariable("RABBITMQ_PORT")
+            ?? configuration["RabbitMq:Port"];
+
+        configuration["RabbitMq:UserName"] = Environment.GetEnvironmentVariable("RabbitMq__UserName")
+            ?? Environment.GetEnvironmentVariable("RabbitMQ__Username")
+            ?? Environment.GetEnvironmentVariable("RABBITMQ_USERNAME")
+            ?? configuration["RabbitMq:UserName"];
+
+        configuration["RabbitMq:Password"] = Environment.GetEnvironmentVariable("RabbitMq__Password")
+            ?? Environment.GetEnvironmentVariable("RabbitMQ__Password")
+            ?? Environment.GetEnvironmentVariable("RABBITMQ_PASSWORD")
+            ?? configuration["RabbitMq:Password"];
+
+        configuration["RabbitMq:VirtualHost"] = Environment.GetEnvironmentVariable("RabbitMq__VirtualHost")
+            ?? Environment.GetEnvironmentVariable("RabbitMQ__VirtualHost")
+            ?? Environment.GetEnvironmentVariable("RABBITMQ_VIRTUALHOST")
+            ?? configuration["RabbitMq:VirtualHost"];
+
+        configuration["GoogleOAuth:ClientId"] = Environment.GetEnvironmentVariable("GoogleOAuth__ClientId")
+            ?? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID")
+            ?? configuration["GoogleOAuth:ClientId"];
+
+        configuration["GoogleOAuth:ClientSecret"] = Environment.GetEnvironmentVariable("GoogleOAuth__ClientSecret")
+            ?? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET")
+            ?? configuration["GoogleOAuth:ClientSecret"];
+
+        configuration["EmailSettings:Host"] = Environment.GetEnvironmentVariable("EmailSettings__Host")
+            ?? Environment.GetEnvironmentVariable("EMAIL_HOST")
+            ?? configuration["EmailSettings:Host"];
+
+        configuration["EmailSettings:Port"] = Environment.GetEnvironmentVariable("EmailSettings__Port")
+            ?? Environment.GetEnvironmentVariable("EMAIL_PORT")
+            ?? configuration["EmailSettings:Port"];
+
+        configuration["EmailSettings:From"] = Environment.GetEnvironmentVariable("EmailSettings__From")
+            ?? Environment.GetEnvironmentVariable("EMAIL_FROM")
+            ?? configuration["EmailSettings:From"];
+
+        configuration["EmailSettings:Username"] = Environment.GetEnvironmentVariable("EmailSettings__Username")
+            ?? Environment.GetEnvironmentVariable("EMAIL_USERNAME")
+            ?? configuration["EmailSettings:Username"];
+
+        configuration["EmailSettings:Password"] = Environment.GetEnvironmentVariable("EmailSettings__Password")
+            ?? Environment.GetEnvironmentVariable("EMAIL_PASSWORD")
+            ?? configuration["EmailSettings:Password"];
+
+        configuration["Spotify:ClientId"] = Environment.GetEnvironmentVariable("Spotify__ClientId")
+            ?? Environment.GetEnvironmentVariable("SPOTIFY_CLIENT_ID")
+            ?? configuration["Spotify:ClientId"];
+
+        configuration["Spotify:ClientSecret"] = Environment.GetEnvironmentVariable("Spotify__ClientSecret")
+            ?? Environment.GetEnvironmentVariable("SPOTIFY_CLIENT_SECRET")
+            ?? configuration["Spotify:ClientSecret"];
+
+        configuration["Spotify:RedirectUri"] = Environment.GetEnvironmentVariable("Spotify__RedirectUri")
+            ?? Environment.GetEnvironmentVariable("SPOTIFY_REDIRECT_URI")
+            ?? configuration["Spotify:RedirectUri"];
+
+        configuration["AppSettings:FrontendUrl"] = Environment.GetEnvironmentVariable("AppSettings__FrontendUrl")
+            ?? Environment.GetEnvironmentVariable("FRONTEND_URL")
+            ?? configuration["AppSettings:FrontendUrl"];
+
+        configuration["ConnectionStrings:MongoDb"] = Environment.GetEnvironmentVariable("ConnectionStrings__MongoDb")
+            ?? Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")
+            ?? configuration["ConnectionStrings:MongoDb"];
+
+        configuration["Mongo:Database"] = Environment.GetEnvironmentVariable("Mongo__Database")
+            ?? Environment.GetEnvironmentVariable("MONGODB_DATABASE")
+            ?? configuration["Mongo:Database"];
     }
 }

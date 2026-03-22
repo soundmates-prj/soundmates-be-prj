@@ -67,32 +67,29 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
-      - POSTGRES_DATABASE=${POSTGRES_DATABASE:-auth_db}
-      - POSTGRES_USERNAME=${POSTGRES_USERNAME:-postgres}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
-      - RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
-      - RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
-      - RABBITMQ_USERNAME=${RABBITMQ_USERNAME:-guest}
-      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-guest}
-      - RABBITMQ_VIRTUALHOST=${RABBITMQ_VIRTUALHOST:-/}
-      - JWT_KEY=${JWT_KEY}
-      - JWT_ISSUER=${JWT_ISSUER:-Soundmates.Auth}
-      - JWT_AUDIENCE=${JWT_AUDIENCE:-Soundmates.Users}
-      - JWT_EXPIRES_IN_HOURS=${JWT_EXPIRES_IN_HOURS:-48}
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-      - EMAIL_HOST=${EMAIL_HOST:-smtp.gmail.com}
-      - EMAIL_PORT=${EMAIL_PORT:-587}
-      - EMAIL_FROM=${EMAIL_FROM}
-      - EMAIL_USERNAME=${EMAIL_USERNAME}
-      - EMAIL_PASSWORD=${EMAIL_PASSWORD}
-      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
-      - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
-      - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
-      - MONGODB_CONNECTION_STRING=${MONGODB_CONNECTION_STRING:-mongodb://mongodb:27017}
-      - MONGODB_DATABASE=${MONGODB_DATABASE:-auth_query}
+      - ConnectionStrings__DefaultConnection=Host=${DB_HOST};Port=${DB_PORT};Database=${AUTH_DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD};Ssl Mode=Disable;Trust Server Certificate=True;
+      - ConnectionStrings__MongoDb=${MONGODB_CONNECTION_STRING}
+      - Mongo__Database=${MONGODB_DATABASE}
+      - RabbitMq__HostName=${RABBITMQ_HOST}
+      - RabbitMq__Port=${RABBITMQ_PORT}
+      - RabbitMq__UserName=${RABBITMQ_USERNAME}
+      - RabbitMq__Password=${RABBITMQ_PASSWORD}
+      - RabbitMq__VirtualHost=${RABBITMQ_VIRTUALHOST}
+      - Jwt__Secret=${JWT_SECRET}
+      - Jwt__Issuer=${JWT_ISSUER}
+      - Jwt__Audience=${JWT_AUDIENCE}
+      - Jwt__ExpiresInHours=${JWT_EXPIRES_IN_HOURS}
+      - GoogleOAuth__ClientId=${GOOGLE_CLIENT_ID}
+      - GoogleOAuth__ClientSecret=${GOOGLE_CLIENT_SECRET}
+      - EmailSettings__Host=${EMAIL_HOST}
+      - EmailSettings__Port=${EMAIL_PORT}
+      - EmailSettings__From=${EMAIL_FROM}
+      - EmailSettings__Username=${EMAIL_USERNAME}
+      - EmailSettings__Password=${EMAIL_PASSWORD}
+      - AppSettings__FrontendUrl=${FRONTEND_URL}
+      - Spotify__ClientId=${SPOTIFY_CLIENT_ID}
+      - Spotify__ClientSecret=${SPOTIFY_CLIENT_SECRET}
+      - Spotify__RedirectUri=${SPOTIFY_REDIRECT_URI}
     ports:
       - "8001:8080"
     depends_on:
@@ -115,24 +112,20 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
-      - POSTGRES_DATABASE=${POSTGRES_DATABASE:-auth_db}
-      - POSTGRES_USERNAME=${POSTGRES_USERNAME:-postgres}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
-      - MONGODB_CONNECTION_STRING=${MONGODB_CONNECTION_STRING:-mongodb://mongodb:27017}
-      - MONGODB_DATABASE=${MONGODB_DATABASE:-auth_query}
-      - RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
-      - RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
-      - RABBITMQ_USERNAME=${RABBITMQ_USERNAME:-guest}
-      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-guest}
-      - RABBITMQ_VIRTUALHOST=${RABBITMQ_VIRTUALHOST:-/}
-      - JWT_KEY=${JWT_KEY}
-      - JWT_ISSUER=${JWT_ISSUER:-Soundmates.Auth}
-      - JWT_AUDIENCE=${JWT_AUDIENCE:-Soundmates.Users}
-      - JWT_EXPIRES_IN_HOURS=${JWT_EXPIRES_IN_HOURS:-48}
-      - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
-      - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
+      - ConnectionStrings__DefaultConnection=Host=${DB_HOST};Port=${DB_PORT};Database=${AUTH_DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD};Ssl Mode=Disable;Trust Server Certificate=True;
+      - ConnectionStrings__MongoDb=${MONGODB_CONNECTION_STRING}
+      - Mongo__Database=${MONGODB_DATABASE}
+      - RabbitMq__HostName=${RABBITMQ_HOST}
+      - RabbitMq__Port=${RABBITMQ_PORT}
+      - RabbitMq__UserName=${RABBITMQ_USERNAME}
+      - RabbitMq__Password=${RABBITMQ_PASSWORD}
+      - RabbitMq__VirtualHost=${RABBITMQ_VIRTUALHOST}
+      - Jwt__Secret=${JWT_SECRET}
+      - Jwt__Issuer=${JWT_ISSUER}
+      - Jwt__Audience=${JWT_AUDIENCE}
+      - Jwt__ExpiresInHours=${JWT_EXPIRES_IN_HOURS}
+      - Spotify__ClientId=${SPOTIFY_CLIENT_ID}
+      - Spotify__ClientSecret=${SPOTIFY_CLIENT_SECRET}
     ports:
       - "8002:8080"
     depends_on:
@@ -147,41 +140,44 @@ services:
   # AI Service (Script + TTS)
   ai-service:
     build:
-      context: ./services/ai-service
-      dockerfile: AiService.Api/Dockerfile
+      context: .
+      dockerfile: services/ai-service/AiService.Api/Dockerfile
     container_name: soundmates-ai-service
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
-      - POSTGRES_DATABASE=${AI_POSTGRES_DATABASE:-ai_db}
-      - POSTGRES_USERNAME=${POSTGRES_USERNAME:-postgres}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
-      - JWT_KEY=${JWT_KEY}
-      - JWT_ISSUER=${JWT_ISSUER:-Soundmates.Auth}
-      - JWT_AUDIENCE=${JWT_AUDIENCE:-Soundmates.Users}
-      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
-      - LLM_BASE_URL=${LLM_BASE_URL:-https://api.openai.com}
-      - LLM_API_KEY=${LLM_API_KEY}
-      - LLM_MODEL=${LLM_MODEL:-gemini-2.5-flash}
-      - TTS_PROVIDER=${TTS_PROVIDER:-vienetts}
-      - TTS_BASE_URL=${TTS_BASE_URL:-http://host.docker.internal:23333}
-      - TTS_API_KEY=${TTS_API_KEY}
-      - TTS_SYNTHESIZE_PATH=${TTS_SYNTHESIZE_PATH:-/v1/chat/completions}
-      - TTS_AUDIO_FORMAT=${TTS_AUDIO_FORMAT:-mp3}
-      - TTS_TIMEOUT_SECONDS=${TTS_TIMEOUT_SECONDS:-60}
-      - TTS_DEMO_MODE=${TTS_DEMO_MODE:-true}
-      - AUDIO_STORAGE_ROOT=/app/data/audios
-      - PUBLIC_BASE_URL=${AI_PUBLIC_BASE_URL:-http://localhost:8067}
+      - ConnectionStrings__DefaultConnection=Host=${DB_HOST};Port=${DB_PORT};Database=${AI_DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD};Ssl Mode=Disable;Trust Server Certificate=True;
+      - RabbitMq__HostName=${RABBITMQ_HOST}
+      - RabbitMq__Port=${RABBITMQ_PORT}
+      - RabbitMq__UserName=${RABBITMQ_USERNAME}
+      - RabbitMq__Password=${RABBITMQ_PASSWORD}
+      - RabbitMq__VirtualHost=${RABBITMQ_VIRTUALHOST}
+      - Jwt__Secret=${JWT_SECRET}
+      - Jwt__Issuer=${JWT_ISSUER}
+      - Jwt__Audience=${JWT_AUDIENCE}
+      - Llm__Provider=${LLM_PROVIDER}
+      - Llm__BaseUrl=${LLM_BASE_URL}
+      - Llm__ApiKey=${LLM_API_KEY}
+      - Llm__Model=${LLM_MODEL}
+      - Tts__Provider=${TTS_PROVIDER}
+      - Tts__BaseUrl=${TTS_BASE_URL}
+      - Tts__ApiKey=${TTS_API_KEY}
+      - Tts__SynthesizePath=${TTS_SYNTHESIZE_PATH}
+      - Tts__AudioFormat=${TTS_AUDIO_FORMAT}
+      - Tts__TimeoutSeconds=${TTS_TIMEOUT_SECONDS}
+      - Tts__DemoMode=${TTS_DEMO_MODE}
+      - Storage__AudioRoot=/app/data/audios
+      - Storage__PublicBaseUrl=${AI_PUBLIC_BASE_URL}
     ports:
       - "8067:8080"
     volumes:
       - ai-audios-data:/app/data/audios
     depends_on:
       postgres:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     networks:
       - soundmates-network
@@ -196,21 +192,17 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
-      - POSTGRES_DATABASE=${LIVE_SESSION_POSTGRES_DATABASE:-live_session_db}
-      - POSTGRES_USERNAME=${POSTGRES_USERNAME:-postgres}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
-      - RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
-      - RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
-      - RABBITMQ_USERNAME=${RABBITMQ_USERNAME:-guest}
-      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-guest}
-      - RABBITMQ_VIRTUALHOST=${RABBITMQ_VIRTUALHOST:-/}
-      - JWT_KEY=${JWT_KEY}
-      - JWT_ISSUER=${JWT_ISSUER:-Soundmates.Auth}
-      - JWT_AUDIENCE=${JWT_AUDIENCE:-Soundmates.Users}
-      - AZURACAST_BASE_URL=${AZURACAST_BASE_URL:-http://azuracast:8080}
-      - AZURACAST_API_KEY=${AZURACAST_API_KEY}
+      - ConnectionStrings__DefaultConnection=Host=${DB_HOST};Port=${DB_PORT};Database=${LIVE_SESSION_DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD};Ssl Mode=Disable;Trust Server Certificate=True;
+      - RabbitMq__HostName=${RABBITMQ_HOST}
+      - RabbitMq__Port=${RABBITMQ_PORT}
+      - RabbitMq__UserName=${RABBITMQ_USERNAME}
+      - RabbitMq__Password=${RABBITMQ_PASSWORD}
+      - RabbitMq__VirtualHost=${RABBITMQ_VIRTUALHOST}
+      - Jwt__Secret=${JWT_SECRET}
+      - Jwt__Issuer=${JWT_ISSUER}
+      - Jwt__Audience=${JWT_AUDIENCE}
+      - AzuraCast__BaseUrl=${AZURACAST_BASE_URL}
+      - AzuraCast__ApiKey=${AZURACAST_API_KEY}
     ports:
       - "8003:8080"
     depends_on:
@@ -225,33 +217,29 @@ services:
   # Account Content Service
   account-content-service:
     build:
-      context: ./services/account-content-service
-      dockerfile: AccountContentService.Api/Dockerfile
-
-    env_file:
-      - ./services/account-content-service/AccountContentService.Api/.env
+      context: .
+      dockerfile: services/account-content-service/AccountContentService.Api/Dockerfile
 
     container_name: soundmates-account-content-service
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
-      - POSTGRES_DATABASE=${ACCOUNT_CONTENT_POSTGRES_DATABASE:-account_content_db}
-      - POSTGRES_USERNAME=${POSTGRES_USERNAME:-postgres}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
-      - RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
-      - RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
-      - RABBITMQ_USERNAME=${RABBITMQ_USERNAME:-guest}
-      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-guest}
-      - RABBITMQ_VIRTUALHOST=${RABBITMQ_VIRTUALHOST:-/}
-      - JWT_KEY=${JWT_KEY}
-      - JWT_ISSUER=${JWT_ISSUER:-Soundmates.Auth}
-      - JWT_AUDIENCE=${JWT_AUDIENCE:-Soundmates.Users}
-      - VNPAY_TMN_CODE=${VNPAY_TMN_CODE}
-      - VNPAY_HASH_SECRET=${VNPAY_HASH_SECRET}
-      - VNPAY_BASE_URL=${VNPAY_BASE_URL}
-      - VNPAY_RETURN_URL=${VNPAY_RETURN_URL}
+      - ConnectionStrings__DefaultConnection=Host=${DB_HOST};Port=${DB_PORT};Database=${ACCOUNT_CONTENT_DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD};Ssl Mode=Disable;Trust Server Certificate=True;
+      - RabbitMq__HostName=${RABBITMQ_HOST}
+      - RabbitMq__Port=${RABBITMQ_PORT}
+      - RabbitMq__UserName=${RABBITMQ_USERNAME}
+      - RabbitMq__Password=${RABBITMQ_PASSWORD}
+      - RabbitMq__VirtualHost=${RABBITMQ_VIRTUALHOST}
+      - Jwt__Secret=${JWT_SECRET}
+      - Jwt__Issuer=${JWT_ISSUER}
+      - Jwt__Audience=${JWT_AUDIENCE}
+      - VNPay__TmnCode=${VNPAY_TMN_CODE}
+      - VNPay__HashSecret=${VNPAY_HASH_SECRET}
+      - VNPay__BaseUrl=${VNPAY_BASE_URL}
+      - VNPay__ReturnUrl=${VNPAY_RETURN_URL}
+      - AESEncryption__Key=${AES_KEY}
+      - AESEncryption__IV=${AES_IV}
+      - AppSettings__FrontendUrl=${FRONTEND_URL}
     ports:
       - "8004:8080"
     depends_on:

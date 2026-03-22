@@ -24,6 +24,7 @@ public partial class AiDbContext : DbContext
     }
 
     public virtual DbSet<AiPrompt> AiPrompts { get; set; }
+    public virtual DbSet<AiServiceConfig> AiServiceConfigs { get; set; }
     public virtual DbSet<Script> Scripts { get; set; }
     public virtual DbSet<TtsVoice> TtsVoices { get; set; }
     public virtual DbSet<ScriptAudio> ScriptAudios { get; set; }
@@ -87,6 +88,35 @@ public partial class AiDbContext : DbContext
                 .HasDefaultValueSql("now() at time zone 'utc'")
                 .HasColumnType("timestamp with time zone")
                 .HasColumnName("created_at");
+        });
+
+        modelBuilder.Entity<AiServiceConfig>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("ai_service_configs_pkey");
+            entity.ToTable("ai_service_configs");
+
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("uuid_generate_v4()")
+                .HasColumnName("id");
+            entity.Property(e => e.Provider)
+                .HasMaxLength(50)
+                .HasColumnName("provider");
+            entity.Property(e => e.ApiKey)
+                .HasColumnName("api_key");
+            entity.Property(e => e.PromptTemplate)
+                .HasColumnName("prompt_template");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasColumnName("is_active");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("now() at time zone 'utc'")
+                .HasColumnType("timestamp with time zone")
+                .HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt)
+                .HasColumnType("timestamp with time zone")
+                .HasColumnName("updated_at");
+
+            entity.HasIndex(e => new { e.Provider, e.IsActive }, "ai_service_configs_provider_active_idx");
         });
 
         modelBuilder.Entity<Script>(entity =>

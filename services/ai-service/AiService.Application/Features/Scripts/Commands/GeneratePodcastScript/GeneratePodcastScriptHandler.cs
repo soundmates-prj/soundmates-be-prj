@@ -23,7 +23,10 @@ public class GeneratePodcastScriptHandler : ICommandHandler<GeneratePodcastScrip
                 ContextType: command.ContextType,
                 ModelName: command.ModelName,
                 Temperature: command.Temperature,
-                MaxTokens: command.MaxTokens),
+                MaxTokens: command.MaxTokens,
+                EditorInstruction: command.EditorInstruction,
+                UseAutoContext: command.UseAutoContext,
+                StrictFactMode: command.StrictFactMode),
             cancellationToken);
 }
 

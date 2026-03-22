@@ -4,7 +4,6 @@ using LiveSessionService.Api.Models.Responses;
 using LiveSessionService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
 using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Features.LiveSessions.Commands.CreateLiveSession;
-using LiveSessionService.Application.Features.LiveSessions.Commands.CreateSessionSchedule;
 using LiveSessionService.Application.Features.LiveSessions.Commands.PauseSession;
 using LiveSessionService.Application.Features.LiveSessions.Commands.ResumeSession;
 using LiveSessionService.Application.Features.LiveSessions.Commands.StartSession;
@@ -192,67 +191,6 @@ public class LiveSessionController : ControllerBase
             nameof(GetById),
             new { id = result.Data!.Id },
             ApiResponse<LiveSessionResult>.SuccessResponse(result.Data!, "Live session created"));
-    }
-
-    /// <summary>
-    /// Create a new schedule for an existing live session
-    /// </summary>
-    [HttpPost("{id:guid}/schedules")]
-    [ProducesResponseType(typeof(ApiResponse<LiveSessionResult>), 200)]
-    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
-    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
-    public async Task<IActionResult> CreateSchedule(Guid id, [FromBody] CreateSessionScheduleRequest request, CancellationToken ct)
-    {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ApiResponse<object>.FailureResponse(
-                "Invalid input",
-                (int)ErrorCode.BadRequest));
-        }
-
-        var command = new CreateSessionScheduleCommand(
-            id,
-            request.StartTime,
-            request.EndTime,
-            request.Title);
-
-        var result = await _commands.Send<CreateSessionScheduleCommand, LiveSessionResult>(command, ct);
-
-        if (!result.IsSuccess)
-        {
-            return result.ErrorCode switch
-            {
-                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
-                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
-                ErrorCode.Conflict => Conflict(result.ToApiResponse()),
-                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
-            };
-        }
-
-        return Ok(ApiResponse<LiveSessionResult>.SuccessResponse(result.Data!, "Session scheduled"));
-    }
-
-    /// <summary>
-    /// Get schedules of a live session
-    /// </summary>
-    [HttpGet("{id:guid}/schedules")]
-    [ProducesResponseType(typeof(ApiResponse<List<SessionScheduleResult>>), 200)]
-    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
-    public async Task<IActionResult> GetSchedules(Guid id, CancellationToken ct)
-    {
-        var query = new GetSessionSchedulesQuery(id);
-        var result = await _queries.Send<GetSessionSchedulesQuery, List<SessionScheduleResult>>(query, ct);
-
-        if (!result.IsSuccess)
-        {
-            return result.ErrorCode switch
-            {
-                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
-                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
-            };
-        }
-
-        return Ok(ApiResponse<List<SessionScheduleResult>>.SuccessResponse(result.Data!, "Schedules retrieved"));
     }
 
     /// <summary>

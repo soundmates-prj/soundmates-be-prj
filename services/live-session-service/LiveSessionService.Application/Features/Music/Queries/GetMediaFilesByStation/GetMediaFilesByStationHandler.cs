@@ -63,6 +63,7 @@ public sealed class GetMediaFilesByStationHandler
                 .Select(m => new MusicResult
                 {
                     Id = m.Id,
+                    SourceType = "station",
                     Title = m.Title,
                     Artist = m.Artist ?? string.Empty,
                     Album = m.Album,

@@ -8,6 +8,7 @@ namespace LiveSessionService.Application.Features.Results.Music;
 public sealed class MusicResult
 {
     public Guid Id { get; init; }
+    public string SourceType { get; init; } = "system";
     public string Title { get; init; } = null!;
     public string Artist { get; init; } = null!;
     public string? Album { get; init; }

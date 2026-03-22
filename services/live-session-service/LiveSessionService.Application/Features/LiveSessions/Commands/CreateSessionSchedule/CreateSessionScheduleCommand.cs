@@ -7,4 +7,5 @@ public sealed record CreateSessionScheduleCommand(
     Guid LiveSessionId,
     DateTime StartTime,
     DateTime EndTime,
-    string? Title) : ICommand<LiveSessionResult>;
+    string? Title,
+    Guid ActorUserId) : ICommand<SessionScheduleResult>;

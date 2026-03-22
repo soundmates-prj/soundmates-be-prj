@@ -12,22 +12,17 @@ namespace LiveSessionService.Application.Features.Music.Commands.UploadMusic;
 public sealed class UploadMusicHandler
     : ICommandHandler<UploadMusicCommand, MusicResult>
 {
-    private readonly IAzuraCastStationRepository _stationRepo;
     private readonly IMediaFileRepository _mediaFileRepo;
-    private readonly IAzuraCastClient _azuraCast;
     private readonly IDateTimeProvider _dateTime;
     private readonly ILogger<UploadMusicHandler> _logger;
+    private const string SystemMediaPrefix = "system://";
 
     public UploadMusicHandler(
-        IAzuraCastStationRepository stationRepo,
         IMediaFileRepository mediaFileRepo,
-        IAzuraCastClient azuraCast,
         IDateTimeProvider dateTime,
         ILogger<UploadMusicHandler> logger)
     {
-        _stationRepo = stationRepo;
         _mediaFileRepo = mediaFileRepo;
-        _azuraCast = azuraCast;
         _dateTime = dateTime;
         _logger = logger;
     }
@@ -36,36 +31,33 @@ public sealed class UploadMusicHandler
         UploadMusicCommand command,
         CancellationToken cancellationToken)
     {
-        var station = await _stationRepo.GetByIdAsync(command.StationId, cancellationToken);
-        if (station == null)
-            return Result<MusicResult>.Failure("Station not found", ErrorCode.NotFound);
+        var extensionWithDot = Path.GetExtension(command.FileName).ToLowerInvariant();
+        var extension = extensionWithDot.TrimStart('.');
+        var safeFileName = $"{Guid.NewGuid():N}{extensionWithDot}";
+        var mediaDir = Path.Combine(AppContext.BaseDirectory, "storage", "system-media");
+        Directory.CreateDirectory(mediaDir);
 
-        // 1. Upload file to AzuraCast
-        var media = await _azuraCast.UploadMediaAsync(
-            station.ExternalStationId,
-            command.FileStream,
-            command.FileName,
-            command.ContentType,
-            command.Title,
-            command.Artist,
-            command.Album,
-            cancellationToken);
+        var absolutePath = Path.Combine(mediaDir, safeFileName);
+        var relativePath = $"system-media/{safeFileName}";
 
-        if (media == null)
-            return Result<MusicResult>.Failure(
-                "Failed to upload media to AzuraCast", ErrorCode.InternalServerError);
+        if (command.FileStream.CanSeek)
+        {
+            command.FileStream.Position = 0;
+        }
 
-        // 2. Save metadata to local DB
-        // FilePath stores the AzuraCast unique_id for future API calls (e.g., assign to playlist)
-        var extension = Path.GetExtension(command.FileName).TrimStart('.').ToLowerInvariant();
+        await using (var fileStream = new FileStream(absolutePath, FileMode.Create, FileAccess.Write, FileShare.None))
+        {
+            await command.FileStream.CopyToAsync(fileStream, cancellationToken);
+        }
+
         var mediaFile = new MediaFile
         {
             Id               = Guid.NewGuid(),
-            Title            = media.Title,
-            Artist           = media.Artist,
-            Album            = media.Album,
-            DurationSeconds  = media.DurationSeconds,
-            FilePath         = media.UniqueId,   // AzuraCast unique_id
+            Title            = command.Title,
+            Artist           = command.Artist,
+            Album            = command.Album,
+            DurationSeconds  = 0,
+            FilePath         = $"{SystemMediaPrefix}{relativePath}",
             FileType         = extension,
             FileSizeBytes    = command.FileStream.Length,
             UploadedByUserId = command.UploadedByUserId,
@@ -75,17 +67,18 @@ public sealed class UploadMusicHandler
         await _mediaFileRepo.AddAsync(mediaFile, cancellationToken);
 
         _logger.LogInformation(
-            "Uploaded media '{Title}' by '{Artist}' to station {StationId}",
-            media.Title, media.Artist, command.StationId);
+            "Uploaded system media '{Title}' by '{Artist}' (separate from station media)",
+            mediaFile.Title, mediaFile.Artist);
 
         return Result<MusicResult>.Success(new MusicResult
         {
             Id          = mediaFile.Id,
+            SourceType  = "system",
             Title       = mediaFile.Title,
             Artist      = mediaFile.Artist ?? string.Empty,
             Album       = mediaFile.Album,
             Duration    = mediaFile.DurationSeconds,
-            FileUrl     = media.Path,
+            FileUrl     = relativePath,
             FileType    = mediaFile.FileType,
             FileSize    = mediaFile.FileSizeBytes,
             UploadedAt  = mediaFile.UploadedAt
