@@ -1041,7 +1041,31 @@
       "QoSOptions": {
         "ExceptionsAllowedBeforeBreaking": 5,
         "DurationOfBreak": 30000,
-        "TimeoutValue": 60000
+        "TimeoutValue": 300000
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/voices",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "ai-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/voices",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 300000
       }
     },
     {
@@ -1065,7 +1089,31 @@
       "QoSOptions": {
         "ExceptionsAllowedBeforeBreaking": 5,
         "DurationOfBreak": 30000,
-        "TimeoutValue": 60000
+        "TimeoutValue": 300000
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/scripts",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "ai-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/scripts",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 300000
       }
     },
     {
@@ -1092,7 +1140,34 @@
       "QoSOptions": {
         "ExceptionsAllowedBeforeBreaking": 5,
         "DurationOfBreak": 30000,
-        "TimeoutValue": 60000
+        "TimeoutValue": 300000
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/scripts/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "ai-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/scripts/{everything}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 300000
       }
     },
     {
@@ -1119,7 +1194,34 @@
       "QoSOptions": {
         "ExceptionsAllowedBeforeBreaking": 5,
         "DurationOfBreak": 30000,
-        "TimeoutValue": 60000
+        "TimeoutValue": 300000
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/audios/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "ai-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/audios/{everything}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 300000
       }
     },
     {
@@ -1146,7 +1248,34 @@
       "QoSOptions": {
         "ExceptionsAllowedBeforeBreaking": 5,
         "DurationOfBreak": 30000,
-        "TimeoutValue": 60000
+        "TimeoutValue": 300000
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "ai-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/ai/{everything}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 300000
       }
     },
     // ═══════════════════════════════════════════════════════════
