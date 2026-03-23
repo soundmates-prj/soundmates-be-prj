@@ -2,16 +2,27 @@
 {
     public class ThemeRequest
     {
-        public required string ThemeName { get; set; }
+        public required string Name { get; set; } = null!;
 
-        public required string PrimaryColor { get; set; }
+        public string Mode { get; set; } = "light";
 
-        public required string SecondaryColor { get; set; }
+        // Core
+        public string? PrimaryColor { get; set; }
+        public string? SecondaryColor { get; set; }
+        public string? BackgroundColor { get; set; }
+        public string? TextColor { get; set; }
 
-        public required string FontFamily { get; set; }
+        // Emotion
+        public string? Mood { get; set; }
+        public string? GradientBackground { get; set; }
 
-        public string? CustomCss { get; set; }
+        // Player
+        public string? PlayerColor { get; set; }
 
-        public bool IsActive { get; set; } = true;
+        // Typography
+        public string? FontFamily { get; set; }
+
+        // Advanced (JSON config)
+        public string? ConfigJson { get; set; }
     }
 }

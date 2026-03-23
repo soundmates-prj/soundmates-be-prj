@@ -1,17 +1,16 @@
-﻿using System;
+﻿using AccountContentService.Application.DTOs;
+using MediatR;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace AccountContentService.Application.DTOs
+namespace AccountContentService.Application.Features.Themes.Commands.CreateTheme
 {
-    public class ThemeDto
+    public class CreateThemeCommand : IRequest<ThemeDto>
     {
-        public Guid Id { get; set; }
-
-        public string Name { get; set; } = null!; // unique
+        public string Name { get; set; } = null!; 
 
         public string Mode { get; set; } = "light";
-        public bool IsActive { get; set; } = true;
 
         // Core
         public string? PrimaryColor { get; set; }
@@ -31,8 +30,5 @@ namespace AccountContentService.Application.DTOs
 
         // Advanced (JSON config)
         public string? ConfigJson { get; set; }
-
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
     }
 }
