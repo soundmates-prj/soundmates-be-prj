@@ -1,4 +1,4 @@
-﻿using AccountContentService.Api.Common;
+using AccountContentService.Api.Common;
 using AccountContentService.Api.Constants;
 using AccountContentService.Api.Contracts.Requests;
 using AccountContentService.Api.Contracts.Responses;
@@ -97,12 +97,28 @@ namespace AccountContentService.Api.Controllers
                 v => v.Value.ToString()
             );
 
-            var frontendUrl = _configuration["AppSettings:FrontendUrl"]?.TrimEnd('/') ?? "http://localhost:3000";
+            var frontendUrl = _configuration["AppSettings:FrontendUrl"]?.TrimEnd('/') ?? "http://localhost:5173";
             var returnPage = $"{frontendUrl}/payment/result";
+
+            var isJsonRequest = Request.Headers["Accept"].ToString().Contains("application/json");
 
             try
             {
                 var result = await _mediator.Send(new VNPayCallbackCommand { Data = data });
+
+                if (isJsonRequest)
+                {
+                    return Ok(ApiResponse<object>.Ok(new
+                    {
+                        status = "success",
+                        transactionId = result.Id,
+                        paymentId = result.PaymentId,
+                        amount = result.Amount,
+                        provider = result.PaymentProvider,
+                        vnp_TransactionNo = data.GetValueOrDefault("vnp_TransactionNo", ""),
+                        transactionStatus = result.TransactionStatus
+                    }, "Payment processed successfully"));
+                }
 
                 var query = System.Web.HttpUtility.ParseQueryString(string.Empty);
                 query["status"] = result.TransactionStatus.ToLower();
@@ -117,6 +133,11 @@ namespace AccountContentService.Api.Controllers
             }
             catch (Exception ex)
             {
+                if (isJsonRequest)
+                {
+                    return BadRequest(ApiResponse<string>.Fail(ex.Message));
+                }
+
                 var query = System.Web.HttpUtility.ParseQueryString(string.Empty);
                 query["status"] = "failed";
                 query["message"] = ex.Message;

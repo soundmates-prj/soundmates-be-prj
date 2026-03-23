@@ -1,4 +1,4 @@
-﻿using AccountContentService.Application.Common.Pagination;
+using AccountContentService.Application.Common.Pagination;
 using AccountContentService.Application.Interfaces.Repositories;
 using AccountContentService.Domain.Entities;
 using AccountContentService.Domain.Enums;
@@ -53,11 +53,22 @@ namespace AccountContentService.Infrastructure.Repositories
             };
         }
 
+        // Tìm theo Primary Key của bảng PaymentTransactions
         public async Task<PaymentTransaction> GetByIdAsync(Guid id, CancellationToken cancellationToken)
         {
             return await _context.PaymentTransactions
                 .AsNoTracking()
                 .Where(x => x.Id == id)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        // Tìm theo Foreign Key PaymentId liên kết với bảng Payments
+        // Dùng để tìm lại giao dịch cũ khi VNPay gọi lại callback (tránh gửi trùng lặp/idempotency)
+        public async Task<PaymentTransaction> GetByPaymentIdAsync(Guid paymentId, CancellationToken cancellationToken)
+        {
+            return await _context.PaymentTransactions
+                .AsNoTracking()
+                .Where(x => x.PaymentId == paymentId)
                 .FirstOrDefaultAsync(cancellationToken);
         }
 

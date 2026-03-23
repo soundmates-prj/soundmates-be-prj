@@ -1,4 +1,4 @@
-﻿using AccountContentService.Application.DTOs;
+using AccountContentService.Application.DTOs;
 using AccountContentService.Application.Interfaces.Repositories;
 using AccountContentService.Application.Interfaces.Services;
 using AccountContentService.Domain.Entities;
@@ -54,9 +54,18 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
             if (payment == null)
                 throw new Exception("Payment not found");
 
-            // 🔥 4. Idempotency
+            // 🔥 4. Idempotency Check
+            // Nếu Payment đã có trạng thái 'Success', nghĩa là giao dịch này đã được xử lý xong từ trước.
+            // Thay vì trả về lỗi (khiến Frontend bị crash), chúng ta tìm lại giao dịch cũ đã thành công để trả về cho người dùng.
             if (payment.Status == PaymentStatus.Success.ToString())
-                throw new Exception("Payment already processed");
+            {
+                var existingTransaction = await _transactionRepo.GetByPaymentIdAsync(payment.Id, cancellationToken);
+                if (existingTransaction != null)
+                {
+                    return _mapper.Map<TransactionDto>(existingTransaction);
+                }
+                throw new Exception("Payment already processed but transaction not found");
+            }
 
             var isSuccess = responseCode == "00";
 
