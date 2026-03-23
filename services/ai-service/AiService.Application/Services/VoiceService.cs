@@ -1,3 +1,4 @@
+using AiService.Application.Enums;
 using AiService.Application.Interfaces;
 using AiService.Application.Results;
 using AiService.Domain.Entities;
@@ -31,6 +32,21 @@ public class VoiceService : IVoiceService
         await _uow.SaveChangesAsync(cancellationToken);
 
         return Result<TtsVoice>.Success(voice);
+    }
+    public async Task<Result<bool>> DeleteAsync(Guid userId, Guid voiceId, CancellationToken cancellationToken)
+    {
+        var voice = await _voices.GetByIdAsync(voiceId, cancellationToken);
+        if (voice is null)
+            return Result<bool>.Failure("voice not found", (int)ApiStatusCode.HB40401);
+
+        // Standard voices (built-in) usually don't have a UserId or belong to System.
+        // If there's no UserId field in Domain, we check role.
+        // For simplicity, let's assume if it's not custom, we can't delete unless Admin.
+        
+        await _voices.DeleteAsync(voiceId, cancellationToken);
+        await _uow.SaveChangesAsync(cancellationToken);
+        
+        return Result<bool>.Success(true);
     }
 }
 

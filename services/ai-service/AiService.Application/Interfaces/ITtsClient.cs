@@ -18,5 +18,6 @@ public record TtsSynthesizeResponse(
 public interface ITtsClient
 {
     Task<TtsSynthesizeResponse> SynthesizeAsync(TtsSynthesizeRequest request, CancellationToken cancellationToken);
+    Task<bool> CloneVoiceAsync(string voiceId, string refText, byte[] audioBytes, string fileName, CancellationToken cancellationToken);
 }
 

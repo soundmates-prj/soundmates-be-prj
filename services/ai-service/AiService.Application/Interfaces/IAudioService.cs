@@ -26,5 +26,7 @@ public interface IAudioService
     /// </summary>
     Task<Result<AudioFileStreamResult>> OpenReadForUserAsync(Guid userId, Guid audioId, CancellationToken cancellationToken);
     Task<Result<AudioFileStreamResult>> OpenReadAnonymousAsync(Guid audioId, CancellationToken cancellationToken);
+    Task<Result<IReadOnlyList<ScriptAudio>>> ListForUserAsync(Guid userId, CancellationToken cancellationToken);
+    Task<Result<bool>> DeleteAsync(Guid userId, Guid audioId, CancellationToken cancellationToken);
 }
 

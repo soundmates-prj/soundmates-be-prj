@@ -17,4 +17,5 @@ public record TextToSpeechResult(
 public interface ITextToSpeechService
 {
     Task<Result<TextToSpeechResult>> GenerateAudioAsync(TextToSpeechRequest request, CancellationToken cancellationToken);
+    Task<Result<bool>> CloneVoiceAsync(string voiceId, string refText, byte[] audioBytes, string fileName, CancellationToken cancellationToken);
 }

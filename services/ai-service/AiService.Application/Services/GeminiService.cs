@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Text.RegularExpressions;
 using AiService.Application.Constants;
 using AiService.Application.Enums;
@@ -41,10 +42,15 @@ public class GeminiService : IGeminiService
 
         var systemPrompt = BuildSystemPrompt(template, request);
 
+        // --- DEFENSIVE LOGIC: Allow any model starting with 'gemini', fallback to flash if invalid ---
+        var modelToUse = !string.IsNullOrWhiteSpace(request.ModelName) && request.ModelName.ToLower().Contains("gemini")
+            ? request.ModelName.ToLower().Trim()
+            : "gemini-1.5-flash";
+
         var llmResponse = await _llmClient.GenerateAsync(
             new LlmGenerateRequest(
                 InputText: request.Topic.Trim(),
-                ModelName: request.ModelName,
+                ModelName: modelToUse,
                 Temperature: 0.7m,
                 MaxTokens: 2048,
                 ContextType: "podcast",

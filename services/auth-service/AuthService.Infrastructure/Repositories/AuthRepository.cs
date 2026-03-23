@@ -55,21 +55,24 @@ public class AuthRepository : IAuthRepository
 
     public async Task<User> RegisterAsync(string username, string email, string password, string firstName, string lastName)
     {
-        // Check for existing username
-        var existingByUsername = await _db.Users
-            .FirstOrDefaultAsync(u => u.Username.ToLower() == username.ToLower());
-        if (existingByUsername != null)
-        {
-            throw new Application.Exceptions.AuthException(
-                AuthErrorCode.UserAlreadyExists,
-                $"Username '{username}' is already taken");
-        }
+        // 1. Optimized check: combine username and email check in one query
+        var normalizedUsername = username.Trim().ToLower();
+        var normalizedEmail = email.Trim().ToLower();
 
-        // Check for existing email
-        var existingByEmail = await _db.Users
-            .FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower());
-        if (existingByEmail != null)
+        var existingUser = await _db.Users
+            .FirstOrDefaultAsync(u => 
+                u.Username.ToLower() == normalizedUsername || 
+                u.Email.ToLower() == normalizedEmail);
+
+        if (existingUser != null)
         {
+            if (existingUser.Username.ToLower() == username.ToLower())
+            {
+                throw new Application.Exceptions.AuthException(
+                    AuthErrorCode.UserAlreadyExists,
+                    $"Username '{username}' is already taken");
+            }
+            
             throw new Application.Exceptions.AuthException(
                 AuthErrorCode.UserAlreadyExists,
                 $"Email '{email}' is already registered");
@@ -100,11 +103,12 @@ public class AuthRepository : IAuthRepository
             RoleId = userRole.Id,
             Role = userRole,
             IsActive = false, // User must verify email before activation
-            EmailVerificationToken = null // No longer using token, using OTP instead
+            EmailVerificationToken = null 
         };
 
+        // Just add to context, DON'T SaveChanges here.
+        // Let the Handler manage the transaction/unit of work.
         _db.Users.Add(user);
-        await _uow.SaveChangesAsync();
 
         return user;
     }

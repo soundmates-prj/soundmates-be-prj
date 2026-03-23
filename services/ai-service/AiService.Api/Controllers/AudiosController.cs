@@ -1,3 +1,4 @@
+using System.Linq;
 using AiService.Api.Extensions;
 using AiService.Api.Models.Requests.Audios;
 using AiService.Api.Models.Responses;
@@ -172,6 +173,28 @@ public class AudiosController : ControllerBase
             return configured;
 
         return Path.Combine(AppContext.BaseDirectory, "data", "audios");
+    }
+    [HttpGet]
+    public async Task<IActionResult> List(CancellationToken ct)
+    {
+        if (!User.TryGetCurrentUserId(out var userId))
+            return Unauthorized(ApiResponse<string>.Error(ApiStatusCode.HB40101, "Invalid token"));
+
+        var result = await _audioService.ListForUserAsync(userId, ct);
+        var responses = result.Data?.Select(MapToAudioResponse) ?? Enumerable.Empty<AudioResponse>();
+        return Ok(ApiResponse<object>.SuccessResponse(new { audios = responses }));
+    }
+
+    [HttpDelete("{audioId:guid}")]
+    public async Task<IActionResult> Delete([FromRoute] Guid audioId, CancellationToken ct)
+    {
+        if (!User.TryGetCurrentUserId(out var userId))
+            return Unauthorized(ApiResponse<string>.Error(ApiStatusCode.HB40101, "Invalid token"));
+
+        var result = await _audioService.DeleteAsync(userId, audioId, ct);
+        return result.IsSuccess 
+            ? Ok(ApiResponse<string>.SuccessResponse("Deleted"))
+            : BadRequest(ApiResponse<string>.Error(ApiStatusCode.HB40001, result.ErrorMessage ?? "Failed"));
     }
 }
 

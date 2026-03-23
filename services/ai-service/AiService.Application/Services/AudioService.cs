@@ -211,5 +211,34 @@ public class AudioService : IAudioService
         var (stream, contentType, contentLength) = await _storage.OpenReadAsync(audio.AudioPath, cancellationToken);
         return Result<AudioFileStreamResult>.Success(new AudioFileStreamResult(stream, contentType, contentLength));
     }
+
+    public async Task<Result<IReadOnlyList<ScriptAudio>>> ListForUserAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var audios = await _audios.GetForUserAsync(userId, cancellationToken);
+        return Result<IReadOnlyList<ScriptAudio>>.Success(audios);
+    }
+
+    public async Task<Result<bool>> DeleteAsync(Guid userId, Guid audioId, CancellationToken cancellationToken)
+    {
+        var audio = await _audios.GetByIdAsync(audioId, cancellationToken);
+        if (audio is null)
+            return Result<bool>.Failure("audio not found", (int)ApiStatusCode.HB40401);
+
+        if (audio.Script.AuthorId != userId)
+            return Result<bool>.Failure("forbidden", (int)ApiStatusCode.HB40301);
+
+        // Delete from storage
+        if (!string.IsNullOrWhiteSpace(audio.AudioPath))
+        {
+            try { await _storage.DeleteAsync(audio.AudioPath, cancellationToken); }
+            catch (Exception ex) { _logger.LogWarning(ex, "Failed to delete audio file {Path}", audio.AudioPath); }
+        }
+
+        // Delete from DB
+        await _audios.DeleteAsync(audioId, cancellationToken);
+        await _uow.SaveChangesAsync(cancellationToken);
+
+        return Result<bool>.Success(true);
+    }
 }
 

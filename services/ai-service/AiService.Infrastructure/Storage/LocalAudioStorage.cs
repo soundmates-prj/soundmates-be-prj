@@ -79,5 +79,20 @@ public class LocalAudioStorage : IAudioStorage
         };
         return Task.FromResult<(Stream, string, long?)>((stream, contentType, stream.Length));
     }
+
+    public Task DeleteAsync(string relativePath, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(relativePath)) return Task.CompletedTask;
+
+        var safe = relativePath.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+        var fullPath = Path.Combine(_audioRoot, safe);
+        
+        if (File.Exists(fullPath))
+        {
+            File.Delete(fullPath);
+        }
+        
+        return Task.CompletedTask;
+    }
 }
 

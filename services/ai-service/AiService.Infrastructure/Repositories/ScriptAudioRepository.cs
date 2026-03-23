@@ -28,5 +28,24 @@ public class ScriptAudioRepository : IScriptAudioRepository
         _db.ScriptAudios.Update(audio);
         return Task.CompletedTask;
     }
+
+    public async Task<IReadOnlyList<ScriptAudio>> GetForUserAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        return await _db.ScriptAudios
+            .Include(a => a.Script)
+            .Include(a => a.Voice)
+            .Where(a => a.Script.AuthorId == userId)
+            .OrderByDescending(a => a.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task DeleteAsync(Guid audioId, CancellationToken cancellationToken)
+    {
+        var audio = await _db.ScriptAudios.FindAsync(new object[] { audioId }, cancellationToken);
+        if (audio is not null)
+        {
+            _db.ScriptAudios.Remove(audio);
+        }
+    }
 }
 
