@@ -25,11 +25,16 @@ using LiveSessionService.Application.Features.NowPlaying.Queries.GetNowPlaying;
 using LiveSessionService.Application.Features.NowPlaying.Queries.GetNowPlayingHistory;
 using LiveSessionService.Application.Features.Playlists.Commands.AddMediaToPlaylist;
 using LiveSessionService.Application.Features.Playlists.Commands.CreatePlaylist;
+using LiveSessionService.Application.Features.Playlists.Commands.CreateUserPlaylist;
+using LiveSessionService.Application.Features.Playlists.Commands.DeleteUserPlaylist;
 using LiveSessionService.Application.Features.Playlists.Commands.RemoveMediaFromPlaylist;
 using LiveSessionService.Application.Features.Playlists.Commands.SyncPlaylists;
 using LiveSessionService.Application.Features.Playlists.Commands.UpdatePlaylist;
+using LiveSessionService.Application.Features.Playlists.Commands.UpdateUserPlaylist;
 using LiveSessionService.Application.Features.Playlists.Queries.GetPlaylistsByStation;
 using LiveSessionService.Application.Features.Playlists.Queries.GetPlaylistTracks;
+using LiveSessionService.Application.Features.Playlists.Queries.GetUserPlaylistById;
+using LiveSessionService.Application.Features.Playlists.Queries.GetUserPlaylists;
 using LiveSessionService.Application.Features.Podcasts.Commands.CreatePodcast;
 using LiveSessionService.Application.Features.Podcasts.Commands.DeletePodcast;
 using LiveSessionService.Application.Features.Podcasts.Commands.UpdatePodcast;
@@ -87,7 +92,10 @@ public static class DependencyInjection
 
         // Register Playlist Command Handlers
         services.AddScoped<ICommandHandler<CreatePlaylistCommand, PlaylistResult>, CreatePlaylistHandler>();
+        services.AddScoped<ICommandHandler<CreateUserPlaylistCommand, UserPlaylistResult>, CreateUserPlaylistHandler>();
         services.AddScoped<ICommandHandler<UpdatePlaylistCommand, PlaylistResult>, UpdatePlaylistHandler>();
+        services.AddScoped<ICommandHandler<UpdateUserPlaylistCommand, UserPlaylistResult>, UpdateUserPlaylistHandler>();
+        services.AddScoped<ICommandHandler<DeleteUserPlaylistCommand>, DeleteUserPlaylistHandler>();
         services.AddScoped<ICommandHandler<AddMediaToPlaylistCommand, PlaylistMediaResult>, AddMediaToPlaylistHandler>();
         services.AddScoped<ICommandHandler<RemoveMediaFromPlaylistCommand>, RemoveMediaFromPlaylistHandler>();
         services.AddScoped<ICommandHandler<SyncPlaylistsCommand, SyncPlaylistsResult>, SyncPlaylistsHandler>();
@@ -111,6 +119,8 @@ public static class DependencyInjection
 
         // Register Playlist Query Handlers
         services.AddScoped<IQueryHandler<GetPlaylistsByStationQuery, List<PlaylistResult>>, GetPlaylistsByStationHandler>();
+        services.AddScoped<IQueryHandler<GetUserPlaylistsQuery, List<UserPlaylistResult>>, GetUserPlaylistsHandler>();
+        services.AddScoped<IQueryHandler<GetUserPlaylistByIdQuery, UserPlaylistResult>, GetUserPlaylistByIdHandler>();
         services.AddScoped<IQueryHandler<GetPlaylistTracksQuery, List<PlaylistMediaResult>>, GetPlaylistTracksHandler>();
 
         // Register Podcast Command Handlers
