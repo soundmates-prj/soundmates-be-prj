@@ -17,5 +17,7 @@ public interface IAudioStorage
     Task<(Stream Stream, string ContentType, long? ContentLength)> OpenReadAsync(
         string relativePath,
         CancellationToken cancellationToken);
+
+    Task DeleteAsync(string relativePath, CancellationToken cancellationToken);
 }
 

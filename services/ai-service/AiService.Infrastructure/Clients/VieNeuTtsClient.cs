@@ -165,6 +165,37 @@ public class VieNeuTtsClient : ITtsClient
             RawProviderResponse: raw);
     }
 
+    public async Task<bool> CloneVoiceAsync(string voiceId, string refText, byte[] audioBytes, string fileName, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(_options.BaseUrl) || _options.BaseUrl.StartsWith("${"))
+             throw new InvalidOperationException("TTS_BASE_URL is required for VieNeuTTS clone client.");
+        
+        var baseUrl = _options.BaseUrl;
+        var uri = BuildUri(baseUrl, "/clone_voice");
+
+        using var content = new MultipartFormDataContent();
+        content.Add(new StringContent(voiceId), "voice_id");
+        content.Add(new StringContent(refText), "ref_text");
+        
+        var fileContent = new ByteArrayContent(audioBytes);
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue("audio/wav");
+        content.Add(fileContent, "file", fileName);
+
+        using var response = await _http.PostAsync(uri, content, cancellationToken);
+        
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync(cancellationToken);
+            // I'll need to fix the logger or use a different one if logger is not defined
+            // Looking at the constructor, there is no logger, so I'll skip logging or use Console
+            Console.WriteLine($"VieNeuTTS clone_voice failed: {response.StatusCode} {error}");
+            return false;
+        }
+
+        return true;
+    }
+
+
     private async Task<TtsSynthesizeResponse> SynthesizeViaChatCompletionsAsync(TtsSynthesizeRequest request, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(_options.BaseUrl) || _options.BaseUrl.StartsWith("${"))

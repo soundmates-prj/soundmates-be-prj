@@ -7,5 +7,6 @@ public interface IVoiceService
 {
     Task<Result<IReadOnlyList<TtsVoice>>> GetActiveAsync(CancellationToken cancellationToken);
     Task<Result<TtsVoice>> CreateAsync(TtsVoice voice, CancellationToken cancellationToken);
+    Task<Result<bool>> DeleteAsync(Guid userId, Guid voiceId, CancellationToken cancellationToken);
 }
 

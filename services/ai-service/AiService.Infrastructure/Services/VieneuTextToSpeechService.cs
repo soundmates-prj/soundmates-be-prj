@@ -2,6 +2,8 @@ using AiService.Application.Constants;
 using AiService.Application.Enums;
 using AiService.Application.Interfaces;
 using AiService.Application.Results;
+using AiService.Domain.Interfaces;
+using System.Linq;
 
 namespace AiService.Infrastructure.Services;
 
@@ -9,11 +11,13 @@ public class VieneuTextToSpeechService : ITextToSpeechService
 {
     private readonly ITtsClient _ttsClient;
     private readonly IAudioStorage _audioStorage;
+    private readonly IVoiceRepository _voiceRepository;
 
-    public VieneuTextToSpeechService(ITtsClient ttsClient, IAudioStorage audioStorage)
+    public VieneuTextToSpeechService(ITtsClient ttsClient, IAudioStorage audioStorage, IVoiceRepository voiceRepository)
     {
         _ttsClient = ttsClient;
         _audioStorage = audioStorage;
+        _voiceRepository = voiceRepository;
     }
 
     public async Task<Result<TextToSpeechResult>> GenerateAudioAsync(TextToSpeechRequest request, CancellationToken cancellationToken)
@@ -23,16 +27,35 @@ public class VieneuTextToSpeechService : ITextToSpeechService
             return Result<TextToSpeechResult>.Failure("text is required", (int)ApiStatusCode.HB40001);
         }
 
-        if (string.IsNullOrWhiteSpace(request.Voice))
+        // --- DEFENSIVE LOGIC: Validate voice, fallback if necessary ---
+        var voiceCodeToUse = request.Voice;
+        var voice = await _voiceRepository.GetByCodeAsync(AiProviderConstants.VieNeuTts, voiceCodeToUse, cancellationToken);
+        
+        if (voice == null)
         {
-            return Result<TextToSpeechResult>.Failure("voice is required", (int)ApiStatusCode.HB40001);
+            // Fallback to ngochuyen
+            voiceCodeToUse = "ngochuyen";
+            voice = await _voiceRepository.GetByCodeAsync(AiProviderConstants.VieNeuTts, voiceCodeToUse, cancellationToken);
+            
+            // If still null, try to take the first active one
+            if (voice == null)
+            {
+                var activeVoices = await _voiceRepository.GetActiveAsync(cancellationToken);
+                voice = activeVoices.FirstOrDefault();
+                if (voice != null) voiceCodeToUse = voice.VoiceCode;
+            }
+        }
+
+        if (voice == null)
+        {
+            return Result<TextToSpeechResult>.Failure("No active TTS voices available in the system", (int)ApiStatusCode.HB50001);
         }
 
         var ttsResponse = await _ttsClient.SynthesizeAsync(
             new TtsSynthesizeRequest(
                 Text: request.Text,
-                VoiceCode: request.Voice,
-                Model: null,
+                VoiceCode: voiceCodeToUse,
+                Model: voice.Model,
                 Speed: null,
                 Pitch: null),
             cancellationToken);
@@ -61,6 +84,25 @@ public class VieneuTextToSpeechService : ITextToSpeechService
 
         return Result<TextToSpeechResult>.Success(result);
     }
+
+    public async Task<Result<bool>> CloneVoiceAsync(string voiceId, string refText, byte[] audioBytes, string fileName, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(voiceId))
+            return Result<bool>.Failure("voiceId is required", (int)ApiStatusCode.HB40001);
+
+        if (string.IsNullOrWhiteSpace(refText))
+            return Result<bool>.Failure("refText is required", (int)ApiStatusCode.HB40001);
+
+        if (audioBytes == null || audioBytes.Length == 0)
+            return Result<bool>.Failure("audio file is empty", (int)ApiStatusCode.HB40001);
+
+        var success = await _ttsClient.CloneVoiceAsync(voiceId, refText, audioBytes, fileName, cancellationToken);
+        
+        return success 
+            ? Result<bool>.Success(true) 
+            : Result<bool>.Failure("TTS server failed to clone voice", (int)ApiStatusCode.HB50001);
+    }
+
 
     private static Result<bool> ValidateAudioResponse(string sourceText, TtsSynthesizeResponse response)
     {

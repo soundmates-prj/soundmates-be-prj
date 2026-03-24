@@ -29,5 +29,20 @@ public class VoiceRepository : IVoiceRepository
             .ThenBy(v => v.DisplayName)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task DeleteAsync(Guid voiceId, CancellationToken cancellationToken)
+    {
+        var voice = await _db.TtsVoices.FindAsync(new object[] { voiceId }, cancellationToken);
+        if (voice is not null)
+        {
+            _db.TtsVoices.Remove(voice);
+        }
+    }
+
+    public Task<TtsVoice?> GetByCodeAsync(string provider, string voiceCode, CancellationToken cancellationToken)
+    {
+        return _db.TtsVoices
+            .FirstOrDefaultAsync(v => v.Provider == provider && v.VoiceCode == voiceCode, cancellationToken);
+    }
 }
 

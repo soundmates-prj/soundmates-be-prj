@@ -47,7 +47,7 @@
       "QoSOptions": {
         "ExceptionsAllowedBeforeBreaking": 5,
         "DurationOfBreak": 30000,
-        "TimeoutValue": 5000
+        "TimeoutValue": 20000
       }
     },
     // === USER COMMANDS ===
@@ -415,9 +415,22 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/posts",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/posts/{everything}",
@@ -429,9 +442,22 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/posts/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     // === COMMENTS ===
     {
@@ -444,9 +470,22 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/comments",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/comments/{everything}",
@@ -458,9 +497,22 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/comments/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     // === REACTIONS ===
     {
@@ -473,9 +525,22 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/reactions",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/reactions/{everything}",
@@ -487,9 +552,22 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/reactions/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     // === ME ===
     {
@@ -502,9 +580,18 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/me/posts",
-      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/me/comments",
@@ -516,9 +603,18 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/me/comments",
-      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/me/reactions",
@@ -530,9 +626,18 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/me/reactions",
-      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/me/subscriptions",
@@ -544,9 +649,18 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/me/subscriptions",
-      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/me/subscriptions/history",
@@ -558,9 +672,18 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/me/subscriptions/history",
-      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     // === SUBSCRIPTIONS & PAYMENTS ===
     {
@@ -573,9 +696,22 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/subscription-plans",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/subscription-plans/{everything}",
@@ -587,9 +723,22 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/subscription-plans/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/subscriptions",
@@ -601,9 +750,22 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/subscriptions",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/subscriptions/{everything}",
@@ -615,9 +777,22 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/subscriptions/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/payments",
@@ -629,9 +804,22 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/payments",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/payments/{everything}",
@@ -643,37 +831,92 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/payments/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     // === TRANSACTIONS ===
     {
       "DownstreamPathTemplate": "/api/v1/transaction",
       "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [ { "Host": "account-content-service", "Port": 8080 } ],
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-content-service",
+          "Port": 8080
+        }
+      ],
       "UpstreamPathTemplate": "/api/v1/transaction",
-      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/transaction/{everything}",
       "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [ { "Host": "account-content-service", "Port": 8080 } ],
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-content-service",
+          "Port": 8080
+        }
+      ],
       "UpstreamPathTemplate": "/api/v1/transaction/{everything}",
-      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/me/transaction/history",
       "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [ { "Host": "account-content-service", "Port": 8080 } ],
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-content-service",
+          "Port": 8080
+        }
+      ],
       "UpstreamPathTemplate": "/api/v1/me/transaction/history",
-      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     // === SPOTIFY AUTH (auth-service) ===
     {
@@ -686,9 +929,22 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/spotify-auth/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     // === SPOTIFY QUERY (auth-query-service) ===
     {
@@ -701,9 +957,18 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/spotify/{everything}",
-      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     // === FAVORITES: READ (auth-query-service) ===
     {
@@ -716,9 +981,17 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/me/favorites",
-      "UpstreamHttpMethod": [ "GET" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 20000, "TimeoutValue": 3000 }
+      "UpstreamHttpMethod": [
+        "GET"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 20000,
+        "TimeoutValue": 3000
+      }
     },
     // === FAVORITES: WRITE (auth-service) ===
     {
@@ -731,9 +1004,20 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/me/favorites",
-      "UpstreamHttpMethod": [ "POST", "PUT", "DELETE", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 5000 }
+      "UpstreamHttpMethod": [
+        "POST",
+        "PUT",
+        "DELETE",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 5000
+      }
     },
     // === AI SERVICE (Gemini + TTS) ===
     {
@@ -746,9 +1030,43 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/voices",
-      "UpstreamHttpMethod": [ "GET", "POST", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 60000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 300000
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/voices",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "ai-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/voices",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 300000
+      }
     },
     {
       "DownstreamPathTemplate": "/api/scripts",
@@ -760,9 +1078,43 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/scripts",
-      "UpstreamHttpMethod": [ "GET", "POST", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 60000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 300000
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/scripts",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "ai-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/scripts",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 300000
+      }
     },
     {
       "DownstreamPathTemplate": "/api/scripts/{everything}",
@@ -774,9 +1126,49 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/scripts/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 60000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 300000
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/scripts/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "ai-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/scripts/{everything}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 300000
+      }
     },
     {
       "DownstreamPathTemplate": "/api/audios/{everything}",
@@ -788,9 +1180,49 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/audios/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 60000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 300000
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/audios/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "ai-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/audios/{everything}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 300000
+      }
     },
     {
       "DownstreamPathTemplate": "/api/{everything}",
@@ -802,191 +1234,434 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/ai/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 60000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 300000
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "ai-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/ai/{everything}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 300000
+      }
     },
     // ═══════════════════════════════════════════════════════════
     // LIVE SESSION SERVICE — Direct routes (no prefix)
     //   Timeout: 8s (AzuraCast calls may be slower)
     //   Upload:  30s (music file uploads)
     // ═══════════════════════════════════════════════════════════
-
     // === PLAYLIST ===
     {
       "DownstreamPathTemplate": "/api/v1/Playlist",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
-        { "Host": "live-session-service", "Port": 8080 }
+        {
+          "Host": "live-session-service",
+          "Port": 8080
+        }
       ],
       "UpstreamPathTemplate": "/api/v1/playlist",
-      "UpstreamHttpMethod": [ "GET", "POST", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/Playlist/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
-        { "Host": "live-session-service", "Port": 8080 }
+        {
+          "Host": "live-session-service",
+          "Port": 8080
+        }
       ],
       "UpstreamPathTemplate": "/api/v1/playlist/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
-
     // === MUSIC CATALOG (direct /musiccatalog) ===
     {
       "DownstreamPathTemplate": "/api/v1/musiccatalog",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
-        { "Host": "live-session-service", "Port": 8080 }
+        {
+          "Host": "live-session-service",
+          "Port": 8080
+        }
       ],
       "UpstreamPathTemplate": "/api/v1/musiccatalog",
-      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/musiccatalog/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
-        { "Host": "live-session-service", "Port": 8080 }
+        {
+          "Host": "live-session-service",
+          "Port": 8080
+        }
       ],
       "UpstreamPathTemplate": "/api/v1/musiccatalog/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 30000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 30000
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/musiccatalog",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
-        { "Host": "live-session-service", "Port": 8080 }
+        {
+          "Host": "live-session-service",
+          "Port": 8080
+        }
       ],
       "UpstreamPathTemplate": "/api/v1/music-catalog",
-      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/musiccatalog/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
-        { "Host": "live-session-service", "Port": 8080 }
+        {
+          "Host": "live-session-service",
+          "Port": 8080
+        }
       ],
       "UpstreamPathTemplate": "/api/v1/music-catalog/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 30000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 30000
+      }
     },
-
     // === LIVE SESSION ===
     {
       "DownstreamPathTemplate": "/api/v1/livesession",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
-        { "Host": "live-session-service", "Port": 8080 }
+        {
+          "Host": "live-session-service",
+          "Port": 8080
+        }
       ],
       "UpstreamPathTemplate": "/api/v1/livesession",
-      "UpstreamHttpMethod": [ "GET", "POST", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/livesession/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
-        { "Host": "live-session-service", "Port": 8080 }
+        {
+          "Host": "live-session-service",
+          "Port": 8080
+        }
       ],
       "UpstreamPathTemplate": "/api/v1/livesession/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/livesession",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
-        { "Host": "live-session-service", "Port": 8080 }
+        {
+          "Host": "live-session-service",
+          "Port": 8080
+        }
       ],
       "UpstreamPathTemplate": "/api/v1/live-session",
-      "UpstreamHttpMethod": [ "GET", "POST", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/livesession/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
-        { "Host": "live-session-service", "Port": 8080 }
+        {
+          "Host": "live-session-service",
+          "Port": 8080
+        }
       ],
       "UpstreamPathTemplate": "/api/v1/live-session/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
-
     // === PODCAST (direct /podcast) ===
     {
       "DownstreamPathTemplate": "/api/v1/Podcast",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
-        { "Host": "live-session-service", "Port": 8080 }
+        {
+          "Host": "live-session-service",
+          "Port": 8080
+        }
       ],
       "UpstreamPathTemplate": "/api/v1/podcast",
-      "UpstreamHttpMethod": [ "GET", "POST", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/Podcast/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
-        { "Host": "live-session-service", "Port": 8080 }
+        {
+          "Host": "live-session-service",
+          "Port": 8080
+        }
       ],
       "UpstreamPathTemplate": "/api/v1/podcast/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
-
     // === SCHEDULE ===
     {
       "DownstreamPathTemplate": "/api/v1/Schedule",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
-        { "Host": "live-session-service", "Port": 8080 }
+        {
+          "Host": "live-session-service",
+          "Port": 8080
+        }
       ],
       "UpstreamPathTemplate": "/api/v1/schedule",
-      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/Schedule/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
-        { "Host": "live-session-service", "Port": 8080 }
+        {
+          "Host": "live-session-service",
+          "Port": 8080
+        }
       ],
       "UpstreamPathTemplate": "/api/v1/schedule/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     },
-
     // === AZURACAST HEALTH ===
     {
       "DownstreamPathTemplate": "/api/v1/AzuraCastHealth/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
-        { "Host": "live-session-service", "Port": 8080 }
+        {
+          "Host": "live-session-service",
+          "Port": 8080
+        }
       ],
       "UpstreamPathTemplate": "/api/v1/azuracast/{everything}",
-      "UpstreamHttpMethod": [ "GET", "OPTIONS" ],
-      "LoadBalancerOptions": { "Type": "RoundRobin" },
-      "QoSOptions": { "ExceptionsAllowedBeforeBreaking": 5, "DurationOfBreak": 30000, "TimeoutValue": 8000 }
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
     }
   ]
 }

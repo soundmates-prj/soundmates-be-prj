@@ -1,3 +1,6 @@
+using System.Linq;
+using Microsoft.Extensions.DependencyInjection;
+using AiService.Application.Constants;
 using AiService.Api.Extensions;
 using AiService.Api.Models.Requests.Voices;
 using AiService.Api.Models.Responses;
@@ -6,6 +9,7 @@ using AiService.Application.Enums;
 using AiService.Application.Features.Voices.Commands.CreateVoice;
 using AiService.Application.Features.Voices.Queries.GetActiveVoices;
 using AiService.Domain.Entities;
+using AiService.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -60,6 +64,59 @@ public class VoicesController : ControllerBase
 
         return result.IsSuccess
             ? Ok(ApiResponse<object>.SuccessResponse(new { voice = result.Data }))
+            : BadRequest(ApiResponse<string>.Error(ApiStatusCode.HB40001, result.ErrorMessage ?? "Failed"));
+    }
+
+    [HttpPost("clone")]
+    public async Task<IActionResult> Clone([FromForm] string voice_id, [FromForm] string ref_text, IFormFile file, CancellationToken ct)
+    {
+        if (!User.TryGetCurrentUserId(out var userId))
+            return Unauthorized(ApiResponse<string>.Error(ApiStatusCode.HB40101, "Invalid token"));
+
+        if (file == null || file.Length == 0)
+            return BadRequest(ApiResponse<string>.Error(ApiStatusCode.HB40001, "file is required"));
+
+        using var ms = new MemoryStream();
+        await file.CopyToAsync(ms, ct);
+        var audioBytes = ms.ToArray();
+
+        // Register in TTS Provider
+        var tts = HttpContext.RequestServices.GetRequiredService<ITextToSpeechService>();
+        var result = await tts.CloneVoiceAsync(voice_id, ref_text, audioBytes, file.FileName, ct);
+
+        if (!result.IsSuccess)
+        {
+            return BadRequest(ApiResponse<string>.Error(ApiStatusCode.HB50001, result.ErrorMessage ?? "Failed to clone voice"));
+        }
+
+        // Save association in our DB so it appears in GetActive list
+        var voiceResult = await _commands.Send<CreateVoiceCommand, TtsVoice>(
+            new CreateVoiceCommand(
+                UserId: userId,
+                IsUserVoice: true,
+                Provider: AiProviderConstants.VieNeuTts,
+                VoiceCode: voice_id,
+                DisplayName: voice_id,
+                Region: "VN",
+                Gender: "Unknown",
+                Model: "custom",
+                IsActive: true),
+            ct);
+
+        return Ok(ApiResponse<object>.SuccessResponse(new { voice = voiceResult.Data }));
+    }
+
+    [HttpDelete("{voiceId:guid}")]
+    public async Task<IActionResult> Delete([FromRoute] Guid voiceId, CancellationToken ct)
+    {
+        if (!User.TryGetCurrentUserId(out var userId))
+            return Unauthorized(ApiResponse<string>.Error(ApiStatusCode.HB40101, "Invalid token"));
+
+        var voiceService = HttpContext.RequestServices.GetRequiredService<IVoiceService>();
+        var result = await voiceService.DeleteAsync(userId, voiceId, ct);
+        
+        return result.IsSuccess 
+            ? Ok(ApiResponse<string>.SuccessResponse("Deleted"))
             : BadRequest(ApiResponse<string>.Error(ApiStatusCode.HB40001, result.ErrorMessage ?? "Failed"));
     }
 }
