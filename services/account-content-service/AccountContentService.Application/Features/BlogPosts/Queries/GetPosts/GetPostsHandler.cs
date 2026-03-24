@@ -1,4 +1,4 @@
-﻿using AccountContentService.Application.Common.Pagination;
+using AccountContentService.Application.Common.Pagination;
 using AccountContentService.Application.Common.Result;
 using AccountContentService.Application.DTOs;
 using AccountContentService.Application.Interfaces.Repositories;

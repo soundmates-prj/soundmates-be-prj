@@ -1,5 +1,7 @@
 using System.Text.Json;
+using AuthQueryService.Domain.Entities.ReadModels;
 using AuthQueryService.Domain.Interfaces;
+using AuthQueryService.Infrastructure.Messaging.EventHandlers;
 using Microsoft.Extensions.Logging;
 
 namespace AuthQueryService.Infrastructure.Messaging.EventHandlers.Handlers
@@ -13,22 +15,40 @@ namespace AuthQueryService.Infrastructure.Messaging.EventHandlers.Handlers
 
         protected override async Task HandleEventAsync(JsonElement root, CancellationToken cancellationToken)
         {
-            var userId = GetUserId(root);
-            _logger.LogDebug("Updating user in MongoDB: {UserId}", userId);
+            var userData = EventPropertyExtractor.GetDataElement(root);
+            var userId = GetUserId(userData);
+            
+            _logger.LogDebug("Processing user update for {UserId}", userId);
 
             var existing = await _repository.GetByIdAsync(userId);
+            bool isNew = false;
+
             if (existing is null)
             {
-                _logger.LogWarning("User not found in MongoDB for update: {UserId}", userId);
-                return;
+                _logger.LogWarning("User not found in MongoDB for update: {UserId}. Creating new entry (Upsert).", userId);
+                isNew = true;
+                
+                // Khởi tạo model mới nếu chưa tồn tại (Xử lý trường hợp sự kiện Created đến sau)
+                existing = new UserReadModel
+                {
+                    Id = userId,
+                    Username = EventPropertyExtractor.GetStringProperty(userData, "username", "Username"),
+                    Email = EventPropertyExtractor.GetStringProperty(userData, "email", "Email"),
+                    FirstName = EventPropertyExtractor.GetOptionalStringProperty(userData, "firstName", "FirstName"),
+                    LastName = EventPropertyExtractor.GetOptionalStringProperty(userData, "lastName", "LastName"),
+                    RoleId = EventPropertyExtractor.GetNullableGuidProperty(userData, "roleId", "RoleId"),
+                    RoleName = EventPropertyExtractor.GetOptionalStringProperty(userData, "roleName", "RoleName"),
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                };
             }
 
-            // Update fields if present
-            var username = EventPropertyExtractor.GetOptionalStringProperty(root, "username", "Username");
-            var email = EventPropertyExtractor.GetOptionalStringProperty(root, "email", "Email");
-            var (firstName, lastName) = EventPropertyExtractor.ParseName(root);
-            var roleId = EventPropertyExtractor.GetNullableGuidProperty(root, "roleId", "RoleId");
-            var roleName = EventPropertyExtractor.GetOptionalStringProperty(root, "roleName", "RoleName");
+            // Cập nhật các trường nếu có trong event
+            var username = EventPropertyExtractor.GetOptionalStringProperty(userData, "username", "Username");
+            var email = EventPropertyExtractor.GetOptionalStringProperty(userData, "email", "Email");
+            var (firstName, lastName) = EventPropertyExtractor.ParseName(userData);
+            var roleId = EventPropertyExtractor.GetNullableGuidProperty(userData, "roleId", "RoleId");
+            var roleName = EventPropertyExtractor.GetOptionalStringProperty(userData, "roleName", "RoleName");
 
             if (!string.IsNullOrEmpty(username)) existing.Username = username;
             if (!string.IsNullOrEmpty(email)) existing.Email = email;
@@ -37,17 +57,13 @@ namespace AuthQueryService.Infrastructure.Messaging.EventHandlers.Handlers
             if (roleId.HasValue) existing.RoleId = roleId;
             if (!string.IsNullOrEmpty(roleName)) existing.RoleName = roleName;
 
-            // Handle IsActive if present
-            if (root.TryGetProperty("isActive", out var isActiveProp) || 
-                root.TryGetProperty("IsActive", out isActiveProp))
-            {
-                existing.IsActive = isActiveProp.ValueKind == JsonValueKind.True;
-            }
+            // Xử lý IsActive
+            existing.IsActive = EventPropertyExtractor.GetBooleanProperty(userData, "isActive", "IsActive");
 
             existing.UpdatedAt = DateTime.UtcNow;
 
             await _repository.UpsertAsync(existing);
-            _logger.LogDebug("User updated in MongoDB: {UserId}", userId);
+            _logger.LogInformation(isNew ? "User created via Update event: {Id}" : "User updated in MongoDB: {Id}", userId);
         }
     }
 }

@@ -49,56 +49,67 @@ public sealed class VerifyEmailHandler : ICommandHandler<VerifyEmailCommand, Aut
             return Result<AuthResult>.Failure("Invalid or expired OTP code", 400);
         }
 
-        // Verify email using OTP
-        var user = await _repo.VerifyEmailAsync(command.Email, command.OtpCode);
+        // Bắt đầu Transaction để đảm bảo tính nguyên tử giữa User DB và Outbox
+        await _unitOfWork.BeginTransactionAsync(cancellationToken);
         
-        if (user == null)
+        try
         {
-            return Result<AuthResult>.Failure("Invalid or expired OTP code", 400);
+            // Verify email using OTP
+            var user = await _repo.VerifyEmailAsync(command.Email, command.OtpCode);
+            
+            if (user == null)
+            {
+                await _unitOfWork.RollbackAsync(cancellationToken);
+                return Result<AuthResult>.Failure("Invalid or expired OTP code", 400);
+            }
+
+            // Mark OTP as used
+            otp.IsUsed = true;
+            otp.UsedAt = _dateTimeProvider.UtcNow;
+            await _otpRepository.UpdateAsync(otp);
+            
+            // Generate tokens for immediate login after verification
+            var (accessToken, refreshToken) = _jwt.GenerateTokenPair(user);
+            
+            // Save refresh token
+            var refreshTokenEntity = new RefreshToken
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                Token = refreshToken,
+                ExpiresAt = _dateTimeProvider.UtcNow.AddDays(7),
+                CreatedAt = _dateTimeProvider.UtcNow,
+                IsRevoked = false
+            };
+            await _refreshTokenRepository.AddAsync(refreshTokenEntity);
+
+            // Publish user updated event to Outbox within same transaction
+            await _outbox.EnqueueAsync("auth.user.updated", new
+            {
+                id = user.Id,
+                username = user.Username,
+                email = user.Email,
+                firstName = user.FirstName,
+                lastName = user.LastName,
+                roleId = user.RoleId,
+                roleName = user.Role?.Name ?? "MEMBER",
+                isActive = true, // User is now active
+                emailVerifiedAt = user.EmailVerifiedAt,
+                updatedAt = DateTime.UtcNow
+            }, cancellationToken);
+            
+            // Commit cả User change và Outbox message
+            await _unitOfWork.CommitAsync(cancellationToken);
+
+            // Map to AuthResult
+            var authResult = user.ToAuthResult(accessToken, refreshToken);
+            return Result<AuthResult>.Success(authResult, "Email verified successfully. Your account is now active.");
         }
-
-        // Mark OTP as used
-        otp.IsUsed = true;
-        otp.UsedAt = _dateTimeProvider.UtcNow;
-        await _otpRepository.UpdateAsync(otp);
-        
-        // Generate tokens for immediate login after verification
-        var (accessToken, refreshToken) = _jwt.GenerateTokenPair(user);
-        
-        // Save refresh token
-        var refreshTokenEntity = new RefreshToken
+        catch (Exception ex)
         {
-            Id = Guid.NewGuid(),
-            UserId = user.Id,
-            Token = refreshToken,
-            ExpiresAt = _dateTimeProvider.UtcNow.AddDays(7),
-            CreatedAt = _dateTimeProvider.UtcNow,
-            IsRevoked = false
-        };
-        await _refreshTokenRepository.AddAsync(refreshTokenEntity);
-        
-        // Commit transaction
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        // Publish user updated event
-        await _outbox.EnqueueAsync("auth.user.updated", new
-        {
-            id = user.Id,
-            username = user.Username,
-            email = user.Email,
-            firstName = user.FirstName,
-            lastName = user.LastName,
-            roleId = user.RoleId,
-            roleName = user.Role?.Name,
-            isActive = user.IsActive,
-            emailVerifiedAt = user.EmailVerifiedAt,
-            updatedAt = user.UpdatedAt
-        }, cancellationToken);
-
-        // Map to AuthResult
-        var authResult = user.ToAuthResult(accessToken, refreshToken);
-
-        return Result<AuthResult>.Success(authResult, "Email verified successfully. Your account is now active.");
+            await _unitOfWork.RollbackAsync(cancellationToken);
+            throw;
+        }
     }
 }
 
