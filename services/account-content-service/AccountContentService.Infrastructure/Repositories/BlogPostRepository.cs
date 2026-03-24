@@ -1,4 +1,4 @@
-﻿using AccountContentService.Application.Common.Pagination;
+using AccountContentService.Application.Common.Pagination;
 using AccountContentService.Application.Features.BlogPosts.Queries.GetPopularPosts;
 using AccountContentService.Application.Features.BlogPosts.Queries.GetPosts;
 using AccountContentService.Application.Features.BlogPosts.Queries.GetPostStats;
@@ -189,6 +189,11 @@ namespace AccountContentService.Infrastructure.Repositories
                 request.Search,
                 request.FromDate,
                 request.ToDate);
+
+            if (!string.IsNullOrWhiteSpace(request.AuthorName) && Guid.TryParse(request.AuthorName, out var userId))
+            {
+                query = query.Where(p => p.UserId == userId);
+            }
 
             var totalCount = await query.CountAsync(cancellationToken);
 

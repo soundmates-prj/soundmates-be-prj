@@ -1,4 +1,4 @@
-﻿using AccountContentService.Api.Common;
+using AccountContentService.Api.Common;
 using AccountContentService.Api.Constants;
 using AccountContentService.Api.Contracts.Requests;
 using AccountContentService.Api.Contracts.Responses;
@@ -21,7 +21,6 @@ using Sprache;
 
 
 [ApiController]
-[Authorize]
 public class BlogController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -41,6 +40,7 @@ public class BlogController : ControllerBase
     /// </remarks>
     /// <response code="200">Create post successfully</response>
     /// <response code="400">Invalid request</response>
+    [Authorize]
     [HttpPost(ApiRoutes.Posts.Create)]
     public async Task<IActionResult> CreatePost(CreatePostRequest request)
     {
@@ -58,6 +58,7 @@ public class BlogController : ControllerBase
     /// <summary>
     /// Share a music card to current user's blog wall.
     /// </summary>
+    [Authorize]
     [HttpPost(ApiRoutes.Posts.ShareMusic)]
     public async Task<IActionResult> ShareMusicPost(ShareMusicPostRequest request)
     {
@@ -79,6 +80,7 @@ public class BlogController : ControllerBase
     /// <param name="request">Post request body</param>
     /// <response code="200">Update post successfully</response>
     /// <response code="404">Post not found</response>
+    [Authorize]
     [HttpPut(ApiRoutes.Posts.Update)]
     public async Task<IActionResult> UpdatePost(
         [FromRoute] Guid postId,
@@ -103,6 +105,7 @@ public class BlogController : ControllerBase
     /// Filters can be applied using query parameters (e.g., status, moodTag).
     /// </remarks>
     /// <response code="200">Get posts successfully</response>
+    [Authorize]
     [HttpGet(ApiRoutes.Posts.GetAll)]
     public async Task<IActionResult> GetPosts([FromQuery] PaginationRequest request)
     {
@@ -208,6 +211,7 @@ public class BlogController : ControllerBase
     /// Can be filtered by moodTag, authorName, search keyword, and date range using query parameters.
     /// </remarks>
     /// <response code="200">Get statistics successfully</response>
+    [Authorize]
     [HttpGet(ApiRoutes.Posts.GetAllStats)]
     public async Task<IActionResult> GetPostsStats([FromQuery] PaginationRequest request)
     {
@@ -252,6 +256,7 @@ public class BlogController : ControllerBase
     /// <param name="postId">Post identifier</param>
     /// <response code="200">Post retrieved successfully</response>
     /// <response code="404">Post not found</response>
+    [Authorize]
     [HttpGet(ApiRoutes.Posts.GetById)]
     public async Task<IActionResult> GetPostById([FromRoute] Guid postId)
     {
@@ -274,6 +279,7 @@ public class BlogController : ControllerBase
     /// <param name="request"></param>
     /// <response code="200">Post retrieved successfully</response>
     /// <response code="404">Post not found</response>
+    [Authorize]
     [HttpGet(ApiRoutes.Users.GetUserPosts)]
     public async Task<IActionResult> GetPostByUserId([FromRoute] Guid userId, [FromQuery]PaginationRequest request)
     {
@@ -300,6 +306,7 @@ public class BlogController : ControllerBase
     /// </summary>
     /// <response code="200">Post retrieved successfully</response>
     /// <response code="404">Post not found</response>
+    [Authorize]
     [HttpGet(ApiRoutes.Me.MyPosts)]
     public async Task<IActionResult> GetCurrentUserPost([FromQuery] PaginationRequest request)
     {
@@ -346,6 +353,7 @@ public class BlogController : ControllerBase
     /// Delete a blog post
     /// </summary>
     /// <param name="postId">Post identifier</param>
+    [Authorize]
     [HttpDelete(ApiRoutes.Posts.Delete)]
     public async Task<IActionResult> DeletePostById([FromRoute] Guid postId)
     {
@@ -364,6 +372,7 @@ public class BlogController : ControllerBase
     /// <param name="postId">Post identifier</param>
     /// <response code="200">Post published successfully</response>
     /// <response code="404">Post not found</response>
+    [Authorize]
     [HttpPatch(ApiRoutes.Posts.Publish)]
     public async Task<IActionResult> PublishPost([FromRoute] Guid postId)
     {
@@ -381,6 +390,7 @@ public class BlogController : ControllerBase
     /// <param name="postId">Post identifier</param>
     /// <response code="200">Post published successfully</response>
     /// <response code="404">Post not found</response>
+    [Authorize]
     [HttpPatch(ApiRoutes.Posts.Draft)]
     public async Task<IActionResult> MoveToDraft([FromRoute] Guid postId)
     {
@@ -399,6 +409,7 @@ public class BlogController : ControllerBase
     /// <param name="postId">Post identifier</param>
     /// <response code="200">Post published successfully</response>
     /// <response code="404">Post not found</response>
+    [Authorize]
     [HttpPatch(ApiRoutes.Posts.Archive)]
     public async Task<IActionResult> MoveToArchived([FromRoute] Guid postId)
     {

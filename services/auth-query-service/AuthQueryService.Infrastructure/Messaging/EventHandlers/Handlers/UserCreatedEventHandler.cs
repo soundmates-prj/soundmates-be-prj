@@ -26,6 +26,14 @@ namespace AuthQueryService.Infrastructure.Messaging.EventHandlers.Handlers
 
             _logger.LogDebug("Creating user in MongoDB: {Username} ({Id})", username, id);
 
+            // Kiểm tra xem User đã được tạo bởi một sự kiện cập nhật đến trước hay chưa
+            var existing = await _repository.GetByIdAsync(id);
+            if (existing != null)
+            {
+                _logger.LogInformation("User {Id} already exists in MongoDB read-model (arrival out of order). Skipping creation.", id);
+                return;
+            }
+
             var userModel = new UserReadModel
             {
                 Id = id,
@@ -41,7 +49,7 @@ namespace AuthQueryService.Infrastructure.Messaging.EventHandlers.Handlers
             };
 
             await _repository.UpsertAsync(userModel);
-            _logger.LogDebug("User created in MongoDB: {Username}", username);
+            _logger.LogInformation("User created in MongoDB: {Username} ({Id})", username, id);
         }
     }
 }

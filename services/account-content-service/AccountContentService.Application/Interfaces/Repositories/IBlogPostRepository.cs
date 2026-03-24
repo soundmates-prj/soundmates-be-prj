@@ -1,4 +1,4 @@
-﻿using AccountContentService.Application.Common.Pagination;
+using AccountContentService.Application.Common.Pagination;
 using AccountContentService.Application.DTOs;
 using AccountContentService.Application.Features.BlogPosts.Queries.GetPopularPosts;
 using AccountContentService.Application.Features.BlogPosts.Queries.GetPosts;
