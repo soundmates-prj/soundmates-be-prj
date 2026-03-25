@@ -73,6 +73,8 @@ public sealed class GetAllLiveSessionsHandler : IQueryHandler<GetAllLiveSessions
                 PeakListeners = s.Listeners.Count(l => l.IsConnected),
                 ListenersCount = s.Listeners.Count(l => l.IsConnected),
                 StreamUrl = s.AzuraCastStation?.StreamUrl,
+                StationShortcode = s.AzuraCastStation?.StationShortcode,
+                PublicPlayerUrl = s.AzuraCastStation?.PublicPlayerUrl,
                 ThumbnailUrl = s.ThumbnailUrl,
                 Genre = s.Genre,
                 CreatedAt = s.CreatedAt

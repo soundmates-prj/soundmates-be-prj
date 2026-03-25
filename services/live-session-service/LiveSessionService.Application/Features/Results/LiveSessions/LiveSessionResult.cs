@@ -20,6 +20,8 @@ public sealed class LiveSessionResult
     public int TotalDuration { get; init; }
     public DateTime CreatedAt { get; init; }
     public string? StreamUrl { get; init; }
+    public string? StationShortcode { get; init; }
+    public string? PublicPlayerUrl { get; init; }
     public string? ThumbnailUrl { get; init; }
     public string? Genre { get; init; }
     public int ListenersCount { get; init; }

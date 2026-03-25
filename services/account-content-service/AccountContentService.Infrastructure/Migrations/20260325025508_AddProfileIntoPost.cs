@@ -12,9 +12,16 @@ namespace AccountContentService.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
+            migrationBuilder.RenameColumn(
                 name: "ThemeName",
-                table: "Themes");
+                table: "Themes",
+                newName: "name");
+
+            migrationBuilder.Sql(@"
+UPDATE ""Themes""
+SET ""name"" = LEFT(""name"", 150)
+WHERE LENGTH(""name"") > 150;
+");
 
             migrationBuilder.RenameColumn(
                 name: "Id",
@@ -102,7 +109,7 @@ namespace AccountContentService.Infrastructure.Migrations
                 type: "character varying(20)",
                 maxLength: 20,
                 nullable: false,
-                defaultValue: "");
+                defaultValue: "light");
 
             migrationBuilder.AddColumn<string>(
                 name: "mood",
@@ -111,13 +118,14 @@ namespace AccountContentService.Infrastructure.Migrations
                 maxLength: 50,
                 nullable: true);
 
-            migrationBuilder.AddColumn<string>(
+            migrationBuilder.AlterColumn<string>(
                 name: "name",
                 table: "Themes",
                 type: "character varying(150)",
                 maxLength: 150,
                 nullable: false,
-                defaultValue: "");
+                oldClrType: typeof(string),
+                oldType: "text");
 
             migrationBuilder.AddColumn<string>(
                 name: "player_color",
@@ -154,6 +162,26 @@ namespace AccountContentService.Infrastructure.Migrations
                 nullable: false,
                 defaultValue: "");
 
+            migrationBuilder.Sql(@"
+UPDATE ""Themes""
+SET ""name"" = CASE
+    WHEN ""name"" IS NULL OR ""name"" = '' THEN 'theme-' || ""id""::text
+    ELSE ""name""
+END;
+");
+
+            migrationBuilder.Sql(@"
+WITH ranked AS (
+    SELECT ""id"", ""name"",
+           ROW_NUMBER() OVER (PARTITION BY ""name"" ORDER BY ""id"") AS rn
+    FROM ""Themes""
+)
+UPDATE ""Themes"" t
+SET ""name"" = LEFT(t.""name"", 140) || '-' || ranked.rn::text
+FROM ranked
+WHERE t.""id"" = ranked.""id"" AND ranked.rn > 1;
+");
+
             migrationBuilder.CreateIndex(
                 name: "IX_Themes_name",
                 table: "Themes",
@@ -186,10 +214,6 @@ namespace AccountContentService.Infrastructure.Migrations
 
             migrationBuilder.DropColumn(
                 name: "mood",
-                table: "Themes");
-
-            migrationBuilder.DropColumn(
-                name: "name",
                 table: "Themes");
 
             migrationBuilder.DropColumn(
@@ -241,6 +265,20 @@ namespace AccountContentService.Infrastructure.Migrations
                 name: "gradient_background",
                 table: "Themes",
                 newName: "CustomCss");
+
+            migrationBuilder.AlterColumn<string>(
+                name: "name",
+                table: "Themes",
+                type: "text",
+                nullable: false,
+                oldClrType: typeof(string),
+                oldType: "character varying(150)",
+                oldMaxLength: 150);
+
+            migrationBuilder.RenameColumn(
+                name: "name",
+                table: "Themes",
+                newName: "ThemeName");
 
             migrationBuilder.AlterColumn<string>(
                 name: "SecondaryColor",

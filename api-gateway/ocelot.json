@@ -1283,6 +1283,43 @@
     //   Timeout: 8s (AzuraCast calls may be slower)
     //   Upload:  30s (music file uploads)
     // ═══════════════════════════════════════════════════════════
+    // === SIGNALR HUBS (WebSockets via Gateway) ===
+    {
+      "DownstreamPathTemplate": "/hubs/live-session",
+      "DownstreamScheme": "ws",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "live-session-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/liveHub",
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/hubs/now-playing",
+      "DownstreamScheme": "ws",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "live-session-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/nowPlayingHub",
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      }
+    },
     // === PLAYLIST ===
     {
       "DownstreamPathTemplate": "/api/v1/Playlist",

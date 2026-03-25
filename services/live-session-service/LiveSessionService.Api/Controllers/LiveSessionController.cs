@@ -15,6 +15,8 @@ using LiveSessionService.Application.Features.LiveSessions.Queries.GetStaffDashb
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetSessionSchedules;
 using LiveSessionService.Application.Features.Results;
 using LiveSessionService.Application.Features.Results.LiveSessions;
+using LiveSessionService.Application.Features.Results.NowPlaying;
+using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSessionNowPlaying;
 using LiveSessionService.Application.Features.Results.SongRequests;
 using LiveSessionService.Application.Features.SongRequests.Commands.CreateSongRequest;
 using LiveSessionService.Application.Features.SongRequests.Commands.ReviewSongRequest;
@@ -143,6 +145,29 @@ public class LiveSessionController : ControllerBase
         }
 
         return Ok(ApiResponse<LiveSessionResult>.SuccessResponse(result.Data!, "Success"));
+    }
+
+    /// <summary>
+    /// Get live now-playing data from AzuraCast for a live session
+    /// </summary>
+    [HttpGet("{id:guid}/now-playing")]
+    [ProducesResponseType(typeof(ApiResponse<StationNowPlayingResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> GetNowPlaying(Guid id, CancellationToken ct)
+    {
+        var query = new Application.Features.LiveSessions.Queries.GetLiveSessionNowPlaying.GetLiveSessionNowPlayingQuery(id);
+        var result = await _queries.Send<Application.Features.LiveSessions.Queries.GetLiveSessionNowPlaying.GetLiveSessionNowPlayingQuery, StationNowPlayingResult>(query, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(ApiResponse<StationNowPlayingResult>.SuccessResponse(result.Data!, "Success"));
     }
 
     /// <summary>
