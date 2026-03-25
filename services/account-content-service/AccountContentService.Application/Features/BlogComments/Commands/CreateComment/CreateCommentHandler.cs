@@ -18,24 +18,29 @@ namespace AccountContentService.Application.Features.BlogComments.Commands.Creat
         private readonly ICommentRepository _repository;
         private readonly IBlogPostRepository _postRepository;
         private readonly IMapper _mapper;   
-        private readonly IUserServiceClient _userClient;
+        private readonly IUserServiceClient _userServiceClient;
 
         public CreateCommentHandler(
             ICommentRepository repository,
             IBlogPostRepository postRepository,
             IMapper mapper,
-            IUserServiceClient userClient)
+            IUserServiceClient userServiceClient)
         {
             _repository = repository;
             _postRepository = postRepository;
             _mapper = mapper;
-            _userClient = userClient;
+            _userServiceClient = userServiceClient;
         }
 
         public async Task<CommentDto> Handle(
             CreateCommentCommand request,
             CancellationToken cancellationToken)
         {
+            var user = await _userServiceClient.GetMyProfile();
+            if (user == null)
+            {
+                throw new Exception("User is not available!");
+            }
             var post = await _postRepository.GetByIdAsync(request.PostId, cancellationToken);
 
             if (post == null)
@@ -46,12 +51,11 @@ namespace AccountContentService.Application.Features.BlogComments.Commands.Creat
             var comment = _mapper.Map<BlogComment>(request);
             comment.Status = CommentStatus.Active.ToString();
             comment.CreatedAt  = DateTime.UtcNow;
+            comment.UserAvatarUrl = user.ProfileImageUrl ?? string.Empty;
+            comment.UserFullName = $"{user.FirstName ?? ""} {user.LastName ?? ""}".Trim() ?? string.Empty;
 
             await _repository.AddAsync(comment);
-
-            var userProfile = await _userClient.GetMyProfile();
             var respose = _mapper.Map<CommentDto>(comment);
-            respose.userProfile = userProfile;
 
             return respose;
         }

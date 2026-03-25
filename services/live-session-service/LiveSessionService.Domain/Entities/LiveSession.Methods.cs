@@ -120,6 +120,28 @@ public partial class LiveSession
         UpdatedAt = dateTimeProvider.UtcNow;
     }
 
+    public void RevertToCreated(IDateTimeProvider dateTimeProvider)
+    {
+        if (Status == SessionStatus.Live || Status == SessionStatus.Paused)
+            throw new InvalidSessionStateException(
+                "Cannot revert an active session to created",
+                LiveSessionErrorCodes.SessionAlreadyActive);
+
+        if (Status == SessionStatus.Ended)
+            throw new InvalidSessionStateException(
+                "Cannot revert an ended session to created",
+                LiveSessionErrorCodes.SessionAlreadyEnded);
+
+        if (Status == SessionStatus.Cancelled)
+            throw new InvalidSessionStateException(
+                "Cannot revert a cancelled session to created",
+                LiveSessionErrorCodes.SessionNotActive);
+
+        Status = SessionStatus.Created;
+        StartedAt = CreatedAt;
+        UpdatedAt = dateTimeProvider.UtcNow;
+    }
+
     /// <summary>
     /// Starts the live session.
     /// </summary>

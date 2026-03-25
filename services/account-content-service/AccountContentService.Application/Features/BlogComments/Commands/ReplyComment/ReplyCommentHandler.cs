@@ -9,6 +9,7 @@ using MediatR;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using static System.Collections.Specialized.BitVector32;
 
 namespace AccountContentService.Application.Features.BlogComments.Commands.ReplyComment
 {
@@ -30,23 +31,21 @@ namespace AccountContentService.Application.Features.BlogComments.Commands.Reply
             ReplyCommentCommand request,
             CancellationToken cancellationToken)
         {
-            var parent = await _repository.GetByIdAsync(request.ParentCommentId, cancellationToken);
+            var user = await _userClient.GetMyProfile() ?? throw new Exception("User is not available!");
 
-            if (parent == null)
-            {
-                throw new NotFoundException("Comment not found");
-            }
+            var parent = await _repository.GetByIdAsync(request.ParentCommentId, cancellationToken) ?? throw new NotFoundException("Comment not found");
 
             var reply = _mapper.Map<BlogComment>(request);
             reply.Status = CommentStatus.Active.ToString();
             reply.CreatedAt = DateTime.UtcNow;
             reply.PostId = parent.PostId;
+            reply.UserAvatarUrl = user.ProfileImageUrl ?? string.Empty;
+            reply.UserFullName = $"{user.FirstName ?? ""} {user.LastName ?? ""}".Trim() ?? string.Empty;
 
             await _repository.AddAsync(reply);
 
             var userProfile = await _userClient.GetMyProfile();
             var response = _mapper.Map<CommentDto>(reply);
-            response.userProfile = userProfile;
 
             return response;
         }
