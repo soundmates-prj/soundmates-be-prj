@@ -35,7 +35,7 @@ public sealed class NowPlayingBroadcastService : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation(
-            "NowPlayingBroadcastService started — polling every {Interval}s",
+            "NowPlayingBroadcastService started ï¿½ polling every {Interval}s",
             _pollInterval.TotalSeconds);
 
         while (!stoppingToken.IsCancellationRequested)
@@ -51,9 +51,11 @@ public sealed class NowPlayingBroadcastService : BackgroundService
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
             var stationRepo = scope.ServiceProvider.GetRequiredService<IAzuraCastStationRepository>();
+            var sessionRepo = scope.ServiceProvider.GetRequiredService<ILiveSessionRepository>();
             var queries     = scope.ServiceProvider.GetRequiredService<IQueryDispatcher>();
 
             var stations = await stationRepo.GetAllEnabledAsync(ct);
+            var activeSessions = await sessionRepo.GetActiveSessionsAsync(ct);
 
             foreach (var station in stations)
             {
@@ -77,8 +79,16 @@ public sealed class NowPlayingBroadcastService : BackgroundService
                         .Group($"station-{station.Id}")
                         .SendAsync("NowPlayingUpdated", nowPlaying, ct);
 
+                    var relatedSessions = activeSessions.Where(s => s.AzuraCastStationId == station.Id).ToList();
+                    foreach (var session in relatedSessions)
+                    {
+                        await _hub.Clients
+                            .Group($"session-{session.Id}")
+                            .SendAsync("NowPlayingUpdated", nowPlaying, ct);
+                    }
+
                     _logger.LogDebug(
-                        "Broadcast NowPlaying for station {StationId}: [{ShId}] {Title} — {Artist}",
+                        "Broadcast NowPlaying for station {StationId}: [{ShId}] {Title} ï¿½ {Artist}",
                         station.Id, currentShId,
                         nowPlaying.CurrentTrack?.Title ?? "-",
                         nowPlaying.CurrentTrack?.Artist ?? "-");

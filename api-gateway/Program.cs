@@ -30,6 +30,8 @@ app.UseCors("AllowFrontend");
 
 app.UseHttpsRedirection();
 
+app.UseWebSockets();
+
 // THIS LINE IS REQUIRED
 await app.UseOcelot();
 

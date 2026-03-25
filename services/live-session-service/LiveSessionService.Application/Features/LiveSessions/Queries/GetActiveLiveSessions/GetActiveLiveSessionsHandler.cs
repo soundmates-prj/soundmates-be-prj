@@ -34,6 +34,8 @@ public sealed class GetActiveLiveSessionsHandler : IQueryHandler<GetActiveLiveSe
             EndedAt = s.EndedAt,
             CreatedAt = s.CreatedAt,
             StreamUrl = s.AzuraCastStation?.StreamUrl,
+            StationShortcode = s.AzuraCastStation?.StationShortcode,
+            PublicPlayerUrl = s.AzuraCastStation?.PublicPlayerUrl,
             ThumbnailUrl = s.ThumbnailUrl,
             Genre = s.Genre,
             ListenersCount = s.Listeners?.Count(l => l.IsConnected) ?? 0
