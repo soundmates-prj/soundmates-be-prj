@@ -9,11 +9,12 @@ namespace AccountContentService.Api.Contracts.Responses
         public Guid PostId { get; set; }
 
         public Guid UserId { get; set; }
+        public string UserFullName { get; set; } = string.Empty;
+        public string UserAvatarUrl { get; set; } = string.Empty;
 
         public string ReactionType { get; set; }
 
         public DateTime CreatedAt { get; set; }
 
-        public UserProfileResponse userProfile { get; set; } = null!;
     }
 }

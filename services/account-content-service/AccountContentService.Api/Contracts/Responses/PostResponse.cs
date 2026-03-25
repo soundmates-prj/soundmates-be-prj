@@ -5,6 +5,8 @@
         public Guid Id { get; set; }
 
         public Guid UserId { get; set; }
+        public string UserFullName { get; set; } = string.Empty;
+        public string UserAvatarUrl { get; set; } = string.Empty;
 
         public string Title { get; set; } = string.Empty;
 
@@ -31,7 +33,6 @@
         public string? PostType { get; set; }
         public ShareMusicResponse? ShareMusic { get; set; }
 
-        public UserProfileResponse userProfile { get; set; } = null!;
         //public List<CommentResponse> Comments { get; set; } = new();
         //public List<ReactionResponse> Reactions { get; set; } = new();
     }

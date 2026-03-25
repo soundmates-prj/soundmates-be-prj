@@ -15,27 +15,35 @@ public static class DataSeeder
         var userId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
         // THEMES
-        var defaultTheme = new Theme
+        var chillTheme = new Theme
         {
             Id = Guid.NewGuid(),
-            ThemeName = "Default",
-            PrimaryColor = "#4F46E5",
-            SecondaryColor = "#FFFFFF",
-            FontFamily = "Inter",
-            IsActive = true
+            Name = "Dark Theme",
+            Mode = "dark",
+            IsActive = true,
+            PrimaryColor = "#000000",
+            BackgroundColor = "#121212",
+            TextColor = "#FFFFFF",
+            Mood = "chill",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         };
 
-        var darkTheme = new Theme
+        var loveTheme = new Theme
         {
             Id = Guid.NewGuid(),
-            ThemeName = "Dark",
-            PrimaryColor = "#111827",
-            SecondaryColor = "#1F2937",
-            FontFamily = "Inter",
-            IsActive = true
+            Name = "Love Theme",
+            Mode = "light",
+            IsActive = true,
+            PrimaryColor = "#FF4D6D",
+            BackgroundColor = "#FFF0F3",
+            TextColor = "#000000",
+            Mood = "love",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         };
 
-        context.Themes.AddRange(defaultTheme, darkTheme);
+        context.Themes.AddRange(chillTheme, loveTheme);
 
         // SUBSCRIPTION PLANS
         // SUBSCRIPTION PLANS

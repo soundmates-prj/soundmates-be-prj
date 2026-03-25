@@ -312,7 +312,7 @@
         // =====================================================
 
         /// <summary>
-        /// Endpoints for payment processing.
+        /// Endpoints for system settings.
         /// </summary>
         public static class Settings
         {
@@ -338,7 +338,7 @@
         }
 
         // =====================================================
-        // SYSTEM SETTING
+        // TRANSACTIONS
         // =====================================================
 
         /// <summary>
@@ -362,6 +362,57 @@
 
             /// <summary>Retrieve all transaction values.</summary>
             public const string GetAll = BaseRoute;
+        }
+
+        // =====================================================
+        // THEMES
+        // =====================================================
+
+        /// <summary>
+        /// Provides API endpoint routes for theme management.
+        /// </summary>
+        public static class Themes
+        {
+            private const string BaseRoute = $"{Base}/themes";
+
+            /// <summary>
+            /// Endpoint to create a new theme.
+            /// </summary>
+            public const string Create = BaseRoute;
+
+            /// <summary>
+            /// Endpoint to update an existing theme by its unique identifier.
+            /// </summary>
+            public const string Update = $"{BaseRoute}/{{themeId:guid}}";
+
+            /// <summary>
+            /// Endpoint to delete a theme by its unique identifier.
+            /// </summary>
+            public const string Delete = $"{BaseRoute}/{{themeId:guid}}";
+
+            /// <summary>
+            /// Endpoint to retrieve a theme by its unique identifier.
+            /// </summary>
+            public const string GetById = $"{BaseRoute}/{{themeId:guid}}";
+
+            /// <summary>Ative/Unactive a theme.</summary>
+            public const string Active = $"{BaseRoute}/{{themeId:guid}}/set-active";
+
+            ///// <summary>
+            ///// Endpoint to retrieve a theme by its name.
+            ///// </summary>
+            //public const string GetByName = $"{BaseRoute}/by-name/{{themeName}}";
+
+            /// <summary>
+            /// Endpoint to retrieve all themes or filter themes via query parameters.
+            /// </summary>
+            public const string GetAll = BaseRoute;
+
+            /// <summary>
+            /// Endpoint to retrieve all themes or filter themes via query parameters.
+            /// </summary>
+            public const string GetAllActive = $"{BaseRoute}/active";
+
         }
     }
 }

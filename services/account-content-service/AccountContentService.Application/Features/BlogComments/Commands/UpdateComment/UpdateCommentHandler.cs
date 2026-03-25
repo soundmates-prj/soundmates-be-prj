@@ -45,7 +45,7 @@ namespace AccountContentService.Application.Features.BlogComments.Commands.Updat
             await _commentRepository.UpdateAsync(comment);
             var response = _mapper .Map<CommentDto>(comment);
             var userProfile = await _userClient.GetMyProfile();
-            response.userProfile = userProfile;
+            
 
             return _mapper.Map<CommentDto>(response);
         }

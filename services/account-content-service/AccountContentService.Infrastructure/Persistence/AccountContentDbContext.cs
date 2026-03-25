@@ -1,5 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
-using AccountContentService.Domain.Entities;
+﻿using AccountContentService.Domain.Entities;
+using AccountContentService.Infrastructure.Persistence.Configurations;
+using Microsoft.EntityFrameworkCore;
 
 public class AccountContentDbContext : DbContext
 {
@@ -99,6 +100,8 @@ public class AccountContentDbContext : DbContext
             // Index on IsActive for faster filtering
             entity.HasIndex(x => x.IsActive);
         });
+
+        modelBuilder.ApplyConfiguration(new ThemeConfiguration());
 
         base.OnModelCreating(modelBuilder);
     }

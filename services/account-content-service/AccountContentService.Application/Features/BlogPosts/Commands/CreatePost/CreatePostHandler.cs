@@ -1,5 +1,6 @@
 ﻿using AccountContentService.Application.DTOs;
 using AccountContentService.Application.Interfaces.Repositories;
+using AccountContentService.Application.Interfaces.Services;
 using AccountContentService.Domain.Entities;
 using AutoMapper;
 using MediatR;
@@ -14,13 +15,16 @@ namespace AccountContentService.Application.Features.BlogPosts.Commands.CreatePo
     public class CreatePostHandler : IRequestHandler<CreatePostCommand, PostDto>
     {
         private readonly IBlogPostRepository _postRepository;
+        private readonly IUserServiceClient _userServiceClient;
         private readonly IMapper _mapper;
 
         public CreatePostHandler(
             IBlogPostRepository postRepository,
+            IUserServiceClient userServiceClient,
             IMapper mapper)
         {
             _postRepository = postRepository;
+            _userServiceClient = userServiceClient;
             _mapper = mapper;
         }
 
@@ -28,8 +32,17 @@ namespace AccountContentService.Application.Features.BlogPosts.Commands.CreatePo
             CreatePostCommand request,
             CancellationToken cancellationToken)
         {
+            var user = await _userServiceClient.GetMyProfile();
+            if (user == null)
+            {
+                throw new Exception("User is not available!");
+            }
             var post = _mapper.Map<BlogPost>(request);
             post.PublishedAt = DateTime.UtcNow;
+            post.CreatedAt = DateTime.UtcNow;
+            post.UserFullName = $"{user.FirstName ?? ""} {user.LastName ?? ""}".Trim() ?? string.Empty;
+            post.UserAvatarUrl = user.ProfileImageUrl ?? string.Empty;
+
 
             await _postRepository.AddAsync(post);
 
