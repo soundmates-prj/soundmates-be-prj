@@ -40,7 +40,7 @@ namespace AccountContentService.Api.Controllers
         /// <param name="request"></param>
         /// <param name="themeName">Optional theme name to filter.</param>
         /// <returns>List of themes.</returns>
-        [HttpGet(ApiRoutes.Themes.GetAll)]
+        [HttpGet(ApiRoutes.Themes.GetAllActive)]
         public async Task<IActionResult> GetAllActive(
             [FromQuery] string? themeName, [FromQuery] PaginationNoFilterRequest request)
         {
@@ -184,7 +184,7 @@ namespace AccountContentService.Api.Controllers
 
             var result = await _mediator.Send(command);
 
-            return Ok(ApiResponse<bool>.Ok(result, $"Status: {result}"));
+            return Ok(ApiResponse<bool>.Ok(result, $"Theme active set to: {result}"));
         }
     }
 }

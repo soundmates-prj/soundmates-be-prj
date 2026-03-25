@@ -33,7 +33,7 @@ namespace AccountContentService.Application.Features.Themes.Commands.SetThemeAct
 
             await _repository.UpdateAsync(theme, cancellationToken);
 
-            return true;
+            return theme.IsActive;
         }
     }
 }

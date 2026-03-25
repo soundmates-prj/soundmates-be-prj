@@ -15,9 +15,9 @@ namespace AccountContentService.Application.Mappings
     {
         public ThemeProfile()
         {
-            CreateMap<ThemeDto, Theme>();
-            CreateMap<CreateThemeCommand, BlogComment>();
-            CreateMap<UpdateThemeCommand, BlogComment>()
+            CreateMap<Theme, ThemeDto>();
+            CreateMap<CreateThemeCommand, Theme>();
+            CreateMap<UpdateThemeCommand, Theme>()
                 .ForAllMembers(opts =>
                 opts.Condition((src, dest, srcMember) => srcMember != null));
         }

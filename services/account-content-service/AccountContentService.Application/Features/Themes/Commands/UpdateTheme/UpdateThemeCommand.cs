@@ -3,6 +3,7 @@ using MediatR;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.Json;
 
 namespace AccountContentService.Application.Features.Themes.Commands.UpdateTheme
 {
@@ -30,6 +31,6 @@ namespace AccountContentService.Application.Features.Themes.Commands.UpdateTheme
         public string? FontFamily { get; set; }
 
         // Advanced (JSON config)
-        public string? ConfigJson { get; set; }
+        public JsonElement? ConfigJson { get; set; }
     }
 }

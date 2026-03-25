@@ -1,4 +1,6 @@
-﻿namespace AccountContentService.Api.Contracts.Responses
+﻿using System.Text.Json;
+
+namespace AccountContentService.Api.Contracts.Responses
 {
     public class ThemeResponse
     {
@@ -26,7 +28,7 @@
         public string? FontFamily { get; set; }
 
         // Advanced (JSON config)
-        public string? ConfigJson { get; set; }
+        public JsonElement? ConfigJson { get; set; }
 
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }

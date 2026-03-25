@@ -1,4 +1,6 @@
-﻿namespace AccountContentService.Domain.Entities;
+﻿using System.Text.Json;
+
+namespace AccountContentService.Domain.Entities;
 
 public class Theme
 {
@@ -26,7 +28,7 @@ public class Theme
     public string? FontFamily { get; set; }
 
     // Advanced (JSON config)
-    public string? ConfigJson { get; set; }
+    public JsonElement? ConfigJson { get; set; }
 
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

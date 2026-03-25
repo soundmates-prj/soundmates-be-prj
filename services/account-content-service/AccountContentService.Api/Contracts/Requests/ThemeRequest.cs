@@ -1,4 +1,6 @@
-﻿namespace AccountContentService.Api.Contracts.Requests
+﻿using System.Text.Json;
+
+namespace AccountContentService.Api.Contracts.Requests
 {
     public class ThemeRequest
     {
@@ -23,6 +25,6 @@
         public string? FontFamily { get; set; }
 
         // Advanced (JSON config)
-        public string? ConfigJson { get; set; }
+        public JsonElement? ConfigJson { get; set; }
     }
 }

@@ -8,6 +8,8 @@ public class BlogComment
 
     public Guid UserId { get; set; }
     public Guid ParentCommentId { get; set; }
+    public string UserFullName { get; set; } = string.Empty;
+    public string UserAvatarUrl { get; set; } = string.Empty;
 
     public string Content { get; set; } = string.Empty;
 

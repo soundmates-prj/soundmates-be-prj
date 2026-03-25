@@ -396,7 +396,7 @@
             public const string GetById = $"{BaseRoute}/{{themeId:guid}}";
 
             /// <summary>Ative/Unactive a theme.</summary>
-            public const string Active = $"{BaseRoute}/{{theme:guid}}/set-active";
+            public const string Active = $"{BaseRoute}/{{themeId:guid}}/set-active";
 
             ///// <summary>
             ///// Endpoint to retrieve a theme by its name.
@@ -407,6 +407,12 @@
             /// Endpoint to retrieve all themes or filter themes via query parameters.
             /// </summary>
             public const string GetAll = BaseRoute;
+
+            /// <summary>
+            /// Endpoint to retrieve all themes or filter themes via query parameters.
+            /// </summary>
+            public const string GetAllActive = $"{BaseRoute}/active";
+
         }
     }
 }

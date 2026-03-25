@@ -13,6 +13,8 @@ namespace AccountContentService.Application.DTOs
         public string Title { get; set; } = string.Empty;
 
         public string ContentText { get; set; } = string.Empty;
+        public string UserFullName { get; set; } = string.Empty;
+        public string UserAvatarUrl { get; set; } = string.Empty;
 
         public string? AudioUrl { get; set; }
         public string? ImageUrl { get; set; }
@@ -33,8 +35,6 @@ namespace AccountContentService.Application.DTOs
 
         public string? PostType { get; set; }
         public ShareMusicDto? ShareMusic { get; set; }
-
-        public UserProfileDto userProfile { get; set; } = null!;
 
         //public List<CommentDto> Comments { get; set; } = new();
         //public List<ReactionDto> Reactions { get; set; } = new();

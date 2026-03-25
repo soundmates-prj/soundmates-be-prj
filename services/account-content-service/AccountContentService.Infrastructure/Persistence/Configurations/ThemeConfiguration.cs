@@ -11,7 +11,7 @@ namespace AccountContentService.Infrastructure.Persistence.Configurations
     {
         public void Configure(EntityTypeBuilder<Theme> builder)
         {
-            builder.ToTable("themes");
+            builder.ToTable("Themes");
 
             builder.HasKey(x => x.Id);
 

@@ -3,6 +3,7 @@ using System;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AccountContentService.Infrastructure.Migrations
 {
     [DbContext(typeof(AccountContentDbContext))]
-    partial class AccountContentDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260325025508_AddProfileIntoPost")]
+    partial class AddProfileIntoPost
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -47,14 +50,6 @@ namespace AccountContentService.Infrastructure.Migrations
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("UserAvatarUrl")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("UserFullName")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
@@ -324,14 +319,6 @@ namespace AccountContentService.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("ReactionType")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("UserAvatarUrl")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("UserFullName")
                         .IsRequired()
                         .HasColumnType("text");
 

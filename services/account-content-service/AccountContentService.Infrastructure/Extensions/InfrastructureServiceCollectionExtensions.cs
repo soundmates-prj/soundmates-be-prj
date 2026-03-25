@@ -31,6 +31,7 @@ namespace AccountContentService.Infrastructure.Extensions
             services.AddScoped<ISystemSettingReposiotry, SystemSettingReposiotry>();
             services.AddScoped<IServiceConfigRepository, ServiceConfigRepository>();
             services.AddScoped<ISystemConfigRepository, SystemConfigRepository>();
+            services.AddScoped<IThemeRepository, ThemeRepository>();
 
             // VNPay Config
             services.Configure<VNPayConfig>(configuration.GetSection("VNPay"));
