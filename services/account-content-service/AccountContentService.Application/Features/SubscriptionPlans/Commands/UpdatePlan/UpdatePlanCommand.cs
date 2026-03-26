@@ -10,7 +10,7 @@ namespace AccountContentService.Application.Features.SubscriptionPlans.Commands.
     {
         public Guid PlanId { get; set; }
 
-        public  string PlanName { get; set; }
+        public  string PlanName { get; set; } = string.Empty;
 
         public  decimal Price { get; set; }
 

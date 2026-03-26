@@ -1,4 +1,4 @@
-﻿using AccountContentService.Application.DTOs;
+using AccountContentService.Application.DTOs;
 using AccountContentService.Application.Exceptions;
 using AccountContentService.Application.Interfaces.Repositories;
 using AccountContentService.Application.Interfaces.Services;
@@ -6,41 +6,34 @@ using AccountContentService.Domain.Entities;
 using AccountContentService.Domain.Enums;
 using AutoMapper;
 using MediatR;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace AccountContentService.Application.Features.BlogComments.Commands.CreateComment
 {
-    public class CreateCommentHandler
-     : IRequestHandler<CreateCommentCommand, CommentDto>
+    public class CreateCommentHandler : IRequestHandler<CreateCommentCommand, CommentDto>
     {
         private readonly ICommentRepository _repository;
         private readonly IBlogPostRepository _postRepository;
-        private readonly IMapper _mapper;   
-        private readonly IUserServiceClient _userServiceClient;
+        private readonly IMapper _mapper;
+        private readonly IUserProfileCache _userProfileCache;
 
         public CreateCommentHandler(
             ICommentRepository repository,
             IBlogPostRepository postRepository,
             IMapper mapper,
-            IUserServiceClient userServiceClient)
+            IUserProfileCache userProfileCache)
         {
             _repository = repository;
             _postRepository = postRepository;
             _mapper = mapper;
-            _userServiceClient = userServiceClient;
+            _userProfileCache = userProfileCache;
         }
 
         public async Task<CommentDto> Handle(
             CreateCommentCommand request,
             CancellationToken cancellationToken)
         {
-            var user = await _userServiceClient.GetMyProfile();
-            if (user == null)
-            {
-                throw new Exception("User is not available!");
-            }
+            var userProfile = await _userProfileCache.GetProfileAsync(request.UserId, cancellationToken);
+
             var post = await _postRepository.GetByIdAsync(request.PostId, cancellationToken);
 
             if (post == null)
@@ -50,14 +43,12 @@ namespace AccountContentService.Application.Features.BlogComments.Commands.Creat
 
             var comment = _mapper.Map<BlogComment>(request);
             comment.Status = CommentStatus.Active.ToString();
-            comment.CreatedAt  = DateTime.UtcNow;
-            comment.UserAvatarUrl = user.ProfileImageUrl ?? string.Empty;
-            comment.UserFullName = $"{user.FirstName ?? ""} {user.LastName ?? ""}".Trim() ?? string.Empty;
+            comment.CreatedAt = DateTime.UtcNow;
+            comment.UserAvatarUrl = userProfile.AvatarUrl ?? string.Empty;
+            comment.UserFullName = userProfile.FullName;
 
             await _repository.AddAsync(comment);
-            var respose = _mapper.Map<CommentDto>(comment);
-
-            return respose;
+            return _mapper.Map<CommentDto>(comment);
         }
     }
 }

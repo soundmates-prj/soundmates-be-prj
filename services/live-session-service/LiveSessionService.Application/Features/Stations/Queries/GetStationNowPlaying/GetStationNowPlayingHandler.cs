@@ -1,6 +1,7 @@
 using LiveSessionService.Application.Abstractions;
 using LiveSessionService.Application.Abstractions.Messaging;
 using LiveSessionService.Application.Enums;
+using LiveSessionService.Application.Exceptions;
 using LiveSessionService.Application.Features.Common.AzuraCast.Models;
 using LiveSessionService.Application.Features.Results;
 using LiveSessionService.Application.Features.Results.NowPlaying;
@@ -38,7 +39,18 @@ public sealed class GetStationNowPlayingHandler
             "Fetching live now playing from AzuraCast for station {StationId} (external: {ExternalId})",
             query.StationId, station.ExternalStationId);
 
-        var data = await _azuraCastClient.GetNowPlayingAsync(station.ExternalStationId, cancellationToken);
+        AzuraCastNowPlayingData? data;
+        try
+        {
+            data = await _azuraCastClient.GetNowPlayingAsync(station.ExternalStationId, cancellationToken);
+        }
+        catch (AzuraCastException ex)
+        {
+            _logger.LogWarning(ex,
+                "AzuraCast now-playing request failed for station {StationId} (external: {ExternalId})",
+                station.Id, station.ExternalStationId);
+            return Result<StationNowPlayingResult>.Failure(ex.Message, ex.ErrorCode);
+        }
 
         if (data == null)
             return Result<StationNowPlayingResult>.Failure(

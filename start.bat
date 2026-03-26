@@ -43,7 +43,7 @@ echo   [?] Setup Complete!
 echo ==========================================
 echo.
 echo [*] Service Endpoints:
-echo    - API Gateway:        http://localhost:8000
+echo    - API Gateway:        http://localhost:8080
 echo    - Auth Service:       http://localhost:8001
 echo    - Auth Query Service: http://localhost:8002
 echo    - PostgreSQL:         localhost:5432

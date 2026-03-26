@@ -10,9 +10,9 @@ namespace AccountContentService.Application.Features.BlogPosts.Queries.GetPopula
 
         public Guid UserId { get; set; }
 
-        public string Title { get; set; }
+        public string Title { get; set; } = string.Empty;
 
-        public string ContentText { get; set; }
+        public string ContentText { get; set; } = string.Empty;
 
         public string? AudioUrl { get; set; }
         public string? ImgUrl { get; set; }
@@ -21,7 +21,7 @@ namespace AccountContentService.Application.Features.BlogPosts.Queries.GetPopula
 
         public string? MoodTag { get; set; }
 
-        public string Status { get; set; }
+        public string Status { get; set; } = string.Empty;
 
         public bool IsGenerated { get; set; }
 

@@ -1,6 +1,7 @@
 using LiveSessionService.Application.Abstractions;
 using LiveSessionService.Application.Abstractions.Messaging;
 using LiveSessionService.Application.Enums;
+using LiveSessionService.Application.Exceptions;
 using LiveSessionService.Application.Features.Results;
 using LiveSessionService.Application.Features.Results.Music;
 using LiveSessionService.Domain.Entities;
@@ -139,6 +140,11 @@ public sealed class SyncMediaFilesHandler : ICommandHandler<SyncMediaFilesComman
                 result.UnchangedFiles);
 
             return Result<SyncMediaFilesResult>.Success(result);
+        }
+        catch (AzuraCastException ex)
+        {
+            _logger.LogError(ex, "AzuraCast error while syncing media files for station {StationId}", command.StationId);
+            return Result<SyncMediaFilesResult>.Failure(ex.Message, ex.ErrorCode);
         }
         catch (Exception ex)
         {

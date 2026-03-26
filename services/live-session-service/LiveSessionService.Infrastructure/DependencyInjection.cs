@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using LiveSessionService.Application.Abstractions;
 using LiveSessionService.Application.Features.Common.AzuraCast;
 using LiveSessionService.Domain.Interfaces;
@@ -111,6 +112,10 @@ public static class DependencyInjection
         // Messaging - RabbitMQ
         services.AddSingleton<IMessageBusPublisher, RabbitMqPublisher>();
         services.AddHostedService<OutboxPublisherBackgroundService>();
+
+        // RabbitMQ options for AzuraCast config consumer
+        services.Configure<RabbitMqOptions>(configuration.GetSection("RabbitMq"));
+        services.AddHostedService<AzuraCastConfigEventConsumer>();
 
         return services;
     }

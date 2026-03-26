@@ -1,6 +1,7 @@
 using AccountContentService.Application.Common.Pagination;
 using AccountContentService.Application.Common.Result;
 using AccountContentService.Application.DTOs;
+using AccountContentService.Application.Exceptions;
 using AccountContentService.Application.Interfaces.Repositories;
 using AutoMapper;
 using MediatR;
@@ -67,7 +68,7 @@ public class GetPostsHandler:
         var post = await _repository.GetByIdAsync(request.PostId, cancellationToken);
         if (post == null)
         {
-            return null;
+            throw new NotFoundException($"Post with id {request.PostId} was not found.");
         }
         return _mapper.Map<PostDto>(post);
     }
@@ -79,7 +80,7 @@ public class GetPostsHandler:
         var post = await _repository.GetPublishByIdAsync(request.PostId, cancellationToken);
         if (post == null)
         {
-            return null;
+            throw new NotFoundException($"Post with id {request.PostId} was not found.");
         }
         return _mapper.Map<PostDto>(post);
     }

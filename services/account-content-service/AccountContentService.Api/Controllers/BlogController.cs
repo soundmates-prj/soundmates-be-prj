@@ -20,6 +20,12 @@ using Microsoft.AspNetCore.Mvc;
 using Sprache;
 
 
+/// <summary>
+/// Provides endpoints for creating, updating, querying, and moderating blog posts.
+/// </summary>
+/// <summary>
+/// Provides endpoints for creating, updating, querying, and moderating blog posts.
+/// </summary>
 [ApiController]
 public class BlogController : ControllerBase
 {

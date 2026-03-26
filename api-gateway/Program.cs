@@ -28,8 +28,9 @@ var app = builder.Build();
 // IMPORTANT: UseCors MUST be called BEFORE UseOcelot
 app.UseCors("AllowFrontend");
 
-app.UseHttpsRedirection();
-
+// IMPORTANT: keep gateway on plain HTTP in local Docker setup.
+// Enabling HTTPS redirection here can cause browser requests to hang/pending
+// when no HTTPS endpoint/certificate is configured for the gateway container.
 app.UseWebSockets();
 
 // THIS LINE IS REQUIRED

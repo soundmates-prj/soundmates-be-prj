@@ -5,6 +5,7 @@ using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Features.Results.Music;
 using LiveSessionService.Application.Features.Music.Commands.SyncMediaFiles;
 using LiveSessionService.Application.Features.Music.Commands.UploadMusic;
+using LiveSessionService.Application.Features.Music.Commands.BulkUploadMusic;
 using LiveSessionService.Application.Features.Music.Commands.ImportSystemMediaBatch;
 using LiveSessionService.Application.Features.Music.Commands.DeleteMedia;
 using LiveSessionService.Application.Features.Music.Queries.GetAllMediaFiles;
@@ -279,6 +280,101 @@ public class MusicCatalogController : ControllerBase
         }
 
         return NoContent();
+    }
+
+    /// <summary>
+    /// Bulk upload multiple music files at once
+    /// </summary>
+    /// <remarks>
+    /// Supported formats: MP3, FLAC, WAV, OGG
+    /// Max individual file size: 100MB
+    /// Max total request size: 500MB
+    /// Max files per request: 100
+    /// Files are stored in standalone system media storage (not auto-pushed to AzuraCast station)
+    /// </remarks>
+    [HttpPost("bulk-upload")]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(524_288_000)] // 500MB
+    [ProducesResponseType(typeof(ApiResponse<BulkUploadMusicResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    public async Task<IActionResult> BulkUploadMusic(
+        [FromForm] BulkUploadMusicRequest request,
+        CancellationToken ct)
+    {
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? throw new InvalidOperationException("User ID claim missing from token"));
+
+        // Validate at least one file
+        if (request.Files == null || request.Files.Count == 0)
+        {
+            return BadRequest(ApiResponse<object>.FailureResponse(
+                "No files uploaded",
+                (int)ErrorCode.BadRequest));
+        }
+
+        // Validate file count
+        if (request.Files.Count > 100)
+        {
+            return BadRequest(ApiResponse<object>.FailureResponse(
+                "Maximum 100 files allowed per bulk upload request",
+                (int)ErrorCode.BadRequest));
+        }
+
+        // Validate file types
+        var allowedExtensions = new[] { ".mp3", ".flac", ".wav", ".ogg" };
+        var invalidFiles = request.Files
+            .Where(f => !allowedExtensions.Contains(Path.GetExtension(f.FileName).ToLowerInvariant()))
+            .Select(f => f.FileName)
+            .ToList();
+
+        if (invalidFiles.Count > 0)
+        {
+            return BadRequest(ApiResponse<object>.FailureResponse(
+                $"Unsupported file types. Allowed: {string.Join(", ", allowedExtensions)}. Invalid files: {string.Join(", ", invalidFiles)}",
+                (int)ErrorCode.BadRequest));
+        }
+
+        // Convert IFormFile to BulkUploadFileEntry
+        var fileEntries = new List<BulkUploadFileEntry>();
+        foreach (var file in request.Files)
+        {
+            var ms = new MemoryStream();
+            await file.CopyToAsync(ms, ct);
+            ms.Position = 0;
+
+            fileEntries.Add(new BulkUploadFileEntry(
+                ms,
+                file.FileName,
+                file.ContentType,
+                null,
+                null,
+                null
+            ));
+        }
+
+        var result = await _commands.Send<BulkUploadMusicCommand, BulkUploadMusicResult>(
+            new BulkUploadMusicCommand(request.StationId, userId, fileEntries), ct);
+
+        // Dispose all streams
+        foreach (var entry in fileEntries)
+        {
+            await entry.FileStream.DisposeAsync();
+        }
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.Unauthorized => Unauthorized(result.ToApiResponse()),
+                ErrorCode.Forbidden => StatusCode(403, result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                ErrorCode.UnprocessableEntity => StatusCode(422, result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(result.ToApiResponse());
     }
 
     /// <summary>

@@ -12,13 +12,13 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["LiveSessionService.Api/LiveSessionService.Api.csproj", "LiveSessionService.Api/"]
-COPY ["LiveSessionService.Application/LiveSessionService.Application.csproj", "LiveSessionService.Application/"]
-COPY ["LiveSessionService.Domain/LiveSessionService.Domain.csproj", "LiveSessionService.Domain/"]
-COPY ["LiveSessionService.Infrastructure/LiveSessionService.Infrastructure.csproj", "LiveSessionService.Infrastructure/"]
-RUN dotnet restore "./LiveSessionService.Api/LiveSessionService.Api.csproj"
+COPY ["services/live-session-service/LiveSessionService.Api/LiveSessionService.Api.csproj", "services/live-session-service/LiveSessionService.Api/"]
+COPY ["services/live-session-service/LiveSessionService.Application/LiveSessionService.Application.csproj", "services/live-session-service/LiveSessionService.Application/"]
+COPY ["services/live-session-service/LiveSessionService.Domain/LiveSessionService.Domain.csproj", "services/live-session-service/LiveSessionService.Domain/"]
+COPY ["services/live-session-service/LiveSessionService.Infrastructure/LiveSessionService.Infrastructure.csproj", "services/live-session-service/LiveSessionService.Infrastructure/"]
+RUN dotnet restore "./services/live-session-service/LiveSessionService.Api/LiveSessionService.Api.csproj"
 COPY . .
-WORKDIR "/src/LiveSessionService.Api"
+WORKDIR "/src/services/live-session-service/LiveSessionService.Api"
 RUN dotnet build "./LiveSessionService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # This stage is used to publish the service project to be copied to the final stage

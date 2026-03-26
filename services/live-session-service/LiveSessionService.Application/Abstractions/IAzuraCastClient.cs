@@ -87,4 +87,10 @@ public interface IAzuraCastClient
         int stationId,
         string fileUniqueId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Updates the AzuraCast configuration at runtime.
+    /// Called by AzuraCastConfigEventConsumer when admin changes the config.
+    /// </summary>
+    void UpdateConfig(string baseUrl, string apiKey);
 }

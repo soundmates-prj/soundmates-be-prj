@@ -28,7 +28,7 @@ public sealed class NowPlayingTrackResult
     public string? ArtUrl { get; init; }
     public string? Lyrics { get; init; }
     public long PlayedAt { get; init; }
-    public long Duration { get; init; }
+    public long? Duration { get; init; }
     public long Elapsed { get; init; }
     public long Remaining { get; init; }
     public bool IsRequest { get; init; }

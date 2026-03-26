@@ -12,7 +12,7 @@ namespace AccountContentService.Application.Features.BlogComments.Commands.Reply
 
         public Guid UserId { get; set; }
 
-        public string Content { get; set; }
+        public string Content { get; set; } = string.Empty;
 
     }
 }

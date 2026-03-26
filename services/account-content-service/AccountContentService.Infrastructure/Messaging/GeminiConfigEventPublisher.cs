@@ -92,4 +92,46 @@ public sealed class GeminiConfigEventPublisher : IGeminiConfigEventPublisher
             _options.ConfigExchange,
             _options.GeminiRoutingKey);
     }
+
+    public async Task PublishDeletedAsync(string provider, CancellationToken cancellationToken)
+    {
+        var evt = new GeminiConfigUpdatedEvent
+        {
+            Provider = provider,
+            IsActive = false,
+            IsDeleted = true,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        var connection = await GetConnectionAsync(cancellationToken);
+        await using var channel = await connection.CreateChannelAsync(cancellationToken: cancellationToken);
+
+        await channel.ExchangeDeclareAsync(
+            exchange: _options.ConfigExchange,
+            type: ExchangeType.Topic,
+            durable: true,
+            autoDelete: false,
+            cancellationToken: cancellationToken);
+
+        var payload = JsonSerializer.Serialize(evt);
+        var body = Encoding.UTF8.GetBytes(payload);
+
+        var properties = new BasicProperties
+        {
+            ContentType = "application/json",
+            DeliveryMode = DeliveryModes.Persistent
+        };
+
+        await channel.BasicPublishAsync(
+            exchange: _options.ConfigExchange,
+            routingKey: _options.GeminiRoutingKey,
+            mandatory: false,
+            basicProperties: properties,
+            body: body,
+            cancellationToken: cancellationToken);
+
+        _logger.LogInformation("Published Gemini config delete event to exchange {Exchange} with routing key {RoutingKey}",
+            _options.ConfigExchange,
+            _options.GeminiRoutingKey);
+    }
 }

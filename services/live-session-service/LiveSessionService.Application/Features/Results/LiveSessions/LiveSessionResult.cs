@@ -1,3 +1,5 @@
+using LiveSessionService.Application.Features.Results.NowPlaying;
+
 namespace LiveSessionService.Application.Features.Results.LiveSessions;
 
 /// <summary>
@@ -25,4 +27,9 @@ public sealed class LiveSessionResult
     public string? ThumbnailUrl { get; init; }
     public string? Genre { get; init; }
     public int ListenersCount { get; init; }
+
+    /// <summary>
+    /// Real-time now playing data from AzuraCast including current track, album art, and song history
+    /// </summary>
+    public StationNowPlayingResult? NowPlaying { get; init; }
 }

@@ -1,30 +1,27 @@
-﻿using AccountContentService.Application.DTOs;
+using AccountContentService.Application.DTOs;
+using AccountContentService.Application.Exceptions;
 using AccountContentService.Application.Interfaces.Repositories;
 using AccountContentService.Application.Interfaces.Services;
 using AccountContentService.Domain.Entities;
+using AccountContentService.Domain.Enums;
 using AutoMapper;
 using MediatR;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text;
-using System.Text.Json;
 
 namespace AccountContentService.Application.Features.BlogPosts.Commands.CreatePost
 {
     public class CreatePostHandler : IRequestHandler<CreatePostCommand, PostDto>
     {
         private readonly IBlogPostRepository _postRepository;
-        private readonly IUserServiceClient _userServiceClient;
+        private readonly IUserProfileCache _userProfileCache;
         private readonly IMapper _mapper;
 
         public CreatePostHandler(
             IBlogPostRepository postRepository,
-            IUserServiceClient userServiceClient,
+            IUserProfileCache userProfileCache,
             IMapper mapper)
         {
             _postRepository = postRepository;
-            _userServiceClient = userServiceClient;
+            _userProfileCache = userProfileCache;
             _mapper = mapper;
         }
 
@@ -32,17 +29,13 @@ namespace AccountContentService.Application.Features.BlogPosts.Commands.CreatePo
             CreatePostCommand request,
             CancellationToken cancellationToken)
         {
-            var user = await _userServiceClient.GetMyProfile();
-            if (user == null)
-            {
-                throw new Exception("User is not available!");
-            }
+            var userProfile = await _userProfileCache.GetProfileAsync(request.UserId, cancellationToken);
+
             var post = _mapper.Map<BlogPost>(request);
             post.PublishedAt = DateTime.UtcNow;
             post.CreatedAt = DateTime.UtcNow;
-            post.UserFullName = $"{user.FirstName ?? ""} {user.LastName ?? ""}".Trim() ?? string.Empty;
-            post.UserAvatarUrl = user.ProfileImageUrl ?? string.Empty;
-
+            post.UserFullName = userProfile.FullName;
+            post.UserAvatarUrl = userProfile.AvatarUrl ?? string.Empty;
 
             await _postRepository.AddAsync(post);
 

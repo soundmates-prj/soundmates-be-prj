@@ -19,6 +19,12 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AccountContentService.Api.Controllers
 {
+    /// <summary>
+    /// Provides endpoints for creating, updating, deleting, and querying blog comments.
+    /// </summary>
+    /// <summary>
+    /// Provides endpoints for creating, updating, deleting, and querying blog comments.
+    /// </summary>
     [ApiController]
     [Authorize]
     public class CommentController : ControllerBase

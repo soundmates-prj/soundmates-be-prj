@@ -10,4 +10,5 @@ public sealed class RabbitMqOptions
 
     public string ConfigExchange { get; init; } = "config.exchange";
     public string GeminiRoutingKey { get; init; } = "config.gemini.updated";
+    public string AzuraCastRoutingKey { get; init; } = "config.azuracast.updated";
 }

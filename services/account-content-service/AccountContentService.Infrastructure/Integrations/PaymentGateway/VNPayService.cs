@@ -1,51 +1,63 @@
-﻿using AccountContentService.Application.Features.Payments.Commands.CreatePayment;
+using AccountContentService.Application.Features.Payments.Commands.CreatePayment;
 using AccountContentService.Application.Interfaces.Services;
-using AccountContentService.Domain.Enums;
 using AccountContentService.Infrastructure.Configurations;
-using AccountContentService.Infrastructure.Integrations.PaymentGateway;
 using Microsoft.Extensions.Options;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace AccountContentService.Infrastructure.NotificationService.PaymentGateway
+namespace AccountContentService.Infrastructure.NotificationService.PaymentGateway;
+
+public class VNPayService : IPaymentProvider
 {
-    public class VNPayService : IPaymentProvider
+    public string Name => "vnpay";
+
+    private readonly VNPayConfig _config;
+
+    public VNPayService(IOptions<VNPayConfig> config)
     {
-        public string Name => "vnpay";
+        _config = config.Value;
+    }
 
-        private readonly VNPayConfig _config;
+    public Task<string> CreatePaymentUrlAsync(Guid orderId, CreatePaymentCommand request)
+    {
+        var returnUrl = ResolveReturnUrl(request.ReturnUrl);
 
-        public VNPayService(IOptions<VNPayConfig> config)
-        {
-            _config = config.Value;
-        }
+        var vnpay = new VNPayLibrary();
 
-        public Task<string> CreatePaymentUrlAsync(Guid orderId, CreatePaymentCommand request)
-        {
-            var vnpay = new VNPayLibrary();
+        vnpay.AddRequestData("vnp_Version", "2.1.0");
+        vnpay.AddRequestData("vnp_Command", "pay");
+        vnpay.AddRequestData("vnp_TmnCode", _config.TmnCode);
+        vnpay.AddRequestData("vnp_Amount", ((int)(request.TotalAmount * 100)).ToString());
+        vnpay.AddRequestData("vnp_CreateDate", DateTime.UtcNow.ToString("yyyyMMddHHmmss"));
+        vnpay.AddRequestData("vnp_CurrCode", "VND");
 
-            vnpay.AddRequestData("vnp_Version", "2.1.0");
-            vnpay.AddRequestData("vnp_Command", "pay");
-            vnpay.AddRequestData("vnp_TmnCode", _config.TmnCode);
-            vnpay.AddRequestData("vnp_Amount", ((int)(request.TotalAmount * 100)).ToString());
-            vnpay.AddRequestData("vnp_CreateDate", DateTime.UtcNow.ToString("yyyyMMddHHmmss"));
-            vnpay.AddRequestData("vnp_CurrCode", "VND");
+        vnpay.AddRequestData("vnp_IpAddr", request.IpAddress);
 
-            // FIX: lấy IP từ HttpContext nếu cần
-            vnpay.AddRequestData("vnp_IpAddr", request.IpAddress);
+        vnpay.AddRequestData("vnp_OrderInfo", $"{request.TargetType}_{request.TargetId}");
+        vnpay.AddRequestData("vnp_OrderType", "other");
+        vnpay.AddRequestData("vnp_Locale", "vn");
 
-            vnpay.AddRequestData("vnp_OrderInfo", $"{request.TargetType}_{request.TargetId}");
-            vnpay.AddRequestData("vnp_OrderType", "other");
-            vnpay.AddRequestData("vnp_Locale", "vn");
+        vnpay.AddRequestData("vnp_ReturnUrl", returnUrl);
+        vnpay.AddRequestData("vnp_TxnRef", orderId.ToString());
 
-            vnpay.AddRequestData("vnp_ReturnUrl", _config.ReturnUrl);
-            vnpay.AddRequestData("vnp_TxnRef", orderId.ToString());
+        var baseUrl = _config.BaseUrl;
+        var url = vnpay.CreateRequestUrl(baseUrl, _config.HashSecret);
 
-            var url = vnpay.CreateRequestUrl(_config.BaseUrl, _config.HashSecret);
+        return Task.FromResult(url);
+    }
 
-            return Task.FromResult(url);
-        }
+    /// <summary>
+    /// Resolves the return URL: use frontend-provided URL if available,
+    /// otherwise fall back to the configured server-side ReturnUrl.
+    /// </summary>
+    private string ResolveReturnUrl(string? requestReturnUrl)
+    {
+        if (!string.IsNullOrWhiteSpace(requestReturnUrl))
+            return requestReturnUrl.TrimEnd('/');
 
+        if (!string.IsNullOrWhiteSpace(_config.ReturnUrl))
+            return _config.ReturnUrl.TrimEnd('/');
+
+        throw new InvalidOperationException(
+            "No ReturnUrl provided by frontend and VNPay:ReturnUrl is not configured. " +
+            "Set VNPay__ReturnUrl in .env or pass ReturnUrl in the payment request.");
     }
 }

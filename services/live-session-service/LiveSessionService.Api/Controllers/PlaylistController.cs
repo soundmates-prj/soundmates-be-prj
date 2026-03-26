@@ -81,6 +81,9 @@ public class PlaylistController : ControllerBase
     [HttpPost("station/{stationId:guid}/sync")]
     [ProducesResponseType(typeof(ApiResponse<SyncPlaylistsResult>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 503)]
     [ProducesResponseType(typeof(ApiResponse<object>), 500)]
     public async Task<IActionResult> SyncStationPlaylists(Guid stationId, CancellationToken ct)
     {
@@ -88,9 +91,16 @@ public class PlaylistController : ControllerBase
             new SyncPlaylistsCommand(stationId), ct);
 
         if (!result.IsSuccess)
-            return result.ErrorCode == ErrorCode.NotFound
-                ? NotFound(result.ToApiResponse())
-                : StatusCode(500, result.ToApiResponse());
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.Unauthorized => Unauthorized(result.ToApiResponse()),
+                ErrorCode.Forbidden => StatusCode(403, result.ToApiResponse()),
+                ErrorCode.ServiceUnavailable => StatusCode(503, result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
 
         return Ok(result.ToApiResponse());
     }

@@ -15,7 +15,7 @@ namespace LiveSessionService.Infrastructure.Services.AzuraCast;
 /// <summary>
 /// HTTP client for AzuraCast API
 /// BaseUrl ???c config qua HttpClient DI
-/// Ch? lo vi?c call API vù map response
+/// Ch? lo vi?c call API vÔøΩ map response
 /// </summary>
 public sealed class AzuraCastClient : IAzuraCastClient
 {
@@ -77,49 +77,39 @@ public sealed class AzuraCastClient : IAzuraCastClient
         int stationId,
         CancellationToken cancellationToken = default)
     {
-        try
+        var endpoint = $"api/nowplaying/{stationId}";
+        _logger.LogInformation(
+            "Fetching now playing from AzuraCast for station {StationId}",
+            stationId);
+
+        using var response = await _httpClient.GetAsync(endpoint, cancellationToken);
+
+        if (response.StatusCode == HttpStatusCode.NotFound)
         {
-            var endpoint = $"api/nowplaying/{stationId}";
-            _logger.LogInformation(
-                "Fetching now playing from AzuraCast for station {StationId}", 
-                stationId);
-
-            // Call API - deserialize to internal API model
-            var apiResponse = await _httpClient.GetFromJsonAsync<AzuraCastApiResponse>(
-                endpoint,
-                cancellationToken);
-
-            if (apiResponse == null)
-            {
-                _logger.LogWarning(
-                    "Received null response from AzuraCast API for station {StationId}", 
-                    stationId);
-                return null;
-            }
-
-            // Map internal API model ? Application model
-            var applicationModel = apiResponse.ToApplicationModel();
-
-            _logger.LogInformation(
-                "Successfully fetched now playing from AzuraCast for station {StationId}",
-                stationId);
-
-            return applicationModel;
+            throw new AzuraCastException(
+                $"AzuraCast now-playing not found for station {stationId}. Station may not exist or has no now-playing endpoint.",
+                ErrorCode.NotFound);
         }
-        catch (HttpRequestException ex)
+
+        await EnsureAzuraCastSuccessAsync(response, $"get now-playing for station {stationId}", cancellationToken);
+
+        var apiResponse = await response.Content.ReadFromJsonAsync<AzuraCastApiResponse>(cancellationToken);
+
+        if (apiResponse == null)
         {
-            _logger.LogError(ex, 
-                "HTTP error fetching now playing from AzuraCast for station {StationId}: {Message}", 
-                stationId, ex.Message);
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, 
-                "Error fetching now playing from AzuraCast for station {StationId}", 
+            _logger.LogWarning(
+                "Received null now-playing response from AzuraCast for station {StationId}",
                 stationId);
-            throw;
+            return null;
         }
+
+        var applicationModel = apiResponse.ToApplicationModel();
+
+        _logger.LogInformation(
+            "Successfully fetched now playing from AzuraCast for station {StationId}",
+            stationId);
+
+        return applicationModel;
     }
 
     public async Task<List<AzuraCastPlaylistData>> GetStationPlaylistsAsync(
@@ -359,7 +349,7 @@ public sealed class AzuraCastClient : IAzuraCastClient
             ? _httpClient.DefaultRequestHeaders.GetValues("X-API-Key").FirstOrDefault() is { } k && k.Length > 8
                 ? k[..4] + "****" + k[^4..]
                 : "****"
-            : "(MISSING ó API key was not loaded at startup)";
+            : "(MISSING ÔøΩ API key was not loaded at startup)";
         _logger.LogInformation(
             "UploadMediaAsync ? station {StationId} | X-API-Key header: {KeyPreview} | URL: {BaseAddress}api/station/{StationId}/files",
             stationId, keyPreview, _httpClient.BaseAddress, stationId);
@@ -560,10 +550,10 @@ public sealed class AzuraCastClient : IAzuraCastClient
                 body.Contains("NotLoggedInException", StringComparison.OrdinalIgnoreCase);
 
             string reason = isNotLoggedIn
-                ? $"AzuraCast rejected '{operation}' with 403 ó API key not recognised (NotLoggedInException). " +
+                ? $"AzuraCast rejected '{operation}' with 403 ÔøΩ API key not recognised (NotLoggedInException). " +
                   "The X-API-Key header was either missing or the key does not exist in AzuraCast. " +
                   "Check that AzuraCast__ApiKey in your .env matches an API key in AzuraCast Admin ? API Keys."
-                : $"AzuraCast rejected '{operation}' with 403 Forbidden ó the API key lacks the required role. " +
+                : $"AzuraCast rejected '{operation}' with 403 Forbidden ÔøΩ the API key lacks the required role. " +
                   "Go to AzuraCast Admin ? API Keys and grant 'Manage Stations' + 'Manage Station Media' permissions.";
 
             throw new AzuraCastException(
@@ -651,5 +641,27 @@ public sealed class AzuraCastClient : IAzuraCastClient
     {
         value = value.Trim();
         return value.Length <= maxLen ? value : value.Substring(0, maxLen) + "...";
+    }
+
+    /// <inheritdoc />
+    public void UpdateConfig(string baseUrl, string apiKey)
+    {
+        if (!string.IsNullOrWhiteSpace(baseUrl))
+        {
+            _httpClient.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
+        }
+
+        _httpClient.DefaultRequestHeaders.Remove("X-API-Key");
+        if (!string.IsNullOrWhiteSpace(apiKey))
+        {
+            _httpClient.DefaultRequestHeaders.Add("X-API-Key", apiKey);
+        }
+
+        _logger.LogInformation(
+            "AzuraCast client config updated at runtime: BaseUrl={BaseUrl}, ApiKey={MaskedKey}",
+            _httpClient.BaseAddress,
+            !string.IsNullOrWhiteSpace(apiKey) && apiKey.Length > 8
+                ? apiKey[..4] + "****"
+                : "(set)");
     }
 }

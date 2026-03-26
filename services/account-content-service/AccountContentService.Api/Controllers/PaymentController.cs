@@ -5,6 +5,7 @@ using AccountContentService.Api.Contracts.Responses;
 using AccountContentService.Application.Features.Payments.Commands;
 using AccountContentService.Application.Features.Payments.Commands.CallbackCommand;
 using AccountContentService.Application.Features.Payments.Commands.CreatePayment;
+using AccountContentService.Application.Features.Payments.Commands.PayOSWebhookCommand;
 using AutoMapper;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -69,6 +70,9 @@ namespace AccountContentService.Api.Controllers
             command.UserId = userId;
             command.IpAddress = ipAddress;
 
+            // Use frontend-provided ReturnUrl if available, otherwise default to config-based frontend URL
+            command.ReturnUrl ??= ResolveDefaultReturnUrl();
+
             var url = await _mediator.Send(command);
 
             return Ok(new { paymentUrl = url });
@@ -125,7 +129,7 @@ namespace AccountContentService.Api.Controllers
                 query["transactionId"] = result.Id.ToString();
                 query["paymentId"] = result.PaymentId.ToString();
                 query["amount"] = result.Amount.ToString();
-                query["provider"] = result.PaymentProvider;
+                query["provider"] = "vnpay";
                 query["vnp_ResponseCode"] = data.GetValueOrDefault("vnp_ResponseCode", "");
                 query["vnp_TransactionNo"] = data.GetValueOrDefault("vnp_TransactionNo", "");
 
@@ -141,6 +145,7 @@ namespace AccountContentService.Api.Controllers
                 var query = System.Web.HttpUtility.ParseQueryString(string.Empty);
                 query["status"] = "failed";
                 query["message"] = ex.Message;
+                query["provider"] = "vnpay";
                 query["vnp_ResponseCode"] = data.GetValueOrDefault("vnp_ResponseCode", "");
 
                 return Redirect($"{returnPage}?{query}");
@@ -148,22 +153,120 @@ namespace AccountContentService.Api.Controllers
         }
 
         /// <summary>
-        /// Receives webhook notifications from PayOS.
+        /// Handles PayOS return URL (GET) after user completes or cancels payment on PayOS.
+        /// Redirects user to frontend result page with payment result.
         /// </summary>
-        /// <returns>Returns 200 OK to acknowledge webhook receipt.</returns>
         /// <remarks>
-        /// This endpoint is intended for PayOS server-to-server communication.
-        /// It should:
-        /// - Validate webhook signature (future implementation)
-        /// - Update payment status asynchronously
-        /// 
-        /// Currently implemented as a placeholder.
+        /// This is the GET returnUrl that PayOS redirects to after payment.
+        /// It processes the payment result and redirects to the frontend.
+        /// </remarks>
+        /// <response code="302">Redirect to frontend payment result page.</response>
+        [AllowAnonymous]
+        [HttpGet(ApiRoutes.Payments.PayOsReturn)]
+        public async Task<IActionResult> PayOSReturn()
+        {
+            var frontendUrl = _configuration["AppSettings:FrontendUrl"]?.TrimEnd('/') ?? "http://localhost:5173";
+            var returnPage = $"{frontendUrl}/payment/result";
+
+            var code = Request.Query["code"].ToString();
+            var id = Request.Query["id"].ToString();
+            var status = Request.Query["status"].ToString();
+            var orderId = Request.Query["orderId"].ToString();
+            var paymentLinkId = Request.Query["paymentLinkId"].ToString();
+            var signature = Request.Query["signature"].ToString();
+
+            // PayOS success: code = "00" or status = "PAID"
+            var isSuccess = status.Equals("PAID", StringComparison.OrdinalIgnoreCase)
+                || code == "00";
+
+            var query = System.Web.HttpUtility.ParseQueryString(string.Empty);
+            query["provider"] = "payos";
+            query["status"] = isSuccess ? "success" : "failed";
+            query["code"] = code;
+            query["payos_TransactionNo"] = paymentLinkId;
+            query["paymentId"] = orderId;
+            query["message"] = GetPayOSMessage(code, status);
+
+            return Redirect($"{returnPage}?{query}");
+        }
+
+        /// <summary>
+        /// Receives webhook notifications from PayOS (server-to-server).
+        /// </summary>
+        /// <remarks>
+        /// PayOS calls this endpoint to notify payment status changes.
+        /// It should validate the webhook signature and update payment status.
         /// </remarks>
         /// <response code="200">Webhook received successfully.</response>
+        [AllowAnonymous]
         [HttpPost(ApiRoutes.Payments.PayOsWebhook)]
-        public IActionResult PayOSWebhook()
+        public async Task<IActionResult> PayOSWebhook(
+            [FromBody] PayOSWebhookRequest webhookData,
+            CancellationToken cancellationToken)
         {
-            return Ok();
+            if (webhookData == null)
+            {
+                return BadRequest(ApiResponse<string>.Fail("Invalid webhook payload"));
+            }
+
+            try
+            {
+                // TODO: Validate PayOS webhook signature using checksum
+                // var isValid = ValidatePayOSWebhook(webhookData);
+                // if (!isValid) return Unauthorized();
+
+                _ = _mediator.Send(new PayOSWebhookCommand
+                {
+                    OrderId = webhookData.orderId,
+                    PaymentLinkId = webhookData.paymentLinkId,
+                    Amount = webhookData.amount,
+                    Status = webhookData.status,
+                    TransactionDateTime = webhookData.transactionDateTime,
+                    Signature = webhookData.signature ?? string.Empty
+                }, cancellationToken);
+
+                return Ok(ApiResponse<string>.Ok("OK", "Webhook received"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<string>.Fail(ex.Message));
+            }
         }
+
+        private static string GetPayOSMessage(string code, string status)
+        {
+            if (status.Equals("PAID", StringComparison.OrdinalIgnoreCase) || code == "00")
+                return "Giao dịch thành công";
+            if (code == "-01")
+                return "Giao dịch bị hủy bởi người dùng";
+            if (code == "-02")
+                return "Giao dịch thất bại";
+            if (code == "-03")
+                return "Giao dịch đang xử lý";
+            if (code == "-04")
+                return "Giao dịch hết hạn";
+            return $"Thanh toán PayOS thất bại (code: {code}, status: {status})";
+        }
+
+        /// <summary>
+        /// Resolves the default return URL used when frontend doesn't provide one.
+        /// </summary>
+        private string ResolveDefaultReturnUrl()
+        {
+            var frontendUrl = _configuration["AppSettings:FrontendUrl"]?.TrimEnd('/')
+                ?? "http://localhost:5173";
+            return $"{frontendUrl}/payment/result";
+        }
+    }
+
+    public class PayOSWebhookRequest
+    {
+        public string orderId { get; set; } = string.Empty;
+        public string paymentLinkId { get; set; } = string.Empty;
+        public int amount { get; set; }
+        public string status { get; set; } = string.Empty;
+        public long? transactionDateTime { get; set; }
+        public string? signature { get; set; }
+        public string? cancelReason { get; set; }
     }
 }
