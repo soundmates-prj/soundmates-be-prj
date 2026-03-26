@@ -18,7 +18,7 @@ public partial class LiveSession
     
     public SessionStatus Status { get; set; }
     
-    public DateTime StartedAt { get; set; }
+    public DateTime? StartedAt { get; set; }
     
     public DateTime? EndedAt { get; set; }
     

@@ -40,8 +40,7 @@ public class LiveSessionConfiguration : IEntityTypeConfiguration<LiveSession>
             .IsRequired();
 
         builder.Property(x => x.StartedAt)
-            .HasColumnName("started_at")
-            .IsRequired();
+            .HasColumnName("started_at");
 
         builder.Property(x => x.EndedAt)
             .HasColumnName("ended_at");

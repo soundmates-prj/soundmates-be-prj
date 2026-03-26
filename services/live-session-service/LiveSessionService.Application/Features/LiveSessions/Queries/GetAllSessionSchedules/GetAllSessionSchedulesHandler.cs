@@ -29,7 +29,13 @@ public sealed class GetAllSessionSchedulesHandler : IQueryHandler<GetAllSessionS
             StartTime = x.StartTime,
             EndTime = x.EndTime,
             Title = x.Title,
-            Status = x.Status
+            Status = x.Status.ToString(),
+            IsRecurring = x.IsRecurring,
+            DaysOfWeek = x.DaysOfWeek,
+            StartDate = x.StartDate,
+            EndDate = x.EndDate,
+            CreatedBy = x.CreatedBy,
+            UpdatedBy = x.UpdatedBy
         }).ToList();
 
         return Result<List<SessionScheduleResult>>.Success(results);

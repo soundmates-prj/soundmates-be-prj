@@ -1,12 +1,16 @@
 using LiveSessionService.Application.Abstractions.Messaging;
 using LiveSessionService.Application.Features.Results.LiveSessions;
+using LiveSessionService.Domain.Enums;
 
 namespace LiveSessionService.Application.Features.LiveSessions.Commands.UpdateSessionSchedule;
 
 public sealed record UpdateSessionScheduleCommand(
     Guid ScheduleId,
-    DateTime StartTime,
-    DateTime EndTime,
+    TimeOnly StartTime,
+    TimeOnly EndTime,
+    DateOnly StartDate,
+    DateOnly? EndDate,
     string? Title,
-    string? Status,
-    Guid ActorUserId) : ICommand<SessionScheduleResult>;
+    Guid ActorUserId,
+    bool? IsRecurring,
+    DaysOfWeek? DaysOfWeek) : ICommand<SessionScheduleResult>;

@@ -1,5 +1,6 @@
 using LiveSessionService.Application.Abstractions.Messaging;
 using LiveSessionService.Application.Enums;
+using LiveSessionService.Application.Features.LiveSessions.Scheduling;
 using LiveSessionService.Application.Features.Results;
 using LiveSessionService.Domain.Enums;
 using LiveSessionService.Domain.Exceptions;
@@ -39,17 +40,25 @@ public sealed class DeleteSessionScheduleHandler : ICommandHandler<DeleteSession
 
         await _scheduleRepository.DeleteAsync(schedule, cancellationToken);
 
-        if (session.Status == SessionStatus.Scheduled)
+        var remainingSchedules = await _scheduleRepository.GetByLiveSessionIdAsync(schedule.LiveSessionId, cancellationToken);
+        var nextOccurrence = ScheduleOccurrenceCalculator.GetNextOccurrenceUtc(remainingSchedules, _dateTimeProvider.UtcNow);
+
+        try
         {
-            try
+            if (nextOccurrence.HasValue)
+            {
+                session.Schedule(nextOccurrence.Value, _dateTimeProvider);
+            }
+            else if (session.Status == SessionStatus.Scheduled)
             {
                 session.RevertToCreated(_dateTimeProvider);
-                await _sessionRepository.UpdateAsync(session, cancellationToken);
             }
-            catch (DomainException ex)
-            {
-                return Result.Failure(ex.Message, (ErrorCode)ex.StatusCode);
-            }
+
+            await _sessionRepository.UpdateAsync(session, cancellationToken);
+        }
+        catch (DomainException ex)
+        {
+            return Result.Failure(ex.Message, (ErrorCode)ex.StatusCode);
         }
 
         return Result.Success();

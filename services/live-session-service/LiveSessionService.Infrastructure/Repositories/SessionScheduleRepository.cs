@@ -24,7 +24,8 @@ public sealed class SessionScheduleRepository : ISessionScheduleRepository
     {
         return await _context.SessionSchedules
             .AsNoTracking()
-            .OrderBy(x => x.StartTime)
+            .OrderBy(x => x.StartDate)
+            .ThenBy(x => x.StartTime)
             .ToListAsync(cancellationToken);
     }
 
@@ -38,7 +39,8 @@ public sealed class SessionScheduleRepository : ISessionScheduleRepository
     {
         return await _context.SessionSchedules
             .Where(x => x.LiveSessionId == liveSessionId)
-            .OrderBy(x => x.StartTime)
+            .OrderBy(x => x.StartDate)
+            .ThenBy(x => x.StartTime)
             .ToListAsync(cancellationToken);
     }
 
@@ -58,7 +60,8 @@ public sealed class SessionScheduleRepository : ISessionScheduleRepository
     {
         return await _context.SessionSchedules
             .Where(x => x.LiveSessionId == liveSessionId)
-            .OrderByDescending(x => x.StartTime)
+            .OrderByDescending(x => x.StartDate)
+            .ThenByDescending(x => x.StartTime)
             .FirstOrDefaultAsync(cancellationToken);
     }
 
@@ -73,11 +76,32 @@ public sealed class SessionScheduleRepository : ISessionScheduleRepository
 
         var schedules = await _context.SessionSchedules
             .Where(x => liveSessionIds.Contains(x.LiveSessionId))
-            .OrderByDescending(x => x.StartTime)
+            .OrderByDescending(x => x.StartDate)
+            .ThenByDescending(x => x.StartTime)
             .ToListAsync(cancellationToken);
 
         return schedules
             .GroupBy(x => x.LiveSessionId)
             .ToDictionary(g => g.Key, g => g.First());
+    }
+
+    public async Task<Dictionary<Guid, List<SessionSchedule>>> GetByLiveSessionIdsAsync(
+        IReadOnlyCollection<Guid> liveSessionIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (liveSessionIds.Count == 0)
+        {
+            return new Dictionary<Guid, List<SessionSchedule>>();
+        }
+
+        var schedules = await _context.SessionSchedules
+            .Where(x => liveSessionIds.Contains(x.LiveSessionId))
+            .OrderBy(x => x.StartDate)
+            .ThenBy(x => x.StartTime)
+            .ToListAsync(cancellationToken);
+
+        return schedules
+            .GroupBy(x => x.LiveSessionId)
+            .ToDictionary(g => g.Key, g => g.ToList());
     }
 }

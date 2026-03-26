@@ -85,7 +85,7 @@ public partial class LiveSession
             SessionName = trimmedName,
             Description = description?.Trim(),
             Status = isScheduled ? SessionStatus.Scheduled : SessionStatus.Created,
-            StartedAt = isScheduled ? scheduledStartAt!.Value : now,
+            StartedAt = isScheduled ? scheduledStartAt : null,
             CreatedAt = now,
             MaxListeners = maxListeners,
             IsPublic = isPublic,
@@ -105,18 +105,14 @@ public partial class LiveSession
                 "Cannot schedule a session that is already running",
                 LiveSessionErrorCodes.SessionAlreadyActive);
 
-        if (Status == SessionStatus.Ended)
-            throw new InvalidSessionStateException(
-                "Cannot schedule an ended session",
-                LiveSessionErrorCodes.SessionAlreadyEnded);
-
         if (Status == SessionStatus.Cancelled)
             throw new InvalidSessionStateException(
                 "Cannot schedule a cancelled session",
                 LiveSessionErrorCodes.SessionNotActive);
 
         Status = SessionStatus.Scheduled;
-        StartedAt = startTime;
+        StartedAt = null;
+        EndedAt = null;
         UpdatedAt = dateTimeProvider.UtcNow;
     }
 
@@ -138,7 +134,7 @@ public partial class LiveSession
                 LiveSessionErrorCodes.SessionNotActive);
 
         Status = SessionStatus.Created;
-        StartedAt = CreatedAt;
+        StartedAt = null;
         UpdatedAt = dateTimeProvider.UtcNow;
     }
 
