@@ -1,4 +1,5 @@
 using LiveSessionService.Application.Abstractions.Messaging;
+using LiveSessionService.Application.Features.LiveSessions.Scheduling;
 using LiveSessionService.Application.Features.Results;
 using LiveSessionService.Application.Features.Results.LiveSessions;
 using LiveSessionService.Domain.Enums;
@@ -10,13 +11,16 @@ public sealed class GetAllLiveSessionsHandler : IQueryHandler<GetAllLiveSessions
 {
     private readonly ILiveSessionRepository _sessionRepository;
     private readonly ISessionScheduleRepository _scheduleRepository;
+    private readonly IDateTimeProvider _dateTimeProvider;
 
     public GetAllLiveSessionsHandler(
         ILiveSessionRepository sessionRepository,
-        ISessionScheduleRepository scheduleRepository)
+        ISessionScheduleRepository scheduleRepository,
+        IDateTimeProvider dateTimeProvider)
     {
         _sessionRepository = sessionRepository;
         _scheduleRepository = scheduleRepository;
+        _dateTimeProvider = dateTimeProvider;
     }
 
     public async Task<Result<PagedResult<LiveSessionResult>>> Handle(
@@ -40,11 +44,15 @@ public sealed class GetAllLiveSessionsHandler : IQueryHandler<GetAllLiveSessions
             .Select(x => x.Id)
             .ToList();
 
-        var latestSchedules = await _scheduleRepository.GetLatestByLiveSessionIdsAsync(scheduledIds, cancellationToken);
+        var schedulesBySession = await _scheduleRepository.GetByLiveSessionIdsAsync(scheduledIds, cancellationToken);
 
         var results = sessions.Select(s =>
         {
-            latestSchedules.TryGetValue(s.Id, out var schedule);
+            schedulesBySession.TryGetValue(s.Id, out var schedules);
+
+            var scheduleStartAt = schedules is null
+                ? null
+                : ScheduleOccurrenceCalculator.GetNextOccurrenceUtc(schedules, _dateTimeProvider.UtcNow);
 
             return new LiveSessionResult
             {
@@ -56,7 +64,7 @@ public sealed class GetAllLiveSessionsHandler : IQueryHandler<GetAllLiveSessions
                 Description = s.Description,
                 Status = s.Status.ToString(),
                 ScheduledStartAt = s.Status == SessionStatus.Scheduled
-                    ? schedule?.StartTime ?? s.StartedAt
+                    ? scheduleStartAt ?? s.StartedAt
                     : null,
                 StartedAt = s.Status is SessionStatus.Live or SessionStatus.Paused or SessionStatus.Ended
                     ? s.StartedAt
