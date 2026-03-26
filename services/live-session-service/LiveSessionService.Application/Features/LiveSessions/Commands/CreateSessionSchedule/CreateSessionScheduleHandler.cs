@@ -1,8 +1,10 @@
 using LiveSessionService.Application.Abstractions.Messaging;
 using LiveSessionService.Application.Enums;
+using LiveSessionService.Application.Features.LiveSessions.Scheduling;
 using LiveSessionService.Application.Features.Results;
 using LiveSessionService.Application.Features.Results.LiveSessions;
 using LiveSessionService.Domain.Entities;
+using LiveSessionService.Domain.Enums;
 using LiveSessionService.Domain.Exceptions;
 using LiveSessionService.Domain.Interfaces;
 
@@ -35,10 +37,50 @@ public sealed class CreateSessionScheduleHandler : ICommandHandler<CreateSession
                 return Result<SessionScheduleResult>.Failure("End time must be greater than start time", ErrorCode.BadRequest);
             }
 
+            if (command.EndDate.HasValue && command.EndDate.Value < command.StartDate)
+            {
+                return Result<SessionScheduleResult>.Failure("End date cannot be earlier than start date", ErrorCode.BadRequest);
+            }
+
+            var nowUtc = _dateTimeProvider.UtcNow;
+            var todayUtc = DateOnly.FromDateTime(nowUtc);
+            var nowTimeUtc = TimeOnly.FromDateTime(nowUtc);
+
+            if (command.StartDate == todayUtc &&
+                (command.StartTime <= nowTimeUtc || command.EndTime <= nowTimeUtc))
+            {
+                return Result<SessionScheduleResult>.Failure(
+                    "For today schedule, start time and end time must be greater than current time",
+                    ErrorCode.BadRequest);
+            }
+
+            if (command.IsRecurring && command.DaysOfWeek == DaysOfWeek.None)
+            {
+                return Result<SessionScheduleResult>.Failure("At least one day of week is required for recurring schedules", ErrorCode.BadRequest);
+            }
+
             var session = await _sessionRepository.GetByIdWithStationAsync(command.LiveSessionId, cancellationToken);
             if (session == null)
             {
                 return Result<SessionScheduleResult>.Failure("Session not found", ErrorCode.NotFound);
+            }
+
+            var normalizedDaysOfWeek = command.IsRecurring ? command.DaysOfWeek : DaysOfWeek.None;
+            var existingSchedules = await _scheduleRepository.GetByLiveSessionIdAsync(command.LiveSessionId, cancellationToken);
+
+            var isDuplicate = existingSchedules.Any(x =>
+                x.StartTime == command.StartTime &&
+                x.EndTime == command.EndTime &&
+                x.StartDate == command.StartDate &&
+                x.EndDate == command.EndDate &&
+                x.IsRecurring == command.IsRecurring &&
+                x.DaysOfWeek == normalizedDaysOfWeek);
+
+            if (isDuplicate)
+            {
+                return Result<SessionScheduleResult>.Failure(
+                    "A schedule with the same time and recurrence already exists",
+                    ErrorCode.Conflict);
             }
 
             var schedule = new SessionSchedule
@@ -47,28 +89,45 @@ public sealed class CreateSessionScheduleHandler : ICommandHandler<CreateSession
                 LiveSessionId = session.Id,
                 StartTime = command.StartTime,
                 EndTime = command.EndTime,
+                StartDate = command.StartDate,
+                EndDate = command.EndDate,
                 Title = string.IsNullOrWhiteSpace(command.Title) ? session.SessionName : command.Title.Trim(),
-                Status = "Scheduled"
+                Status = ScheduleStatus.Scheduled,
+                IsRecurring = command.IsRecurring,
+                DaysOfWeek = normalizedDaysOfWeek,
+                CreatedBy = command.ActorUserId,
+                UpdatedBy = null
             };
+
+            var allSchedules = existingSchedules.Append(schedule);
+            var nextOccurrence = ScheduleOccurrenceCalculator.GetNextOccurrenceUtc(allSchedules, _dateTimeProvider.UtcNow);
+            if (!nextOccurrence.HasValue)
+            {
+                return Result<SessionScheduleResult>.Failure(
+                    "Schedule does not have any upcoming occurrence",
+                    ErrorCode.BadRequest);
+            }
 
             await _scheduleRepository.AddAsync(schedule, cancellationToken);
 
-            session.Schedule(command.StartTime, _dateTimeProvider);
+            session.Schedule(nextOccurrence.Value, _dateTimeProvider);
             await _sessionRepository.UpdateAsync(session, cancellationToken);
 
-            var result = new SessionScheduleResult
+            return Result<SessionScheduleResult>.Success(new SessionScheduleResult
             {
                 Id = schedule.Id,
                 LiveSessionId = schedule.LiveSessionId,
                 StartTime = schedule.StartTime,
                 EndTime = schedule.EndTime,
                 Title = schedule.Title,
-                Status = schedule.Status,
-                CreatedByUserId = command.ActorUserId,
-                UpdatedByUserId = null
-            };
-
-            return Result<SessionScheduleResult>.Success(result);
+                Status = schedule.Status.ToString(),
+                IsRecurring = schedule.IsRecurring,
+                DaysOfWeek = schedule.DaysOfWeek,
+                StartDate = schedule.StartDate,
+                EndDate = schedule.EndDate,
+                CreatedBy = schedule.CreatedBy,
+                UpdatedBy = schedule.UpdatedBy
+            });
         }
         catch (DomainException ex)
         {

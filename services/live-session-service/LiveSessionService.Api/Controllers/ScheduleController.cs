@@ -100,8 +100,12 @@ public class ScheduleController : ControllerBase
             liveSessionId,
             request.StartTime,
             request.EndTime,
+            request.StartDate,
+            request.EndDate,
             request.Title,
-            currentUserId);
+            currentUserId,
+            request.IsRecurring,
+            request.DaysOfWeek);
 
         var result = await _commands.Send<CreateSessionScheduleCommand, SessionScheduleResult>(command, ct);
 
@@ -145,9 +149,12 @@ public class ScheduleController : ControllerBase
             scheduleId,
             request.StartTime,
             request.EndTime,
+            request.StartDate,
+            request.EndDate,
             request.Title,
-            request.Status,
-            currentUserId);
+            currentUserId,
+            request.IsRecurring,
+            request.DaysOfWeek);
 
         var result = await _commands.Send<UpdateSessionScheduleCommand, SessionScheduleResult>(command, ct);
 
