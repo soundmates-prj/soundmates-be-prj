@@ -15,6 +15,12 @@ using AccountContentService.Domain.Entities;
 
 namespace AccountContentService.Api.Controllers
 {
+    /// <summary>
+    /// Provides endpoints for subscription plans and user subscription history.
+    /// </summary>
+    /// <summary>
+    /// Provides endpoints for subscription plans and user subscription history.
+    /// </summary>
     [ApiController]
     [Authorize]
     public class SubscriptionController : ControllerBase

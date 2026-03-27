@@ -45,29 +45,40 @@ public sealed class CreateStationHandler : ICommandHandler<CreateStationCommand,
         {
             _logger.LogInformation("Creating station: {StationName}", command.StationName);
 
-            // TODO: Push to AzuraCast first to get external ID
-            // For now, create locally with placeholder
-            
+            // Local-only creation for now: generate a unique positive external ID placeholder
+            var nextExternalStationId = await _stationRepository.GetNextExternalStationIdAsync(cancellationToken);
+
             var station = AzuraCastStation.Create(
-                externalStationId: 0, // Will be updated after AzuraCast creation
+                externalStationId: nextExternalStationId,
                 stationName: command.StationName,
-                streamUrl: "http://placeholder", // Will be updated
+                streamUrl: "http://placeholder", // Will be updated after AzuraCast integration
                 description: command.Description,
                 apiBaseUrl: null,
                 dateTimeProvider: _dateTimeProvider);
 
+            if (!string.IsNullOrWhiteSpace(command.ShortCode))
+            {
+                station.StationShortcode = command.ShortCode.Trim();
+            }
+
             await _stationRepository.AddAsync(station, cancellationToken);
 
-            _logger.LogInformation("Created station {StationId}", station.Id);
+            // Mark as Synced immediately since it was created locally
+            station.MarkSyncSuccessful(_dateTimeProvider);
+            await _stationRepository.UpdateAsync(station, cancellationToken);
+
+            _logger.LogInformation("Created and marked station {StationId} as Synced", station.Id);
 
             var result = new StationResult
             {
                 Id = station.Id,
                 ExternalStationId = station.ExternalStationId,
                 StationName = station.StationName,
+                StationShortcode = station.StationShortcode,
                 StreamUrl = station.StreamUrl,
                 Description = station.Description,
-                IsEnabled = station.IsEnabled
+                IsEnabled = station.IsEnabled,
+                SyncStatus = station.SyncStatus.ToString()
             };
 
             return Result<StationResult>.Success(result);

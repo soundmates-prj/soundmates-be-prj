@@ -11,6 +11,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Polly;
+using Polly.Extensions.Http;
+using System.Net;
 
 namespace AiService.Infrastructure;
 
@@ -35,10 +38,19 @@ public static class DependencyInjection
 
         services.AddSingleton<IAudioStorage, LocalAudioStorage>();
 
+        IAsyncPolicy<HttpResponseMessage> CreateCircuitBreakerPolicy() =>
+            HttpPolicyExtensions
+                .HandleTransientHttpError()
+                .OrResult(msg => msg.StatusCode == HttpStatusCode.TooManyRequests)
+                .CircuitBreakerAsync(
+                    handledEventsAllowedBeforeBreaking: 5,
+                    durationOfBreak: TimeSpan.FromSeconds(30));
+
         services.AddHttpClient<ILlmClient, GeminiLlmClient>(client =>
         {
             client.Timeout = TimeSpan.FromSeconds(60);
-        });
+        })
+        .AddPolicyHandler(CreateCircuitBreakerPolicy());
 
         services.AddHttpClient<VieNeuTtsClient>((sp, http) =>
         {
@@ -55,14 +67,16 @@ public static class DependencyInjection
             {
                 http.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
             }
-        });
+        })
+        .AddPolicyHandler(CreateCircuitBreakerPolicy());
         services.AddScoped<ITtsClient, VieNeuTtsClient>();
         services.AddScoped<ITextToSpeechService, VieneuTextToSpeechService>();
 
         services.AddHttpClient<IPodcastSyncClient, PodcastSyncClient>(client =>
         {
             client.Timeout = TimeSpan.FromSeconds(30);
-        });
+        })
+        .AddPolicyHandler(CreateCircuitBreakerPolicy());
 
         services.AddScoped<IPodcastPipelineService, PodcastPipelineService>();
         

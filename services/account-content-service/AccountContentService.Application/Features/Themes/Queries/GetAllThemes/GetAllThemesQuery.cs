@@ -21,7 +21,7 @@ namespace AccountContentService.Application.Features.Themes.Queries.GetAllThemes
 
     public record GetAllThemesByNameQuery() : IRequest<PaginationResult<ThemeDto>>
     {
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
         public int Page { get; set; }
         public int PageSize { get; set; }
     }

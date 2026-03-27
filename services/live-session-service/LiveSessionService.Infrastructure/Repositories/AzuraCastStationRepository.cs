@@ -56,6 +56,15 @@ public sealed class AzuraCastStationRepository : IAzuraCastStationRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<int> GetNextExternalStationIdAsync(CancellationToken cancellationToken = default)
+    {
+        var maxId = await _context.AzuraCastStations
+            .Select(x => (int?)x.ExternalStationId)
+            .MaxAsync(cancellationToken);
+
+        return (maxId ?? 0) + 1;
+    }
+
     public async Task AddAsync(AzuraCastStation station, CancellationToken cancellationToken = default)
     {
         await _context.AzuraCastStations.AddAsync(station, cancellationToken);

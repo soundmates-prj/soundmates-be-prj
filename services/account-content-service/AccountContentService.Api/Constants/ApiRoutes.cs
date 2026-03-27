@@ -297,6 +297,9 @@
             /// <summary>Payos webhook.</summary>
             public const string PayOsWebhook = $"{BaseRoute}/payos/webhook";
 
+            /// <summary>PayOS return URL (user redirect after payment).</summary>
+            public const string PayOsReturn = $"{BaseRoute}/payos/return";
+
             /// <summary>Confirm payment.</summary>
             public const string Confirm = $"{BaseRoute}/{{paymentId:guid}}/confirm";
 
@@ -320,6 +323,24 @@
 
             /// <summary>Create new setting value.</summary>
             public const string Create = BaseRoute;
+
+            /// <summary>Upsert Gemini API key.</summary>
+            public const string UpsertGeminiKey = $"{Base}/gemini";
+
+            /// <summary>Get Gemini API key configuration.</summary>
+            public const string GetGeminiConfig = $"{Base}/gemini";
+
+            /// <summary>Delete Gemini API key configuration.</summary>
+            public const string DeleteGeminiConfig = $"{Base}/gemini";
+
+            /// <summary>Upsert AzuraCast API key configuration.</summary>
+            public const string UpsertAzuraCastConfig = $"{Base}/azuracast-config";
+
+            /// <summary>Get AzuraCast API key configuration.</summary>
+            public const string GetAzuraCastConfig = $"{Base}/azuracast-config";
+
+            /// <summary>Delete AzuraCast API key configuration.</summary>
+            public const string DeleteAzuraCastConfig = $"{Base}/azuracast-config";
 
             /// <summary>Update setting value.</summary>
             public const string Update = $"{BaseRoute}/{{settingId:guid}}";

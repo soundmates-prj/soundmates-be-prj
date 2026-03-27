@@ -13,8 +13,10 @@ using LiveSessionService.Application.Features.LiveSessions.Queries.GetActiveLive
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetAllLiveSessions;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetAllSessionSchedules;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSession;
+using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSessionNowPlaying;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetSessionSchedules;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetStaffDashboardOverview;
+using LiveSessionService.Application.Features.Music.Commands.BulkUploadMusic;
 using LiveSessionService.Application.Features.Music.Commands.DeleteMedia;
 using LiveSessionService.Application.Features.Music.Commands.SyncMediaFiles;
 using LiveSessionService.Application.Features.Music.Commands.UploadMusic;
@@ -51,6 +53,8 @@ using LiveSessionService.Application.Features.Results.Stations;
 using LiveSessionService.Application.Features.SongRequests.Commands.CreateSongRequest;
 using LiveSessionService.Application.Features.SongRequests.Commands.ReviewSongRequest;
 using LiveSessionService.Application.Features.SongRequests.Queries.GetSongRequestsBySession;
+using LiveSessionService.Application.Features.Stations.Commands.CreateStation;
+using LiveSessionService.Application.Features.Stations.Commands.CreateStation;
 using LiveSessionService.Application.Features.Stations.Commands.SyncStations;
 using LiveSessionService.Application.Features.Stations.Queries.GetAllStations;
 using LiveSessionService.Application.Features.Stations.Queries.GetStationNowPlaying;
@@ -70,6 +74,7 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<SyncNowPlayingCommand, NowPlayingResult>, SyncNowPlayingHandler>();
 
         // Register Station Command Handlers
+        services.AddScoped<ICommandHandler<CreateStationCommand, StationResult>, CreateStationHandler>();
         services.AddScoped<ICommandHandler<SyncStationsCommand, SyncStationsResult>, SyncStationsHandler>();
 
         // Register LiveSession Command Handlers
@@ -102,6 +107,7 @@ public static class DependencyInjection
 
         // Register Music Command Handlers
         services.AddScoped<ICommandHandler<UploadMusicCommand, MusicResult>, UploadMusicHandler>();
+        services.AddScoped<ICommandHandler<BulkUploadMusicCommand, BulkUploadMusicResult>, BulkUploadMusicHandler>();
         services.AddScoped<ICommandHandler<SyncMediaFilesCommand, SyncMediaFilesResult>, SyncMediaFilesHandler>();
         services.AddScoped<ICommandHandler<DeleteMediaCommand>, DeleteMediaHandler>();
 
@@ -111,6 +117,7 @@ public static class DependencyInjection
 
         // Register LiveSession Query Handlers
         services.AddScoped<IQueryHandler<GetLiveSessionQuery, LiveSessionResult>, GetLiveSessionHandler>();
+        services.AddScoped<IQueryHandler<GetLiveSessionNowPlayingQuery, StationNowPlayingResult>, GetLiveSessionNowPlayingHandler>();
         services.AddScoped<IQueryHandler<GetAllLiveSessionsQuery, PagedResult<LiveSessionResult>>, GetAllLiveSessionsHandler>();
         services.AddScoped<IQueryHandler<GetSessionSchedulesQuery, List<SessionScheduleResult>>, GetSessionSchedulesHandler>();
         services.AddScoped<IQueryHandler<GetAllSessionSchedulesQuery, List<SessionScheduleResult>>, GetAllSessionSchedulesHandler>();

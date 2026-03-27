@@ -74,7 +74,7 @@ public class StationController : ControllerBase
     /// <response code="401">Unauthorized</response>
     /// <response code="403">Forbidden - Admin role required</response>
     [HttpPost]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "ADMIN")]
     [ProducesResponseType(typeof(ApiResponse<StationResult>), 201)]
     [ProducesResponseType(typeof(ApiResponse<object>), 400)]
     [ProducesResponseType(typeof(ApiResponse<object>), 401)]

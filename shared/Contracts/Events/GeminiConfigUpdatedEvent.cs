@@ -15,4 +15,7 @@ public sealed class GeminiConfigUpdatedEvent
 
     [JsonPropertyName("updatedAt")]
     public DateTime UpdatedAt { get; init; }
+
+    [JsonPropertyName("isDeleted")]
+    public bool IsDeleted { get; init; }
 }

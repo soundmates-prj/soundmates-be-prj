@@ -1,6 +1,8 @@
 using LiveSessionService.Application.Abstractions;
 using LiveSessionService.Application.Abstractions.Messaging;
 using LiveSessionService.Application.Enums;
+using LiveSessionService.Application.Exceptions;
+using LiveSessionService.Application.Exceptions;
 using LiveSessionService.Application.Features.Results;
 using LiveSessionService.Application.Features.Results.Playlists;
 using LiveSessionService.Domain.Entities;
@@ -256,6 +258,13 @@ public sealed class SyncPlaylistsHandler : ICommandHandler<SyncPlaylistsCommand,
                 station.StationName, azuraPlaylists.Count, newPlaylistCount, totalMediaSynced);
 
             return Result<SyncPlaylistsResult>.Success(result);
+        }
+        catch (AzuraCastException ex)
+        {
+            _logger.LogError(ex, "AzuraCast error while syncing playlists for station {StationId}", command.StationId);
+            return Result<SyncPlaylistsResult>.Failure(
+                ex.Message,
+                ex.ErrorCode);
         }
         catch (Exception ex)
         {

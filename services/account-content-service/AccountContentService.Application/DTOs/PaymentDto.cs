@@ -9,7 +9,7 @@ namespace AccountContentService.Application.DTOs
     {
         public Guid UserId { get; set; }
         public decimal Amount { get; set; }
-        public string Description { get; set; }
+        public string Description { get; set; } = string.Empty;
 
         public PaymentMethod Method { get; set; }
     }

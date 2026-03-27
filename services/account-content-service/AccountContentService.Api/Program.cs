@@ -1,4 +1,4 @@
-﻿using AccountContentService.Api.Extensions;
+using AccountContentService.Api.Extensions;
 using AccountContentService.Api.Middleware;
 using AccountContentService.Api.Swagger;
 using AccountContentService.Application.DependencyInjection;
@@ -8,6 +8,9 @@ using AccountContentService.Infrastructure.Persistence;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Polly;
+using Polly.Extensions.Http;
+using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -39,20 +42,30 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 // DbContext
 builder.Services.AddDbContext<AccountContentDbContext>(options =>
-    options.UseNpgsql(
-        builder.Configuration.GetConnectionString("DefaultConnection")
-    ));
+{
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
+
+    // Suppress PendingModelChangesWarning — migration will apply at next rebuild with new migration files
+    options.ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+});
 
 // Authentication
 builder.Services.AddJwtAuthentication(builder.Configuration);
 
-// HttpClient 
-var gatewayUrl = builder.Configuration["ApiGateway:BaseUrl"];
+// PayOS HttpClient (ApiGateway HttpClient removed — user profiles now via local RabbitMQ projection)
+IAsyncPolicy<HttpResponseMessage> CreateCircuitBreakerPolicy() =>
+    HttpPolicyExtensions
+        .HandleTransientHttpError()
+        .OrResult(msg => msg.StatusCode == HttpStatusCode.TooManyRequests)
+        .CircuitBreakerAsync(
+            handledEventsAllowedBeforeBreaking: 5,
+            durationOfBreak: TimeSpan.FromSeconds(30));
 
-builder.Services.AddHttpClient("ApiGateway", client =>
+builder.Services.AddHttpClient("PayOS", client =>
 {
-    client.BaseAddress = new Uri(gatewayUrl!);
-});
+    client.Timeout = TimeSpan.FromSeconds(20);
+})
+.AddPolicyHandler(CreateCircuitBreakerPolicy());
 
 builder.Services.AddHttpContextAccessor();
 

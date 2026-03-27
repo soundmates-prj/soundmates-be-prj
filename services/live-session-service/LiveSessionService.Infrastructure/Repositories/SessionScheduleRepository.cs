@@ -24,6 +24,8 @@ public sealed class SessionScheduleRepository : ISessionScheduleRepository
     {
         return await _context.SessionSchedules
             .AsNoTracking()
+            .Include(x => x.LiveSession)
+                .ThenInclude(x => x.AzuraCastStation)
             .OrderBy(x => x.StartDate)
             .ThenBy(x => x.StartTime)
             .ToListAsync(cancellationToken);
@@ -39,6 +41,8 @@ public sealed class SessionScheduleRepository : ISessionScheduleRepository
     {
         return await _context.SessionSchedules
             .Where(x => x.LiveSessionId == liveSessionId)
+            .Include(x => x.LiveSession)
+                .ThenInclude(x => x.AzuraCastStation)
             .OrderBy(x => x.StartDate)
             .ThenBy(x => x.StartTime)
             .ToListAsync(cancellationToken);

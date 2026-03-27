@@ -18,7 +18,7 @@ namespace AccountContentService.Application.DTOs
 
         public DateTime PaymentAt { get; set; }
 
-        public string TransactionStatus { get; set; }
+        public string TransactionStatus { get; set; } = string.Empty;
 
         public DateTime CreatedAt { get; set; }
         public UserProfileDto userProfile { get; set; } = null!;

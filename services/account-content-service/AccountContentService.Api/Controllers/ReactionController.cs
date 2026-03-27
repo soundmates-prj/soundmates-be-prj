@@ -16,6 +16,12 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AccountContentService.Api.Controllers
 {
+    /// <summary>
+    /// Provides endpoints for adding, updating, deleting, and listing post reactions.
+    /// </summary>
+    /// <summary>
+    /// Provides endpoints for adding, updating, deleting, and listing post reactions.
+    /// </summary>
     [ApiController]
     [Authorize]
     public class ReactionController : ControllerBase

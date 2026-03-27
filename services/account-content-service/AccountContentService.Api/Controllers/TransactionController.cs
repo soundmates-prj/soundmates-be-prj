@@ -10,6 +10,12 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AccountContentService.Api.Controllers
 {
+    /// <summary>
+    /// Provides endpoints for querying payment transactions by id, user, and paging.
+    /// </summary>
+    /// <summary>
+    /// Provides endpoints for querying payment transactions by id, user, and paging.
+    /// </summary>
     [Authorize]
     [ApiController]
     public class TransactionController : ControllerBase

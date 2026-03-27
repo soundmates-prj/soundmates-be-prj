@@ -167,9 +167,5 @@ public static class ConfigurationExtensions
         configuration["AppSettings:FrontendUrl"] = Environment.GetEnvironmentVariable("AppSettings__FrontendUrl")
             ?? Environment.GetEnvironmentVariable("FRONTEND_URL")
             ?? configuration["AppSettings:FrontendUrl"];
-
-        configuration["ApiGateway:BaseUrl"] = Environment.GetEnvironmentVariable("ApiGateway__BaseUrl")
-            ?? Environment.GetEnvironmentVariable("GATEWAY_URL")
-            ?? configuration["ApiGateway:BaseUrl"];
     }
 }

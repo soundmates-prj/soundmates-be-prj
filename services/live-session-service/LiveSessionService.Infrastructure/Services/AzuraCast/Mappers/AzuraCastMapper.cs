@@ -77,6 +77,8 @@ internal static class AzuraCastMapper
         {
             ShId = api.ShId,
             PlayedAt = api.PlayedAt,
+            Duration = api.Duration,
+            IsRequest = api.IsRequest,
             Song = api.Song?.ToApplicationModel()
         };
 

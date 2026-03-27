@@ -1,34 +1,26 @@
-﻿using AccountContentService.Application.Abstractions;
+using AccountContentService.Application.Abstractions;
 using AccountContentService.Application.Common.Pagination;
 using AccountContentService.Application.DTOs;
-using AccountContentService.Application.Exceptions;
-using AccountContentService.Application.Features.BlogPosts.Queries.GetPopularPosts;
 using AccountContentService.Application.Interfaces.Repositories;
-using AccountContentService.Application.Interfaces.Services;
 using AutoMapper;
 using MediatR;
 using System;
 using System.Collections.Generic;
-using System.Numerics;
-using System.Text;
-using System.Xml.Linq;
 
 namespace AccountContentService.Application.Features.BlogComments.Queries.GetComments
 {
-    public class GetCommentsHandler : 
+    public class GetCommentsHandler :
         IRequestHandler<GetCommentsQuery, PaginationResult<CommentDto>>,
         IRequestHandler<GetUserCommentsQuery, PaginationResult<CommentDto>>,
         IRequestHandler<GetCommentDetailQuery, List<CommentDto>>
     {
         private readonly ICommentRepository _commentRepository;
         private readonly IMapper _mapper;
-        private readonly IUserServiceClient _userClient;
 
-        public GetCommentsHandler(ICommentRepository commentRepository, IMapper mapper, IUserServiceClient userClient)
+        public GetCommentsHandler(ICommentRepository commentRepository, IMapper mapper)
         {
             _commentRepository = commentRepository;
             _mapper = mapper;
-            _userClient = userClient;
         }
 
         public async Task<PaginationResult<CommentDto>> Handle(
@@ -38,7 +30,6 @@ namespace AccountContentService.Application.Features.BlogComments.Queries.GetCom
             var result = await _commentRepository.GetByPostIdAsync(request.PostId, request.PageSize, request.Page, cancellationToken);
             var items = _mapper.Map<IEnumerable<CommentDto>>(result.Items).ToList();
             var comments = BuildCommentTree(items);
-            
 
             return new PaginationResult<CommentDto>
             {
@@ -70,12 +61,10 @@ namespace AccountContentService.Application.Features.BlogComments.Queries.GetCom
             GetCommentDetailQuery request,
             CancellationToken cancellationToken)
         {
-            var reuslt = await _commentRepository.GetDetailByIdAsync(request.CommentId, cancellationToken);
-            var items = _mapper.Map<List<CommentDto>>(reuslt);
-            var commentDto = BuildCommentTree(items);  
-            return commentDto;
+            var result = await _commentRepository.GetDetailByIdAsync(request.CommentId, cancellationToken);
+            var items = _mapper.Map<List<CommentDto>>(result);
+            return BuildCommentTree(items);
         }
-
 
         private List<CommentDto> BuildCommentTree(List<CommentDto> comments)
         {
@@ -85,8 +74,7 @@ namespace AccountContentService.Application.Features.BlogComments.Queries.GetCom
 
             foreach (var comment in comments)
             {
-                if (comment.ParentCommentId == null ||
-                    comment.ParentCommentId == Guid.Empty)
+                if (comment.ParentCommentId == Guid.Empty)
                 {
                     roots.Add(comment);
                     continue;

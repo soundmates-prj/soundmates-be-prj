@@ -143,6 +143,12 @@ internal sealed class AzuraCastApiSongHistory
     [JsonPropertyName("played_at")]
     public long PlayedAt { get; set; }
 
+    [JsonPropertyName("duration")]
+    public long? Duration { get; set; }
+
+    [JsonPropertyName("is_request")]
+    public bool IsRequest { get; set; }
+
     [JsonPropertyName("song")]
     public AzuraCastApiSong? Song { get; set; }
 }

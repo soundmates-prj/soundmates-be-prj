@@ -46,7 +46,6 @@ public static class DataSeeder
         context.Themes.AddRange(chillTheme, loveTheme);
 
         // SUBSCRIPTION PLANS
-        // SUBSCRIPTION PLANS
         var freePlan = new SubscriptionPlan
         {
             Id = Guid.NewGuid(),
@@ -86,7 +85,7 @@ public static class DataSeeder
             UpdatedAt = now
         };
 
-        context.SubscriptionPlans.AddRange(freePlan, premiumPlan);
+        context.SubscriptionPlans.AddRange(freePlan, premiumPlan, elitePlan);
 
         // SUBSCRIPTION
         var subscription = new Subscription

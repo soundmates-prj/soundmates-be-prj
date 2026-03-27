@@ -61,8 +61,8 @@ services:
   # Auth Service (Command)
   auth-service:
     build:
-      context: ./services/auth-service
-      dockerfile: AuthService.Api/Dockerfile
+      context: .
+      dockerfile: services/auth-service/AuthService.Api/Dockerfile
     container_name: soundmates-auth-service
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
@@ -186,8 +186,8 @@ services:
   # Live Session Service
   live-session-service:
     build:
-      context: ./services/live-session-service
-      dockerfile: LiveSessionService.Api/Dockerfile
+      context: .
+      dockerfile: services/live-session-service/LiveSessionService.Api/Dockerfile
     container_name: soundmates-live-session-service
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
@@ -236,10 +236,19 @@ services:
       - VNPay__TmnCode=${VNPAY_TMN_CODE}
       - VNPay__HashSecret=${VNPAY_HASH_SECRET}
       - VNPay__BaseUrl=${VNPAY_BASE_URL}
+      - VNPay__BaseUrlProd=${VNPAY_BASE_URL_PROD}
       - VNPay__ReturnUrl=${VNPAY_RETURN_URL}
+      - PayOS__ClientId=${PAY_OS_CLIENT_ID}
+      - PayOS__ApiKey=${PAY_OS_API_KEY}
+      - PayOS__ChecksumKey=${PAY_OS_CHECKSUM_KEY}
+      - PayOS__BaseUrl=${PAY_OS_BASE_URL}
+      - PayOS__SandboxBaseUrl=${PAY_OS_BASE_URL_SANDBOX}
+      - PayOS__ReturnUrl=${PAY_OS_RETURN_URL}
       - AESEncryption__Key=${AES_KEY}
       - AESEncryption__IV=${AES_IV}
       - AppSettings__FrontendUrl=${FRONTEND_URL}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "8004:8080"
     depends_on:
