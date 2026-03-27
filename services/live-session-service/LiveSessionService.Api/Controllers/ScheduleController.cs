@@ -7,6 +7,7 @@ using LiveSessionService.Application.Features.LiveSessions.Commands.CreateSessio
 using LiveSessionService.Application.Features.LiveSessions.Commands.DeleteSessionSchedule;
 using LiveSessionService.Application.Features.LiveSessions.Commands.UpdateSessionSchedule;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetAllSessionSchedules;
+using LiveSessionService.Application.Features.LiveSessions.Queries.GetScheduleById;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetSessionSchedules;
 using LiveSessionService.Application.Features.Results.LiveSessions;
 using Microsoft.AspNetCore.Authorization;
@@ -16,12 +17,12 @@ using System.Security.Claims;
 namespace LiveSessionService.Api.Controllers;
 
 /// <summary>
-/// API endpoints for Live session schedules management
+/// API endpoints for Live session schedules management.
+/// GET endpoints are publicly accessible; write endpoints require authentication.
 /// </summary>
 [ApiController]
 [Route("api/v1/[controller]")]
 [Produces("application/json")]
-[Authorize]
 public class ScheduleController : ControllerBase
 {
     private readonly ICommandDispatcher _commands;
@@ -34,9 +35,11 @@ public class ScheduleController : ControllerBase
     }
 
     /// <summary>
-    /// Get all session schedules
+    /// Get all session schedules — publicly accessible.
+    /// Optionally filter by liveSessionId.
     /// </summary>
     [HttpGet]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResponse<List<SessionScheduleResult>>), 200)]
     public async Task<IActionResult> GetAll([FromQuery] Guid? liveSessionId, CancellationToken ct)
     {
@@ -52,9 +55,34 @@ public class ScheduleController : ControllerBase
     }
 
     /// <summary>
-    /// Get schedules of a live session
+    /// Get a single schedule by its ID — publicly accessible.
+    /// </summary>
+    [HttpGet("{scheduleId:guid}")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResponse<SessionScheduleResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> GetById(Guid scheduleId, CancellationToken ct)
+    {
+        var query = new GetScheduleByIdQuery(scheduleId);
+        var result = await _queries.Send<GetScheduleByIdQuery, SessionScheduleResult>(query, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(ApiResponse<SessionScheduleResult>.SuccessResponse(result.Data!, "Schedule retrieved"));
+    }
+
+    /// <summary>
+    /// Get schedules of a live session — publicly accessible.
     /// </summary>
     [HttpGet("live-session/{liveSessionId:guid}")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResponse<List<SessionScheduleResult>>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
     public async Task<IActionResult> GetByLiveSessionId(Guid liveSessionId, CancellationToken ct)
@@ -75,9 +103,10 @@ public class ScheduleController : ControllerBase
     }
 
     /// <summary>
-    /// Create a new schedule for an existing live session
+    /// Create a new schedule for an existing live session — requires authentication.
     /// </summary>
     [HttpPost("live-session/{liveSessionId:guid}")]
+    [Authorize]
     [ProducesResponseType(typeof(ApiResponse<SessionScheduleResult>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 400)]
     [ProducesResponseType(typeof(ApiResponse<object>), 401)]
@@ -124,9 +153,10 @@ public class ScheduleController : ControllerBase
     }
 
     /// <summary>
-    /// Update a session schedule
+    /// Update a session schedule — requires authentication.
     /// </summary>
     [HttpPut("{scheduleId:guid}")]
+    [Authorize]
     [ProducesResponseType(typeof(ApiResponse<SessionScheduleResult>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 400)]
     [ProducesResponseType(typeof(ApiResponse<object>), 401)]
@@ -173,9 +203,10 @@ public class ScheduleController : ControllerBase
     }
 
     /// <summary>
-    /// Delete a session schedule
+    /// Delete a session schedule — requires authentication.
     /// </summary>
     [HttpDelete("{scheduleId:guid}")]
+    [Authorize]
     [ProducesResponseType(204)]
     [ProducesResponseType(typeof(ApiResponse<object>), 401)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]

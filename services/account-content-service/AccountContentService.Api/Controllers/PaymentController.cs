@@ -70,7 +70,9 @@ namespace AccountContentService.Api.Controllers
             command.UserId = userId;
             command.IpAddress = ipAddress;
 
-            // Use frontend-provided ReturnUrl if available, otherwise default to config-based frontend URL
+            // IMPORTANT: ReturnUrl MUST go to backend callback so the system can
+            // create transaction & subscription before redirecting to the frontend.
+            // Only allow frontend override if explicitly needed for testing.
             command.ReturnUrl ??= ResolveDefaultReturnUrl();
 
             var url = await _mediator.Send(command);
@@ -250,12 +252,15 @@ namespace AccountContentService.Api.Controllers
 
         /// <summary>
         /// Resolves the default return URL used when frontend doesn't provide one.
+        /// Must point to the backend callback endpoint so transaction & subscription
+        /// are created server-side before redirecting to the frontend result page.
         /// </summary>
         private string ResolveDefaultReturnUrl()
         {
-            var frontendUrl = _configuration["AppSettings:FrontendUrl"]?.TrimEnd('/')
+            var baseUrl = _configuration["AppSettings:BaseUrl"]?.TrimEnd('/')
+                ?? _configuration["AppSettings:FrontendUrl"]?.TrimEnd('/')
                 ?? "http://localhost:5173";
-            return $"{frontendUrl}/payment/result";
+            return $"{baseUrl}/api/v1/payments/vnpay/callback";
         }
     }
 

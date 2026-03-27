@@ -1278,6 +1278,57 @@
         "TimeoutValue": 300000
       }
     },
+    // === VOICE CLONE (ai-service) ===
+    {
+      "DownstreamPathTemplate": "/api/voice-clone/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "ai-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/voice-clone/{everything}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "DELETE",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 60000,
+        "TimeoutValue": 300000
+      }
+    },
+    // === PODCASTS (ai-service) ===
+    {
+      "DownstreamPathTemplate": "/api/v1/podcasts/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "ai-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/podcasts/{everything}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 300000
+      }
+    },
     // ═══════════════════════════════════════════════════════════
     // LIVE SESSION SERVICE — Direct routes (no prefix)
     //   Timeout: 8s (AzuraCast calls may be slower)

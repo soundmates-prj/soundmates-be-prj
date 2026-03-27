@@ -28,6 +28,8 @@ namespace LiveSessionService.Domain.Entities
 
         public Guid LiveSessionId { get; set; }
 
+        public DateTime CreatedAt { get; set; }
+
         public virtual LiveSession LiveSession { get; set; } = null!;
     }
 }

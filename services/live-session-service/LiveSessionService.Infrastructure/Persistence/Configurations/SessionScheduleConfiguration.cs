@@ -68,6 +68,11 @@ public sealed class SessionScheduleConfiguration : IEntityTypeConfiguration<Sess
             .HasColumnName("live_session_id")
             .IsRequired();
 
+        builder.Property(x => x.CreatedAt)
+            .HasColumnName("created_at")
+            .IsRequired()
+            .HasDefaultValueSql("NOW()");
+
         builder.HasOne(x => x.LiveSession)
             .WithMany(x => x.SessionSchedules)
             .HasForeignKey(x => x.LiveSessionId)

@@ -22,18 +22,34 @@ public class VoicesController : ControllerBase
 {
     private readonly ICommandDispatcher _commands;
     private readonly IQueryDispatcher _queries;
+    private readonly IVoiceService _voiceService;
 
-    public VoicesController(ICommandDispatcher commands, IQueryDispatcher queries)
+    public VoicesController(ICommandDispatcher commands, IQueryDispatcher queries, IVoiceService voiceService)
     {
         _commands = commands;
         _queries = queries;
+        _voiceService = voiceService;
     }
 
     [HttpGet]
     public async Task<IActionResult> GetActive(CancellationToken cancellationToken)
     {
+        if (!User.TryGetCurrentUserId(out var userId))
+            return Unauthorized(ApiResponse<string>.Error(ApiStatusCode.HB40101, "Invalid token"));
+
         var result = await _queries.Send<GetActiveVoicesQuery, IReadOnlyList<TtsVoice>>(new GetActiveVoicesQuery(), cancellationToken);
-        return Ok(ApiResponse<object>.SuccessResponse(new { voices = result.Data }));
+
+        // Lay them gioc cua nguoi dung hien tai
+        var userVoicesResult = await _voiceService.GetByUserAsync(userId, cancellationToken);
+        var userVoices = userVoicesResult.IsSuccess ? userVoicesResult.Data ?? [] : [];
+
+        // Merge: loai bo trung lap (built-in co the da co trong GetActive)
+        var allVoices = result.Data
+            .Concat(userVoices)
+            .DistinctBy(v => v.VoiceId)
+            .ToList();
+
+        return Ok(ApiResponse<object>.SuccessResponse(new { voices = allVoices }));
     }
 
     [HttpPost]

@@ -247,6 +247,7 @@ services:
       - AESEncryption__Key=${AES_KEY}
       - AESEncryption__IV=${AES_IV}
       - AppSettings__FrontendUrl=${FRONTEND_URL}
+      - AppSettings__BaseUrl=${BASE_URL}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
@@ -277,6 +278,7 @@ services:
       - auth-service
       - auth-query-service
       - live-session-service
+      - account-content-service
     networks:
       - soundmates-network
     restart: unless-stopped

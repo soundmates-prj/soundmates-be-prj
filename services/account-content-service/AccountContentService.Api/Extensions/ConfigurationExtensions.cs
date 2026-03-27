@@ -167,5 +167,9 @@ public static class ConfigurationExtensions
         configuration["AppSettings:FrontendUrl"] = Environment.GetEnvironmentVariable("AppSettings__FrontendUrl")
             ?? Environment.GetEnvironmentVariable("FRONTEND_URL")
             ?? configuration["AppSettings:FrontendUrl"];
+
+        configuration["AppSettings:BaseUrl"] = Environment.GetEnvironmentVariable("AppSettings__BaseUrl")
+            ?? Environment.GetEnvironmentVariable("BASE_URL")
+            ?? configuration["AppSettings:BaseUrl"];
     }
 }

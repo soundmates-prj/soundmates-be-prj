@@ -108,20 +108,45 @@ public sealed class UpdateSessionScheduleHandler : ICommandHandler<UpdateSession
             return Result<SessionScheduleResult>.Failure(ex.Message, (ErrorCode)ex.StatusCode);
         }
 
-        return Result<SessionScheduleResult>.Success(new SessionScheduleResult
-        {
-            Id = schedule.Id,
-            LiveSessionId = schedule.LiveSessionId,
-            StartTime = schedule.StartTime,
-            EndTime = schedule.EndTime,
-            Title = schedule.Title,
-            Status = schedule.Status.ToString(),
-            IsRecurring = schedule.IsRecurring,
-            DaysOfWeek = schedule.DaysOfWeek,
-            StartDate = schedule.StartDate,
-            EndDate = schedule.EndDate,
-            CreatedBy = schedule.CreatedBy,
-            UpdatedBy = schedule.UpdatedBy
-        });
+        return Result<SessionScheduleResult>.Success(MapToResult(schedule, session));
     }
+
+    private static SessionScheduleResult MapToResult(Domain.Entities.SessionSchedule schedule, Domain.Entities.LiveSession session) => new()
+    {
+        Id = schedule.Id,
+        LiveSessionId = schedule.LiveSessionId,
+        StartTime = schedule.StartTime,
+        EndTime = schedule.EndTime,
+        Title = schedule.Title,
+        Status = schedule.Status.ToString(),
+        IsRecurring = schedule.IsRecurring,
+        DaysOfWeek = schedule.DaysOfWeek,
+        StartDate = schedule.StartDate,
+        EndDate = schedule.EndDate,
+        CreatedBy = schedule.CreatedBy,
+        UpdatedBy = schedule.UpdatedBy,
+        CreatedAt = schedule.CreatedAt,
+        LiveSession = new LiveSessionScheduleData
+        {
+            Id = session.Id,
+            SessionName = session.SessionName,
+            Description = session.Description,
+            Status = session.Status.ToString(),
+            HostUserId = session.HostUserId,
+            StartedAt = session.StartedAt,
+            EndedAt = session.EndedAt,
+            Genre = session.Genre,
+            ThumbnailUrl = session.ThumbnailUrl,
+            Station = session.AzuraCastStation != null ? new StationScheduleData
+            {
+                Id = session.AzuraCastStation.Id,
+                ExternalStationId = session.AzuraCastStation.ExternalStationId,
+                StationName = session.AzuraCastStation.StationName,
+                StationShortcode = session.AzuraCastStation.StationShortcode,
+                Description = session.AzuraCastStation.Description,
+                StreamUrl = session.AzuraCastStation.StreamUrl,
+                PublicPlayerUrl = session.AzuraCastStation.PublicPlayerUrl
+            } : null
+        }
+    };
 }
