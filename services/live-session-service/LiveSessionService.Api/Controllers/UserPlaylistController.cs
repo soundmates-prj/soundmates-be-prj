@@ -3,10 +3,13 @@ using LiveSessionService.Api.Models.Requests.Playlist;
 using LiveSessionService.Api.Models.Responses;
 using LiveSessionService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
 using LiveSessionService.Application.Enums;
+using LiveSessionService.Application.Features.Playlists.Commands.AddTracksToUserPlaylist;
 using LiveSessionService.Application.Features.Playlists.Commands.CreateUserPlaylist;
 using LiveSessionService.Application.Features.Playlists.Commands.DeleteUserPlaylist;
+using LiveSessionService.Application.Features.Playlists.Commands.RemoveTracksFromUserPlaylist;
 using LiveSessionService.Application.Features.Playlists.Commands.UpdateUserPlaylist;
 using LiveSessionService.Application.Features.Playlists.Queries.GetUserPlaylistById;
+using LiveSessionService.Application.Features.Playlists.Queries.GetUserPlaylistTracks;
 using LiveSessionService.Application.Features.Playlists.Queries.GetUserPlaylists;
 using LiveSessionService.Application.Features.Results.Playlists;
 using Microsoft.AspNetCore.Authorization;
@@ -207,6 +210,116 @@ public sealed class UserPlaylistController : ControllerBase
         {
             return result.ErrorCode switch
             {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.Forbidden => StatusCode(403, result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Get all tracks of a user playlist for the current user
+    /// </summary>
+    [HttpGet("{id:guid}/tracks")]
+    [ProducesResponseType(typeof(ApiResponse<List<PlaylistMediaResult>>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> GetTracks(Guid id, CancellationToken ct)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized(ApiResponse<object>.FailureResponse("Invalid or missing user token", (int)ErrorCode.Unauthorized));
+        }
+
+        var result = await _queries.Send<GetUserPlaylistTracksQuery, List<PlaylistMediaResult>>(
+            new GetUserPlaylistTracksQuery(id, userId),
+            ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.Forbidden => StatusCode(403, result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(result.ToApiResponse());
+    }
+
+    /// <summary>
+    /// Add tracks to a user playlist for the current user
+    /// </summary>
+    [HttpPost("{id:guid}/tracks")]
+    [ProducesResponseType(typeof(ApiResponse<List<PlaylistMediaResult>>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> AddTracks(Guid id, [FromBody] AddUserPlaylistTracksRequest request, CancellationToken ct)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ApiResponse<object>.FailureResponse("Invalid input", (int)ErrorCode.BadRequest));
+        }
+
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized(ApiResponse<object>.FailureResponse("Invalid or missing user token", (int)ErrorCode.Unauthorized));
+        }
+
+        var result = await _commands.Send<AddTracksToUserPlaylistCommand, List<PlaylistMediaResult>>(
+            new AddTracksToUserPlaylistCommand(id, userId, request.MediaIds),
+            ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.Forbidden => StatusCode(403, result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(result.ToApiResponse());
+    }
+
+    /// <summary>
+    /// Remove tracks from a user playlist for the current user
+    /// </summary>
+    [HttpDelete("{id:guid}/tracks")]
+    [ProducesResponseType(204)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> RemoveTracks(Guid id, [FromBody] RemoveUserPlaylistTracksRequest request, CancellationToken ct)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ApiResponse<object>.FailureResponse("Invalid input", (int)ErrorCode.BadRequest));
+        }
+
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized(ApiResponse<object>.FailureResponse("Invalid or missing user token", (int)ErrorCode.Unauthorized));
+        }
+
+        var result = await _commands.Send(
+            new RemoveTracksFromUserPlaylistCommand(id, userId, request.MediaIds),
+            ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
                 ErrorCode.NotFound => NotFound(result.ToApiResponse()),
                 ErrorCode.Forbidden => StatusCode(403, result.ToApiResponse()),
                 _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
