@@ -19,6 +19,7 @@ using LiveSessionService.Application.Features.LiveSessions.Queries.GetScheduleBy
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetStaffDashboardOverview;
 using LiveSessionService.Application.Features.Music.Commands.BulkUploadMusic;
 using LiveSessionService.Application.Features.Music.Commands.DeleteMedia;
+using LiveSessionService.Application.Features.Music.Commands.ImportSystemMediaBatch;
 using LiveSessionService.Application.Features.Music.Commands.SyncMediaFiles;
 using LiveSessionService.Application.Features.Music.Commands.UploadMusic;
 using LiveSessionService.Application.Features.Music.Queries.GetAllMediaFiles;
@@ -114,6 +115,7 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<UploadMusicCommand, MusicResult>, UploadMusicHandler>();
         services.AddScoped<ICommandHandler<BulkUploadMusicCommand, BulkUploadMusicResult>, BulkUploadMusicHandler>();
         services.AddScoped<ICommandHandler<SyncMediaFilesCommand, SyncMediaFilesResult>, SyncMediaFilesHandler>();
+        services.AddScoped<ICommandHandler<ImportSystemMediaBatchCommand, ImportSystemMediaBatchResult>, ImportSystemMediaBatchHandler>();
         services.AddScoped<ICommandHandler<DeleteMediaCommand>, DeleteMediaHandler>();
 
         // Register Music Query Handlers

@@ -34,6 +34,7 @@ namespace AccountContentService.Infrastructure.Repositories
         {
             var query = _context.PaymentTransactions
                 .AsNoTracking()
+                .Include(t => t.Payment)
                 .AsQueryable();
 
             var totalCount = await query.CountAsync(cancellationToken);
@@ -53,13 +54,53 @@ namespace AccountContentService.Infrastructure.Repositories
             };
         }
 
-        // Tìm theo Primary Key của bảng PaymentTransactions
+        /// <summary>
+        /// Get all transactions by explicitly joining with Payment table.
+        /// Safe against missing or misconfigured EF navigation property.
+        /// </summary>
+        public async Task<PaginationResult<PaymentTransaction>> GetAllWithPaymentAsync(int page, int pageSize, CancellationToken cancellationToken)
+        {
+            var query = from t in _context.PaymentTransactions.AsNoTracking()
+                        join p in _context.Payments.AsNoTracking() on t.PaymentId equals p.Id into pj
+                        from p in pj.DefaultIfEmpty()
+                        orderby t.CreatedAt descending
+                        select new { Transaction = t, Payment = p };
+
+            var totalCount = await query.CountAsync(cancellationToken);
+
+            var results = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+
+            var items = results.Select(r =>
+            {
+                r.Transaction.Payment ??= r.Payment;
+                return r.Transaction;
+            }).ToList();
+
+            return new PaginationResult<PaymentTransaction>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize
+            };
+        }
+
+        // Tìm theo Primary Key của bảng PaymentTransactions (explicit join)
         public async Task<PaymentTransaction> GetByIdAsync(Guid id, CancellationToken cancellationToken)
         {
-            return await _context.PaymentTransactions
-                .AsNoTracking()
-                .Where(x => x.Id == id)
-                .FirstOrDefaultAsync(cancellationToken);
+            var result = await (from t in _context.PaymentTransactions.AsNoTracking()
+                                join p in _context.Payments.AsNoTracking() on t.PaymentId equals p.Id into pj
+                                from p in pj.DefaultIfEmpty()
+                                where t.Id == id
+                                select new { Transaction = t, Payment = p })
+                                .FirstOrDefaultAsync(cancellationToken);
+
+            if (result == null) return null!;
+            result.Transaction.Payment ??= result.Payment;
+            return result.Transaction;
         }
 
         // Tìm theo Foreign Key PaymentId liên kết với bảng Payments

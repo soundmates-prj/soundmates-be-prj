@@ -2,6 +2,7 @@ using AccountContentService.Application.Abstractions;
 using AccountContentService.Application.Common.Pagination;
 using AccountContentService.Application.DTOs;
 using AccountContentService.Application.Interfaces.Repositories;
+using AccountContentService.Application.Interfaces.Services;
 using AutoMapper;
 using MediatR;
 using System;
@@ -15,11 +16,16 @@ namespace AccountContentService.Application.Features.BlogComments.Queries.GetCom
         IRequestHandler<GetCommentDetailQuery, List<CommentDto>>
     {
         private readonly ICommentRepository _commentRepository;
+        private readonly IUserProfileCache _userProfileCache;
         private readonly IMapper _mapper;
 
-        public GetCommentsHandler(ICommentRepository commentRepository, IMapper mapper)
+        public GetCommentsHandler(
+            ICommentRepository commentRepository,
+            IUserProfileCache userProfileCache,
+            IMapper mapper)
         {
             _commentRepository = commentRepository;
+            _userProfileCache = userProfileCache;
             _mapper = mapper;
         }
 
@@ -29,6 +35,7 @@ namespace AccountContentService.Application.Features.BlogComments.Queries.GetCom
         {
             var result = await _commentRepository.GetByPostIdAsync(request.PostId, request.PageSize, request.Page, cancellationToken);
             var items = _mapper.Map<IEnumerable<CommentDto>>(result.Items).ToList();
+            await PopulateUserProfilesAsync(items, cancellationToken);
             var comments = BuildCommentTree(items);
 
             return new PaginationResult<CommentDto>
@@ -46,6 +53,7 @@ namespace AccountContentService.Application.Features.BlogComments.Queries.GetCom
         {
             var result = await _commentRepository.GetByUserIdAsync(request.UserId, request.PageSize, request.Page, cancellationToken);
             var items = _mapper.Map<IEnumerable<CommentDto>>(result.Items).ToList();
+            await PopulateUserProfilesAsync(items, cancellationToken);
             var comments = BuildCommentTree(items);
 
             return new PaginationResult<CommentDto>
@@ -63,13 +71,35 @@ namespace AccountContentService.Application.Features.BlogComments.Queries.GetCom
         {
             var result = await _commentRepository.GetDetailByIdAsync(request.CommentId, cancellationToken);
             var items = _mapper.Map<List<CommentDto>>(result);
+            await PopulateUserProfilesAsync(items, cancellationToken);
             return BuildCommentTree(items);
+        }
+
+        /// <summary>
+        /// Refreshes userFullName and userAvatarUrl from the local read-model
+        /// projection for every comment in the list (including replies).
+        /// </summary>
+        private async Task PopulateUserProfilesAsync(List<CommentDto> comments, CancellationToken ct)
+        {
+            foreach (var comment in comments)
+            {
+                await PopulateUserProfileAsync(comment, ct);
+                if (comment.Replies.Count > 0)
+                    await PopulateUserProfilesAsync(comment.Replies, ct);
+            }
+        }
+
+        private async Task PopulateUserProfileAsync(CommentDto comment, CancellationToken ct)
+        {
+            if (comment.UserId == Guid.Empty) return;
+            var profile = await _userProfileCache.GetProfileAsync(comment.UserId, ct);
+            comment.UserFullName = profile.FullName;
+            comment.UserAvatarUrl = profile.AvatarUrl ?? string.Empty;
         }
 
         private List<CommentDto> BuildCommentTree(List<CommentDto> comments)
         {
             var lookup = comments.ToDictionary(x => x.Id);
-
             var roots = new List<CommentDto>();
 
             foreach (var comment in comments)

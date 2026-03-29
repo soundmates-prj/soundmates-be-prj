@@ -63,8 +63,12 @@ public sealed class AddMediaToPlaylistHandler
 
             if (!File.Exists(absolutePath))
             {
+                _logger.LogWarning(
+                    "System media file not found on disk. MediaId={MediaId}, FilePath={FilePath}, ExpectedPath={AbsolutePath}",
+                    mediaFile.Id, mediaFile.FilePath, absolutePath);
+
                 return Result<PlaylistMediaResult>.Failure(
-                    "System media file not found on server storage",
+                    $"File nhạc '{mediaFile.Title}' chưa được upload lên server. Vui lòng upload file trước khi thêm vào playlist. (Path: {absolutePath})",
                     ErrorCode.NotFound);
             }
 

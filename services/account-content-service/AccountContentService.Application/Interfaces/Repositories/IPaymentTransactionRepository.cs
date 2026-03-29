@@ -15,6 +15,11 @@ namespace AccountContentService.Application.Interfaces.Repositories
         Task UpdateAsync(PaymentTransaction paymentTransaction);
         Task DeleteAsync(PaymentTransaction paymentTransaction);
 
+        /// <summary>
+        /// Get all transactions — joins Payment for UserId without relying on navigation config.
+        /// </summary>
+        Task<PaginationResult<PaymentTransaction>> GetAllWithPaymentAsync(int page, int pageSize, CancellationToken cancellationToken);
+
         Task<PaginationResult<PaymentTransaction>> GetAllAsync(int page, int pageSize, CancellationToken cancellationToken);
         Task<PaginationResult<PaymentTransaction>> GetByUserId(Guid userId, int page, int pageSize, CancellationToken cancellationToken);
         /// <summary>

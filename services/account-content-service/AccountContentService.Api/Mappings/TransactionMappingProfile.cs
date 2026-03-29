@@ -10,6 +10,10 @@ namespace AccountContentService.Api.Mappings
     {
         public TransactionMappingProfile()
         {
+            // UserProfileDto → UserProfileResponse
+            CreateMap<UserProfileDto, UserProfileResponse>()
+                .ForMember(dest => dest.AvatarUrl, opt => opt.MapFrom(src => src.ProfileImageUrl));
+
             CreateMap<TransactionDto, TransactionResponse>();
             CreateMap<PaginationNoFilterRequest, GetTransactionByUserIdQuery>();
             CreateMap<PaginationNoFilterRequest, GetTransactionsQuery>();
