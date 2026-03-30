@@ -35,6 +35,12 @@ public sealed class StationPlaylistRepository : IStationPlaylistRepository
         await _db.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task DeleteAsync(StationPlaylist playlist, CancellationToken cancellationToken = default)
+    {
+        _db.StationPlaylists.Remove(playlist);
+        await _db.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task AddMediaAsync(PlaylistMedia media, CancellationToken cancellationToken = default)
     {
         await _db.PlaylistMedias.AddAsync(media, cancellationToken);

@@ -317,6 +317,23 @@ public sealed class AzuraCastClient : IAzuraCastClient
         return new AzuraCastPlaylistData { Id = result.Id, Name = result.Name ?? name };
     }
 
+    public async Task DeletePlaylistAsync(
+        int stationId,
+        int playlistId,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await _httpClient.DeleteAsync(
+            $"api/station/{stationId}/playlist/{playlistId}",
+            cancellationToken);
+
+        await EnsureAzuraCastSuccessAsync(response, $"delete playlist {playlistId} on station {stationId}", cancellationToken);
+
+        _logger.LogInformation(
+            "Deleted AzuraCast playlist {PlaylistId} on station {StationId}",
+            playlistId,
+            stationId);
+    }
+
     public async Task<AzuraCastMediaData?> UploadMediaAsync(
         int stationId,
         Stream fileStream,

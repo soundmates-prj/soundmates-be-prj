@@ -8,6 +8,7 @@ using LiveSessionService.Application.Features.Playlists.Commands.UpdatePlaylist;
 using LiveSessionService.Application.Features.Playlists.Commands.AddMediaToPlaylist;
 using LiveSessionService.Application.Features.Playlists.Commands.RemoveMediaFromPlaylist;
 using LiveSessionService.Application.Features.Playlists.Commands.SyncPlaylists;
+using LiveSessionService.Application.Features.Playlists.Commands.DeletePlaylist;
 using LiveSessionService.Application.Features.Playlists.Queries.GetPlaylistsByStation;
 using LiveSessionService.Application.Features.Playlists.Queries.GetPlaylistTracks;
 using LiveSessionService.Api.Models.Responses;
@@ -200,11 +201,22 @@ public class PlaylistController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
     public async Task<IActionResult> DeletePlaylist(Guid id, CancellationToken ct)
     {
-        _logger.LogWarning("DeletePlaylist not yet implemented");
+        var result = await _commands.Send(new DeletePlaylistCommand(id), ct);
 
-        return StatusCode(501, ApiResponse<object>.FailureResponse(
-            "Delete playlist feature coming soon",
-            501));
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.Unauthorized => Unauthorized(result.ToApiResponse()),
+                ErrorCode.Forbidden => StatusCode(403, result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                ErrorCode.UnprocessableEntity => StatusCode(422, result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return NoContent();
     }
 
     /// <summary>
