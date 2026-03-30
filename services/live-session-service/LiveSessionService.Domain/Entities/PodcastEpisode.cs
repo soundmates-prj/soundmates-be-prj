@@ -10,6 +10,8 @@
 
         public string AudioUrl { get; set; } = null!;
 
+        public string? ThumbnailUrl { get; set; }
+
         public int EpisodeNumber { get; set; }
 
         public DateTime PublishDate { get; set; }

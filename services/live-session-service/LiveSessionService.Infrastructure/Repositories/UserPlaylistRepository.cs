@@ -17,6 +17,7 @@ public sealed class UserPlaylistRepository : IUserPlaylistRepository
     public Task<UserPlaylist?> GetByIdAsync(Guid playlistId, CancellationToken cancellationToken = default)
         => _db.UserPlaylists
             .Include(x => x.UserPlaylistMedias)
+                .ThenInclude(x => x.MediaFile)
             .FirstOrDefaultAsync(x => x.Id == playlistId, cancellationToken);
 
     public Task<List<UserPlaylist>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
@@ -44,4 +45,23 @@ public sealed class UserPlaylistRepository : IUserPlaylistRepository
         _db.UserPlaylists.Remove(playlist);
         await _db.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task AddTracksAsync(IEnumerable<UserPlaylistMedia> tracks, CancellationToken cancellationToken = default)
+    {
+        await _db.UserPlaylistMedias.AddRangeAsync(tracks, cancellationToken);
+        await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task RemoveTracksAsync(IEnumerable<UserPlaylistMedia> tracks, CancellationToken cancellationToken = default)
+    {
+        _db.UserPlaylistMedias.RemoveRange(tracks);
+        await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    public Task<List<UserPlaylistMedia>> GetTracksAsync(Guid playlistId, CancellationToken cancellationToken = default)
+        => _db.UserPlaylistMedias
+            .Include(x => x.MediaFile)
+            .Where(x => x.UserPlaylistId == playlistId)
+            .OrderByDescending(x => x.CreatedAt)
+            .ToListAsync(cancellationToken);
 }

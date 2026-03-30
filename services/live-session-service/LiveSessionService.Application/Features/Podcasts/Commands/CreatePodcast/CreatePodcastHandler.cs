@@ -48,7 +48,8 @@ public sealed class CreatePodcastHandler : ICommandHandler<CreatePodcastCommand,
             CreatedAt = podcast.CreatedAt,
             UpdatedAt = podcast.UpdatedAt,
             CreatedBy = podcast.CreatedBy,
-            EpisodeCount = 0
+            EpisodeCount = 0,
+            AllEpisodes = []
         });
     }
 }

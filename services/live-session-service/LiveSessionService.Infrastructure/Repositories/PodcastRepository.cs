@@ -61,4 +61,37 @@ public sealed class PodcastRepository : IPodcastRepository
         _context.Podcasts.Remove(podcast);
         await _context.SaveChangesAsync(cancellationToken);
     }
+
+    public Task<PodcastEpisode?> GetEpisodeByIdAsync(Guid episodeId, CancellationToken cancellationToken = default)
+        => _context.PodcastEpisodes
+            .FirstOrDefaultAsync(x => x.Id == episodeId, cancellationToken);
+
+    public async Task<IReadOnlyList<PodcastEpisode>> GetEpisodesByPodcastIdAsync(Guid podcastId, CancellationToken cancellationToken = default)
+        => await _context.PodcastEpisodes
+            .Where(x => x.PodcastId == podcastId)
+            .OrderBy(x => x.EpisodeNumber)
+            .ThenByDescending(x => x.PublishDate)
+            .ToListAsync(cancellationToken);
+
+    public Task<PodcastEpisode?> GetEpisodeByNumberAsync(Guid podcastId, int episodeNumber, CancellationToken cancellationToken = default)
+        => _context.PodcastEpisodes
+            .FirstOrDefaultAsync(x => x.PodcastId == podcastId && x.EpisodeNumber == episodeNumber, cancellationToken);
+
+    public async Task AddEpisodeAsync(PodcastEpisode episode, CancellationToken cancellationToken = default)
+    {
+        await _context.PodcastEpisodes.AddAsync(episode, cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task UpdateEpisodeAsync(PodcastEpisode episode, CancellationToken cancellationToken = default)
+    {
+        _context.PodcastEpisodes.Update(episode);
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task DeleteEpisodeAsync(PodcastEpisode episode, CancellationToken cancellationToken = default)
+    {
+        _context.PodcastEpisodes.Remove(episode);
+        await _context.SaveChangesAsync(cancellationToken);
+    }
 }
