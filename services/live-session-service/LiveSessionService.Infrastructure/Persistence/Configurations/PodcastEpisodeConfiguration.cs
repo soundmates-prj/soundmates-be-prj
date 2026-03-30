@@ -30,6 +30,10 @@ public sealed class PodcastEpisodeConfiguration : IEntityTypeConfiguration<Podca
             .HasMaxLength(1000)
             .IsRequired();
 
+        builder.Property(x => x.ThumbnailUrl)
+            .HasColumnName("thumbnail_url")
+            .HasMaxLength(1000);
+
         builder.Property(x => x.EpisodeNumber)
             .HasColumnName("episode_number")
             .IsRequired();

@@ -54,7 +54,21 @@ public sealed class UpdatePodcastHandler : ICommandHandler<UpdatePodcastCommand,
             CreatedAt = podcast.CreatedAt,
             UpdatedAt = podcast.UpdatedAt,
             CreatedBy = podcast.CreatedBy,
-            EpisodeCount = podcast.Episodes.Count
+            EpisodeCount = podcast.Episodes.Count,
+            AllEpisodes = podcast.Episodes
+                .OrderBy(x => x.EpisodeNumber)
+                .Select(x => new PodcastEpisodeResult
+                {
+                    Id = x.Id,
+                    Title = x.Title,
+                    Description = x.Description,
+                    AudioUrl = x.AudioUrl,
+                    ThumbnailUrl = x.ThumbnailUrl,
+                    EpisodeNumber = x.EpisodeNumber,
+                    PublishDate = x.PublishDate,
+                    Duration = x.Duration
+                })
+                .ToList()
         });
     }
 }
