@@ -24,6 +24,9 @@ namespace AuthQueryService.Infrastructure.Messaging.EventHandlers.Handlers
             }
 
             existing.IsActive = false;
+            existing.IsBanned = true;
+            existing.BannedAt = EventPropertyExtractor.GetDateTimeProperty(root, "bannedAt", "BannedAt");
+            existing.BanReason = EventPropertyExtractor.GetOptionalStringProperty(root, "reason", "Reason");
             existing.UpdatedAt = DateTime.UtcNow;
 
             await _repository.UpsertAsync(existing);

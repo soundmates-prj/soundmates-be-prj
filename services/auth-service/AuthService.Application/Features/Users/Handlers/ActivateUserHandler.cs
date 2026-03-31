@@ -12,18 +12,18 @@ using System.Threading.Tasks;
 namespace AuthService.Application.Features.Users.Handlers;
 
 /// <summary>
-/// Deactivates a user account (soft delete).
+/// Activates a previously deactivated user account.
 /// Note: UpdateAccountStatusHandler is preferred for new code as it is idempotent
 /// and unifies all status transitions.
 /// </summary>
-public sealed class DeactivateUserHandler : ICommandHandler<DeactivateUserCommand, bool>
+public sealed class ActivateUserHandler : ICommandHandler<ActivateUserCommand, bool>
 {
     private readonly IUserRepository _userRepository;
     private readonly IOutboxRepository _outbox;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
 
-    public DeactivateUserHandler(
+    public ActivateUserHandler(
         IUserRepository userRepository,
         IOutboxRepository outbox,
         IDateTimeProvider dateTimeProvider,
@@ -35,7 +35,7 @@ public sealed class DeactivateUserHandler : ICommandHandler<DeactivateUserComman
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<Result<bool>> Handle(DeactivateUserCommand command, CancellationToken cancellationToken)
+    public async Task<Result<bool>> Handle(ActivateUserCommand command, CancellationToken cancellationToken)
     {
         var user = await _userRepository.GetByIdAsync(command.UserId);
         if (user is null)
@@ -43,7 +43,7 @@ public sealed class DeactivateUserHandler : ICommandHandler<DeactivateUserComman
 
         try
         {
-            user.Deactivate(_dateTimeProvider);
+            user.Activate(_dateTimeProvider);
         }
         catch (InvalidUserStateException ex)
         {
@@ -55,15 +55,14 @@ public sealed class DeactivateUserHandler : ICommandHandler<DeactivateUserComman
 
         user = await _userRepository.GetByIdAsync(user.Id);
 
-        // Publish typed UserDeactivatedEvent (Auth — domain state change)
-        await _outbox.EnqueueAsync(RoutingKeys.Auth.UserDeactivated, new UserDeactivatedEvent
+        // Publish typed UserActivatedEvent (Auth — domain state change)
+        await _outbox.EnqueueAsync(RoutingKeys.Auth.UserActivated, new UserActivatedEvent
         {
             UserId = user!.Id,
             Username = user.Username,
-            Email = user.Email,
-            DeactivatedAt = _dateTimeProvider.UtcNow
+            Email = user.Email
         }, cancellationToken);
 
-        return Result<bool>.Success(true, "Your account has been deactivated successfully");
+        return Result<bool>.Success(true, $"User '{user.Username}' has been activated successfully");
     }
 }

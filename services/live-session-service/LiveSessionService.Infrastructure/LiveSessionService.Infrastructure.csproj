@@ -37,6 +37,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\LiveSessionService.Application\LiveSessionService.Application.csproj" />
 		<ProjectReference Include="..\LiveSessionService.Domain\LiveSessionService.Domain.csproj" />
+		<ProjectReference Include="..\..\..\shared\shared.csproj" />
 	</ItemGroup>
 
 </Project>

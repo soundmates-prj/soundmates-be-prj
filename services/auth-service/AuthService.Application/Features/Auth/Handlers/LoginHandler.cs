@@ -5,8 +5,11 @@ using AuthService.Application.Features.Auth.Commands;
 using AuthService.Domain.Entities;
 using AuthService.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
+using Shared.Contracts;
+using Shared.Contracts.Events.Activity;
 using System;
-using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace AuthService.Application.Features.Auth.Handlers;
 
@@ -21,7 +24,7 @@ public sealed class LoginHandler : ICommandHandler<LoginCommand, AuthResult>
     private readonly IUnitOfWork _unitOfWork;
 
     public LoginHandler(
-        IAuthRepository repo, 
+        IAuthRepository repo,
         IJwtTokenGenerator jwt,
         IRefreshTokenRepository refreshTokenRepository,
         IOutboxRepository outbox,
@@ -40,59 +43,34 @@ public sealed class LoginHandler : ICommandHandler<LoginCommand, AuthResult>
 
     public async Task<Result<AuthResult>> Handle(LoginCommand command, CancellationToken cancellationToken)
     {
-        // Connect to repository to validate user credentials (by username or email)
         var user = await _repo.LoginByUsernameOrEmailAsync(command.Identifier, command.Password);
         if (user is null)
         {
-            // Publish login failed event
-            await _outbox.EnqueueAsync("auth.user.login.failed", new
+            await _outbox.EnqueueAsync(RoutingKeys.Auth.LoginFailed, new LoginFailedEvent
             {
-                identifier = command.Identifier,
-                reason = "Invalid username/email or password",
-                errorCode = 401,
-                occurredAtUtc = _dateTimeProvider.UtcNow
+                Identifier = command.Identifier,
+                Reason = "Invalid username/email or password",
+                ErrorCode = 401
             }, cancellationToken);
-            
+
             return Result<AuthResult>.Failure("Invalid username/email or password", 401);
         }
 
-        // Check if user has verified their email
         if (!user.IsActive)
         {
-            // Publish login failed event (email not verified)
-            await _outbox.EnqueueAsync("auth.user.login.failed", new
+            await _outbox.EnqueueAsync(RoutingKeys.Auth.LoginFailed, new LoginFailedEvent
             {
-                identifier = command.Identifier,
-                userId = user.Id,
-                reason = "Email not verified",
-                errorCode = 403,
-                occurredAtUtc = _dateTimeProvider.UtcNow
+                Identifier = command.Identifier,
+                UserId = user.Id,
+                Reason = "Email not verified",
+                ErrorCode = 403
             }, cancellationToken);
-            
-            return Result<AuthResult>.Failure("Please verify your email address before logging in. Check your inbox for the verification OTP code.", 403);
+
+            return Result<AuthResult>.Failure(
+                "Please verify your email address before logging in. Check your inbox for the verification OTP code.",
+                403);
         }
 
-        // Log login activity for security monitoring
-        var loginLogPayload = JsonSerializer.Serialize(new
-        {
-            userId = user.Id,
-            email = user.Email,
-            username = user.Username,
-            ipAddress = command.IpAddress ?? "Unknown",
-            userAgent = command.UserAgent ?? "Unknown",
-            loginTime = _dateTimeProvider.UtcNow,
-            isSuccessful = true
-        });
-
-        // Log to outbox for async processing (can be used for security alerts, analytics, etc.)
-        await _outbox.EnqueueAsync("auth.user.login.activity", loginLogPayload, cancellationToken);
-
-        // Log suspicious activity (different IP/location, unusual time, etc.)
-        // This is a simple implementation - in production, you might want to:
-        // 1. Store last login IP/location in user profile
-        // 2. Compare with current login
-        // 3. Use geolocation API to detect location changes
-        // 4. Check for unusual login times
         _logger.LogInformation(
             "User {UserId} ({Email}) logged in from IP: {IpAddress}, User-Agent: {UserAgent}",
             user.Id, user.Email, command.IpAddress ?? "Unknown", command.UserAgent ?? "Unknown");
@@ -112,20 +90,19 @@ public sealed class LoginHandler : ICommandHandler<LoginCommand, AuthResult>
         };
 
         await _refreshTokenRepository.AddAsync(refreshTokenEntity);
-        
+
         // Commit transaction
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         // Map to AuthResult
         var authResult = user.ToAuthResult(accessToken, refreshToken);
 
-        // Publish login successful event
-        await _outbox.EnqueueAsync("auth.user.login.successful", new
+        // Publish typed login successful event (Activity — audit trail)
+        await _outbox.EnqueueAsync(RoutingKeys.Auth.LoginSuccessful, new LoginSuccessfulEvent
         {
-            userId = user.Id,
-            username = user.Username,
-            email = user.Email,
-            occurredAtUtc = _dateTimeProvider.UtcNow
+            UserId = user.Id,
+            Username = user.Username,
+            Email = user.Email
         }, cancellationToken);
 
         return Result<AuthResult>.Success(authResult, "Login successful");

@@ -1,8 +1,13 @@
+using System;
 using System.Text.Json.Serialization;
 
-namespace LiveSessionService.Infrastructure.Messaging;
+namespace Shared.Contracts.Events.Config;
 
-internal sealed class AzuraCastConfigUpdatedEvent
+/// <summary>
+/// Published when AzuraCast configuration is updated.
+/// Routing key: config.azuracast.updated
+/// </summary>
+public sealed class AzuraCastConfigUpdatedEvent : BaseIntegrationEvent
 {
     [JsonPropertyName("baseUrl")]
     public string BaseUrl { get; init; } = string.Empty;
@@ -16,6 +21,9 @@ internal sealed class AzuraCastConfigUpdatedEvent
     [JsonPropertyName("updatedAt")]
     public DateTime UpdatedAt { get; init; }
 
+    /// <summary>
+    /// When true, consumers should clear/reset the AzuraCast configuration.
+    /// </summary>
     [JsonPropertyName("isDeleted")]
     public bool IsDeleted { get; init; }
 }

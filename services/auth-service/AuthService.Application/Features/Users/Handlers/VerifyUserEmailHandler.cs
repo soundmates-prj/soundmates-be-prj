@@ -1,5 +1,6 @@
 using AuthService.Application.Abstractions.Messaging;
 using AuthService.Application.Results;
+using Microsoft.Extensions.Logging;
 using AuthService.Application.Features.Users.Commands;
 using AuthService.Domain.Exceptions;
 using AuthService.Domain.Interfaces;
@@ -12,38 +13,42 @@ using System.Threading.Tasks;
 namespace AuthService.Application.Features.Users.Handlers;
 
 /// <summary>
-/// Deactivates a user account (soft delete).
-/// Note: UpdateAccountStatusHandler is preferred for new code as it is idempotent
-/// and unifies all status transitions.
+/// Admin manually verifies a user's email and activates the account.
+/// Does NOT require OTP — admin grants verification directly.
+/// State transition: UNVERIFIED → VERIFIED + ACTIVE
 /// </summary>
-public sealed class DeactivateUserHandler : ICommandHandler<DeactivateUserCommand, bool>
+public sealed class VerifyUserEmailHandler : ICommandHandler<VerifyUserEmailCommand, bool>
 {
     private readonly IUserRepository _userRepository;
     private readonly IOutboxRepository _outbox;
     private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly ILogger<VerifyUserEmailHandler> _logger;
     private readonly IUnitOfWork _unitOfWork;
 
-    public DeactivateUserHandler(
+    public VerifyUserEmailHandler(
         IUserRepository userRepository,
         IOutboxRepository outbox,
         IDateTimeProvider dateTimeProvider,
+        ILogger<VerifyUserEmailHandler> logger,
         IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
         _outbox = outbox;
         _dateTimeProvider = dateTimeProvider;
+        _logger = logger;
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<Result<bool>> Handle(DeactivateUserCommand command, CancellationToken cancellationToken)
+    public async Task<Result<bool>> Handle(VerifyUserEmailCommand command, CancellationToken cancellationToken)
     {
         var user = await _userRepository.GetByIdAsync(command.UserId);
+
         if (user is null)
             throw new UserNotFoundException($"User with ID {command.UserId} not found");
 
         try
         {
-            user.Deactivate(_dateTimeProvider);
+            user.VerifyEmail(_dateTimeProvider);
         }
         catch (InvalidUserStateException ex)
         {
@@ -53,17 +58,22 @@ public sealed class DeactivateUserHandler : ICommandHandler<DeactivateUserComman
         await _userRepository.UpdateAsync(user);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        // Reload user with role for event payload
         user = await _userRepository.GetByIdAsync(user.Id);
 
-        // Publish typed UserDeactivatedEvent (Auth — domain state change)
-        await _outbox.EnqueueAsync(RoutingKeys.Auth.UserDeactivated, new UserDeactivatedEvent
+        // Publish typed UserEmailVerifiedEvent (Auth — account state change)
+        await _outbox.EnqueueAsync(RoutingKeys.Auth.UserEmailVerified, new UserEmailVerifiedEvent
         {
-            UserId = user!.Id,
+            UserId = user.Id,
             Username = user.Username,
             Email = user.Email,
-            DeactivatedAt = _dateTimeProvider.UtcNow
+            EmailVerifiedAt = user.EmailVerifiedAt ?? _dateTimeProvider.UtcNow
         }, cancellationToken);
 
-        return Result<bool>.Success(true, "Your account has been deactivated successfully");
+        _logger.LogInformation("Admin manually verified email for user {UserId}", user.Id);
+
+        return Result<bool>.Success(true,
+            $"Email of user '{user.Username}' has been verified and account activated");
     }
 }
+

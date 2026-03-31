@@ -24,6 +24,7 @@ public static class UserErrorCodes
     public const string CannotBanInactive = "USER_CANNOT_BAN_INACTIVE";
     public const string EmailAlreadyVerified = "USER_EMAIL_ALREADY_VERIFIED";
     public const string UserAlreadyExists = "USER_ALREADY_EXISTS";
+    public const string InvalidStatusTransition = "USER_INVALID_STATUS_TRANSITION";
     
     // Authentication errors (401 Unauthorized)
     public const string InvalidCredentials = "USER_INVALID_CREDENTIALS";

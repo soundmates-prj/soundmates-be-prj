@@ -24,6 +24,8 @@ namespace AuthQueryService.Infrastructure.Messaging.EventHandlers.Handlers
             }
 
             existing.IsActive = false;
+            existing.IsBanned = false; // Clear ban state if transitioning to deactivated
+            existing.DeactivatedAt = EventPropertyExtractor.GetDateTimeProperty(root, "deactivatedAt", "DeactivatedAt");
             existing.UpdatedAt = DateTime.UtcNow;
 
             await _repository.UpsertAsync(existing);
