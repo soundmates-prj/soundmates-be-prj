@@ -29,6 +29,7 @@ using LiveSessionService.Application.Features.Playlists.Commands.AddMediaToPlayl
 using LiveSessionService.Application.Features.Playlists.Commands.AddTracksToUserPlaylist;
 using LiveSessionService.Application.Features.Playlists.Commands.CreatePlaylist;
 using LiveSessionService.Application.Features.Playlists.Commands.CreateUserPlaylist;
+using LiveSessionService.Application.Features.Playlists.Commands.DeletePlaylist;
 using LiveSessionService.Application.Features.Playlists.Commands.DeleteUserPlaylist;
 using LiveSessionService.Application.Features.Playlists.Commands.RemoveMediaFromPlaylist;
 using LiveSessionService.Application.Features.Playlists.Commands.RemoveTracksFromUserPlaylist;
@@ -104,15 +105,16 @@ public static class DependencyInjection
 
         // Register Playlist Command Handlers
         services.AddScoped<ICommandHandler<CreatePlaylistCommand, PlaylistResult>, CreatePlaylistHandler>();
-        services.AddScoped<ICommandHandler<CreateUserPlaylistCommand, UserPlaylistResult>, CreateUserPlaylistHandler>();
         services.AddScoped<ICommandHandler<UpdatePlaylistCommand, PlaylistResult>, UpdatePlaylistHandler>();
+        services.AddScoped<ICommandHandler<DeletePlaylistCommand>, DeletePlaylistHandler>();
+        services.AddScoped<ICommandHandler<AddMediaToPlaylistCommand, PlaylistMediaResult>, AddMediaToPlaylistHandler>();
+        services.AddScoped<ICommandHandler<RemoveMediaFromPlaylistCommand>, RemoveMediaFromPlaylistHandler>();
+        services.AddScoped<ICommandHandler<SyncPlaylistsCommand, SyncPlaylistsResult>, SyncPlaylistsHandler>();
+        services.AddScoped<ICommandHandler<CreateUserPlaylistCommand, UserPlaylistResult>, CreateUserPlaylistHandler>();
         services.AddScoped<ICommandHandler<UpdateUserPlaylistCommand, UserPlaylistResult>, UpdateUserPlaylistHandler>();
         services.AddScoped<ICommandHandler<DeleteUserPlaylistCommand>, DeleteUserPlaylistHandler>();
         services.AddScoped<ICommandHandler<AddTracksToUserPlaylistCommand, List<PlaylistMediaResult>>, AddTracksToUserPlaylistHandler>();
         services.AddScoped<ICommandHandler<RemoveTracksFromUserPlaylistCommand>, RemoveTracksFromUserPlaylistHandler>();
-        services.AddScoped<ICommandHandler<AddMediaToPlaylistCommand, PlaylistMediaResult>, AddMediaToPlaylistHandler>();
-        services.AddScoped<ICommandHandler<RemoveMediaFromPlaylistCommand>, RemoveMediaFromPlaylistHandler>();
-        services.AddScoped<ICommandHandler<SyncPlaylistsCommand, SyncPlaylistsResult>, SyncPlaylistsHandler>();
 
         // Register Music Command Handlers
         services.AddScoped<ICommandHandler<UploadMusicCommand, MusicResult>, UploadMusicHandler>();
