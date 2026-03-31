@@ -40,11 +40,12 @@ public sealed class UpdateSessionScheduleHandler : ICommandHandler<UpdateSession
         }
 
         var nowUtc = _dateTimeProvider.UtcNow;
-        var todayUtc = DateOnly.FromDateTime(nowUtc);
-        var nowTimeUtc = TimeOnly.FromDateTime(nowUtc);
+        var scheduleNow = ConvertUtcToScheduleLocal(nowUtc);
+        var today = DateOnly.FromDateTime(scheduleNow);
+        var nowTime = TimeOnly.FromDateTime(scheduleNow);
 
-        if (command.StartDate == todayUtc &&
-            (command.StartTime <= nowTimeUtc || command.EndTime <= nowTimeUtc))
+        if (command.StartDate == today &&
+            (command.StartTime <= nowTime || command.EndTime <= nowTime))
         {
             return Result<SessionScheduleResult>.Failure(
                 "For today schedule, start time and end time must be greater than current time",

@@ -51,6 +51,12 @@ public interface IAzuraCastClient
         bool isEnabled,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Deletes a playlist in AzuraCast for the given station</summary>
+    Task DeletePlaylistAsync(
+        int stationId,
+        int playlistId,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Uploads an audio file to AzuraCast station media library</summary>
     Task<AzuraCastMediaData?> UploadMediaAsync(
         int stationId,

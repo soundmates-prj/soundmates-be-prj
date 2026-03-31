@@ -40,17 +40,18 @@ public sealed class CreateSessionScheduleHandler : ICommandHandler<CreateSession
             return Result<SessionScheduleResult>.Failure("End date cannot be earlier than start date", ErrorCode.BadRequest);
         }
 
-        var nowUtc = _dateTimeProvider.UtcNow;
-        var todayUtc = DateOnly.FromDateTime(nowUtc);
-        var nowTimeUtc = TimeOnly.FromDateTime(nowUtc);
+            var nowUtc = _dateTimeProvider.UtcNow;
+            var scheduleNow = ConvertUtcToScheduleLocal(nowUtc);
+            var today = DateOnly.FromDateTime(scheduleNow);
+            var nowTime = TimeOnly.FromDateTime(scheduleNow);
 
-        if (command.StartDate == todayUtc &&
-            (command.StartTime <= nowTimeUtc || command.EndTime <= nowTimeUtc))
-        {
-            return Result<SessionScheduleResult>.Failure(
-                "For today schedule, start time and end time must be greater than current time",
-                ErrorCode.BadRequest);
-        }
+            if (command.StartDate == today &&
+                (command.StartTime <= nowTime || command.EndTime <= nowTime))
+            {
+                return Result<SessionScheduleResult>.Failure(
+                    "For today schedule, start time and end time must be greater than current time",
+                    ErrorCode.BadRequest);
+            }
 
         if (command.IsRecurring && command.DaysOfWeek == DaysOfWeek.None)
         {

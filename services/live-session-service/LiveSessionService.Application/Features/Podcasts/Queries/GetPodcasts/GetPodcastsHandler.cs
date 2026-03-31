@@ -42,7 +42,21 @@ public sealed class GetPodcastsHandler : IQueryHandler<GetPodcastsQuery, List<Po
             CreatedAt = x.CreatedAt,
             UpdatedAt = x.UpdatedAt,
             CreatedBy = x.CreatedBy,
-            EpisodeCount = x.Episodes.Count
+            EpisodeCount = x.Episodes.Count,
+            AllEpisodes = x.Episodes
+                .OrderBy(e => e.EpisodeNumber)
+                .Select(e => new PodcastEpisodeResult
+                {
+                    Id = e.Id,
+                    Title = e.Title,
+                    Description = e.Description,
+                    AudioUrl = e.AudioUrl,
+                    ThumbnailUrl = e.ThumbnailUrl,
+                    EpisodeNumber = e.EpisodeNumber,
+                    PublishDate = e.PublishDate,
+                    Duration = e.Duration
+                })
+                .ToList()
         }).ToList();
 
         return Result<List<PodcastResult>>.Success(result);
