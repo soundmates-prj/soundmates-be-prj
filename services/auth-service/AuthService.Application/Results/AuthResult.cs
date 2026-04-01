@@ -17,4 +17,10 @@ public sealed class AuthResult
     public string? AccessToken { get; init; }
     public string? RefreshToken { get; init; }
     public DateTime? CreatedAt { get; init; }
+
+    /// <summary>
+    /// Role-based redirect URL — used by FE to navigate after successful login
+    /// instead of inferring from RoleName.
+    /// </summary>
+    public string? RedirectUrl { get; init; }
 }

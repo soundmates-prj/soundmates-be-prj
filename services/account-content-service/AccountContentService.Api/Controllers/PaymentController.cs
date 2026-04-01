@@ -258,7 +258,7 @@ namespace AccountContentService.Api.Controllers
         /// </summary>
         private string ResolveDefaultReturnUrl(string method)
         {
-            var apiBaseUrl = _configuration["AppSettings:ApiBaseUrl"]?.TrimEnd('/');
+            var apiBaseUrl = _configuration["AppSettings:BaseUrl"]?.TrimEnd('/');
             
             if (string.IsNullOrWhiteSpace(apiBaseUrl))
             {

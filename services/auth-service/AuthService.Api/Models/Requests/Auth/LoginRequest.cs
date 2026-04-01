@@ -13,5 +13,10 @@ namespace AuthService.Api.Models.Requests
         public string EmailOrUsername { get; set; } = null!;
         [Required]
         public string Password { get; set; } = null!;
+
+        /// <summary>
+        /// If true, issues a longer-lived refresh token (30 days instead of 7).
+        /// </summary>
+        public bool RememberMe { get; set; } = false;
     }
 }
