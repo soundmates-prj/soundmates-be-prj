@@ -24,6 +24,12 @@ namespace AccountContentService.Application.DTOs
         public DateTime UpdatedAt { get; set; }
 
         public string? Description { get; set; }
+
+        public int VoiceModelLimit { get; set; }
+
+        public int TtsMinuteLimit { get; set; }
+
+        public int PodcastRequestLimit { get; set; }
     }
 
     public class SubscriptionDto    

@@ -37,6 +37,15 @@ public sealed class SessionScheduleRepository : ISessionScheduleRepository
             .FirstOrDefaultAsync(x => x.Id == scheduleId, cancellationToken);
     }
 
+    public async Task<SessionSchedule?> GetByIdWithSessionAsync(Guid scheduleId, CancellationToken cancellationToken = default)
+    {
+        return await _context.SessionSchedules
+            .AsNoTracking()
+            .Include(x => x.LiveSession)
+                .ThenInclude(x => x.AzuraCastStation)
+            .FirstOrDefaultAsync(x => x.Id == scheduleId, cancellationToken);
+    }
+
     public async Task<List<SessionSchedule>> GetByLiveSessionIdAsync(Guid liveSessionId, CancellationToken cancellationToken = default)
     {
         return await _context.SessionSchedules

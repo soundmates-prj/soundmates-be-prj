@@ -1,5 +1,5 @@
 using System.Text;
-using AuthService.Infrastructure.Messaging;
+using LiveSessionService.Domain.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;

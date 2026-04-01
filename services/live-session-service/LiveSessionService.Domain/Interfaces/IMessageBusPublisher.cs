@@ -1,7 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace AuthService.Infrastructure.Messaging
+namespace LiveSessionService.Domain.Interfaces
 {
     public interface IMessageBusPublisher
     {

@@ -1,4 +1,4 @@
-﻿using DotNetEnv;
+using DotNetEnv;
 
 namespace AccountContentService.Api.Extensions;
 
@@ -167,5 +167,14 @@ public static class ConfigurationExtensions
         configuration["AppSettings:FrontendUrl"] = Environment.GetEnvironmentVariable("AppSettings__FrontendUrl")
             ?? Environment.GetEnvironmentVariable("FRONTEND_URL")
             ?? configuration["AppSettings:FrontendUrl"];
+
+        configuration["AppSettings:BaseUrl"] = Environment.GetEnvironmentVariable("AppSettings__BaseUrl")
+            ?? Environment.GetEnvironmentVariable("BASE_URL")
+            ?? configuration["AppSettings:BaseUrl"];
+
+        configuration["AppSettings:ApiBaseUrl"] = Environment.GetEnvironmentVariable("AppSettings__ApiBaseUrl")
+            ?? Environment.GetEnvironmentVariable("API_BASE_URL")
+            ?? Environment.GetEnvironmentVariable("BASE_URL")
+            ?? configuration["AppSettings:ApiBaseUrl"];
     }
 }

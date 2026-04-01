@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AiService.Domain\AiService.Domain.csproj" />
+    <ProjectReference Include="..\..\..\shared\shared.csproj" />
   </ItemGroup>
 
 </Project>

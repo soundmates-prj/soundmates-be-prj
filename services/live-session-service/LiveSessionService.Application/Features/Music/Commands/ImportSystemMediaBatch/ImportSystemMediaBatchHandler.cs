@@ -106,6 +106,11 @@ public sealed class ImportSystemMediaBatchHandler
                     continue;
                 }
 
+                // Cập nhật FilePath trong DB: từ system://... → AzuraCast unique_id
+                // Để lần addTracksToPlaylist sau không bị lỗi "file not found"
+                media.FilePath = uploaded.UniqueId;
+                await _mediaFileRepository.UpdateAsync(media, cancellationToken);
+
                 importedItems.Add(new ImportedSystemMediaItemResult
                 {
                     MediaFileId = media.Id,

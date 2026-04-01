@@ -1,15 +1,16 @@
+using System;
 using System.Text.Json.Serialization;
 
-namespace Shared.Contracts.Events;
+namespace Shared.Contracts.Events.Auth;
 
 /// <summary>
-/// Published by auth-service when user basic info or extended profile is updated.
+/// Published when user basic info or extended profile is updated.
 /// Routing key: auth.user.profile.updated
 /// </summary>
-public sealed class UserProfileUpdatedEvent
+public sealed class UserProfileUpdatedEvent : BaseIntegrationEvent
 {
     [JsonPropertyName("id")]
-    public Guid Id { get; init; }
+    public new Guid Id { get; init; }
 
     [JsonPropertyName("username")]
     public string Username { get; init; } = string.Empty;

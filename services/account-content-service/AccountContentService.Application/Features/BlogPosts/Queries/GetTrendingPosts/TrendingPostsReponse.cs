@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -9,6 +9,10 @@ namespace AccountContentService.Application.Features.BlogPosts.Queries.GetTrendi
         public Guid Id { get; set; }
 
         public Guid UserId { get; set; }
+
+        public string UserFullName { get; set; } = string.Empty;
+
+        public string UserAvatarUrl { get; set; } = string.Empty;
 
         public string Title { get; set; } = string.Empty;
 

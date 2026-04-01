@@ -12,7 +12,19 @@ namespace AuthQueryService.Domain.Entities.ReadModels
         public bool IsActive { get; set; }
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
-        
+
+        // Email verification
+        public bool IsVerified { get; set; }
+        public DateTime? EmailVerifiedAt { get; set; }
+
+        // Ban fields
+        public bool IsBanned { get; set; }
+        public DateTime? BannedAt { get; set; }
+        public string? BanReason { get; set; }
+
+        // Deactivation
+        public DateTime? DeactivatedAt { get; set; }
+
         // Profile fields
         public string? Bio { get; set; }
         public string? ProfileImageUrl { get; set; }

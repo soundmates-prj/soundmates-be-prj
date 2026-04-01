@@ -1,15 +1,16 @@
+using System;
 using System.Text.Json.Serialization;
 
-namespace Shared.Contracts.Events;
+namespace Shared.Contracts.Events.Auth;
 
 /// <summary>
-/// Published by auth-service when a new user is registered or created via Google OAuth.
+/// Published when a new user is registered or created via Google OAuth.
 /// Routing key: auth.user.created
 /// </summary>
-public sealed class UserCreatedEvent
+public sealed class UserCreatedEvent : BaseIntegrationEvent
 {
     [JsonPropertyName("id")]
-    public Guid Id { get; init; }
+    public new Guid Id { get; init; }
 
     [JsonPropertyName("username")]
     public string Username { get; init; } = string.Empty;

@@ -16,6 +16,15 @@ namespace AccountContentService.Infrastructure.Integrations.PaymentGateway
 
             var vnpSecureHash = data["vnp_SecureHash"];
 
+            // Determine hash algorithm: default SHA256, use SHA512 only when explicitly specified
+            // vnp_SecureHashType can be "SHA256" or "SHA512" (VNPay sandbox often uses SHA256)
+            var hashType = "SHA256";
+            if (data.TryGetValue("vnp_SecureHashType", out var secureHashType)
+                && !string.IsNullOrEmpty(secureHashType))
+            {
+                hashType = secureHashType.ToUpperInvariant();
+            }
+
             // Remove hash fields
             var filtered = data
                 .Where(k => k.Key != "vnp_SecureHash" && k.Key != "vnp_SecureHashType")
@@ -25,9 +34,22 @@ namespace AccountContentService.Infrastructure.Integrations.PaymentGateway
             var rawData = string.Join("&",
                 filtered.Select(kvp => $"{kvp.Key}={kvp.Value}"));
 
-            var hash = HmacSHA512(secret, rawData);
+            var hash = hashType == "SHA512"
+                ? HmacSHA512(secret, rawData)
+                : HmacSHA256(secret, rawData);
 
             return hash.Equals(vnpSecureHash, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string HmacSHA256(string key, string inputData)
+        {
+            var keyBytes = Encoding.UTF8.GetBytes(key);
+            var inputBytes = Encoding.UTF8.GetBytes(inputData);
+
+            using var hmac = new HMACSHA256(keyBytes);
+            var hashBytes = hmac.ComputeHash(inputBytes);
+
+            return BitConverter.ToString(hashBytes).Replace("-", "").ToLower();
         }
 
         private static string HmacSHA512(string key, string inputData)

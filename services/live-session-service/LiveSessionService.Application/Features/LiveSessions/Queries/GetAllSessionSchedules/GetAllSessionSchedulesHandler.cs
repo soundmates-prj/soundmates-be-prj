@@ -36,6 +36,7 @@ public sealed class GetAllSessionSchedulesHandler : IQueryHandler<GetAllSessionS
             EndDate = x.EndDate,
             CreatedBy = x.CreatedBy,
             UpdatedBy = x.UpdatedBy,
+            CreatedAt = x.CreatedAt,
             CreatedByUserId = x.CreatedBy,
             UpdatedByUserId = x.UpdatedBy,
             LiveSession = x.LiveSession != null ? new LiveSessionScheduleData

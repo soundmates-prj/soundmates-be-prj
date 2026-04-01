@@ -27,6 +27,11 @@ public class TtsVoice
 
     public bool IsActive { get; set; } = true;
 
+    /// <summary>
+    /// Nguoi dung so huu gioc (null = gioc built-in)
+    /// </summary>
+    public Guid? UserId { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public ICollection<ScriptAudio> Audios { get; set; } = new List<ScriptAudio>();

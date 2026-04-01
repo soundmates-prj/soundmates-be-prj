@@ -9,7 +9,9 @@ using AuthService.Domain.Interfaces;
 using AuthService.Domain.Rules;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
-using Shared.Contracts.Events;
+using Shared.Contracts;
+using Shared.Contracts.Events.Auth;
+using Shared.Contracts.Events.Activity;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -55,15 +57,16 @@ public sealed class RegisterHandler : ICommandHandler<RegisterCommand, AuthResul
             }
             catch (UserValidationException ex)
             {
-                // Publish registration failed event
-                await _outbox.EnqueueAsync("auth.user.registration.failed", new
+                // Publish registration failed event (Activity — non-critical audit trail)
+                var failEvt = new RegistrationFailedEvent
                 {
-                    username = command.Username,
-                    email = command.Email,
-                    reason = ex.Message,
-                    errorCode = ex.ErrorCode,
-                    occurredAtUtc = _dateTimeProvider.UtcNow
-                }, cancellationToken);
+                    Username = command.Username,
+                    Email = command.Email,
+                    Reason = ex.Message,
+                    ErrorCode = ex.ErrorCode ?? string.Empty
+                };
+                await _outbox.EnqueueAsync(
+                    RoutingKeys.Auth.RegistrationFailed, failEvt, cancellationToken);
 
                 return Result<AuthResult>.Failure(ex.Message, ex.StatusCode);
             }
@@ -73,10 +76,11 @@ public sealed class RegisterHandler : ICommandHandler<RegisterCommand, AuthResul
 
             try
             {
-                // RegisterAsync now only adds to context, doesn't save (I updated this in Repository)
-                var user = await _repo.RegisterAsync(command.Username, command.Email, command.Password, command.FirstName, command.LastName);
+                var user = await _repo.RegisterAsync(
+                    command.Username, command.Email, command.Password,
+                    command.FirstName, command.LastName);
 
-                // Publish typed UserCreatedEvent to Outbox
+                // Publish typed UserCreatedEvent to Outbox (Auth — domain state change)
                 var evt = new UserCreatedEvent
                 {
                     Id = user.Id,
@@ -89,32 +93,26 @@ public sealed class RegisterHandler : ICommandHandler<RegisterCommand, AuthResul
                     IsActive = user.IsActive,
                     CreatedAt = user.CreatedAt ?? DateTime.UtcNow
                 };
-                await _outbox.EnqueueAsync("auth.user.created", evt, cancellationToken);
+                await _outbox.EnqueueAsync(RoutingKeys.Auth.UserCreated, evt, cancellationToken);
 
                 // Commit both User and OutboxMessage in one transaction
                 await _unitOfWork.CommitAsync(cancellationToken);
 
                 // Run email OTP in Background to avoid Gateway Timeouts
-                // use fire-and-forget safely with its own scope
                 _ = Task.Run(async () =>
                 {
                     try
                     {
                         using var scope = _serviceScopeFactory.CreateScope();
                         var backgroundOtpService = scope.ServiceProvider.GetRequiredService<IOtpService>();
-
                         await backgroundOtpService.GenerateAndSendOtpAsync(
-                            user.Email,
-                            user.Username,
-                            user.FirstName,
-                            OtpPurpose.EmailVerification,
-                            CancellationToken.None);
-
+                            user.Email, user.Username, user.FirstName,
+                            OtpPurpose.EmailVerification, CancellationToken.None);
                         _logger.LogInformation("Verification OTP sent in background to {Email}", user.Email);
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Background OTP send failed for {Email}", command.Email);
+                        _logger.LogError(ex, "Background OTP send failed for {Email}", user.Email);
                     }
                 }, CancellationToken.None);
 
@@ -130,17 +128,18 @@ public sealed class RegisterHandler : ICommandHandler<RegisterCommand, AuthResul
         }
         catch (Application.Exceptions.AuthException ex)
         {
-            // Publish registration failed event
+            // Publish registration failed event (enum ErrorCode → int → string)
             try
             {
-                await _outbox.EnqueueAsync("auth.user.registration.failed", new
+                var failEvt = new RegistrationFailedEvent
                 {
-                    username = command.Username,
-                    email = command.Email,
-                    reason = ex.Message,
-                    errorCode = (int)ex.ErrorCode,
-                    occurredAtUtc = _dateTimeProvider.UtcNow
-                }, cancellationToken);
+                    Username = command.Username,
+                    Email = command.Email,
+                    Reason = ex.Message,
+                    ErrorCode = ((int)ex.ErrorCode).ToString()
+                };
+                await _outbox.EnqueueAsync(
+                    RoutingKeys.Auth.RegistrationFailed, failEvt, cancellationToken);
             }
             catch { }
 

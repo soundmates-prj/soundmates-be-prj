@@ -9,5 +9,6 @@ public interface IVoiceRepository
     Task<IReadOnlyList<TtsVoice>> GetActiveAsync(CancellationToken cancellationToken);
     Task DeleteAsync(Guid voiceId, CancellationToken cancellationToken);
     Task<TtsVoice?> GetByCodeAsync(string provider, string voiceCode, CancellationToken cancellationToken);
+    Task<IReadOnlyList<TtsVoice>> GetByUserAsync(Guid userId, CancellationToken cancellationToken);
 }
 

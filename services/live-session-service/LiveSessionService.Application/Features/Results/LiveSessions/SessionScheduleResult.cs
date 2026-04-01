@@ -17,6 +17,11 @@ public sealed class SessionScheduleResult
     public Guid? CreatedBy { get; init; }
     public Guid? UpdatedBy { get; init; }
 
+    /// <summary>
+    /// UTC timestamp when the schedule was created
+    /// </summary>
+    public DateTime CreatedAt { get; init; }
+
     // Backward-compatible aliases for newer API contract naming
     public Guid? CreatedByUserId { get; init; }
     public Guid? UpdatedByUserId { get; init; }

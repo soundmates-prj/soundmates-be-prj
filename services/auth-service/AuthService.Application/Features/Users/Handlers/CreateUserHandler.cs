@@ -5,12 +5,16 @@ using AuthService.Application.Features.Users.Commands;
 using AuthService.Domain.Entities;
 using AuthService.Domain.Exceptions;
 using AuthService.Domain.Interfaces;
+using Shared.Contracts;
+using Shared.Contracts.Events.Auth;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace AuthService.Application.Features.Users.Handlers;
 
 /// <summary>
-/// Handler for creating new user (Admin action)
-/// CLEAN ARCHITECTURE: Uses Domain services and methods
+/// Handler for creating new user (Admin action).
 /// </summary>
 public sealed class CreateUserHandler : ICommandHandler<CreateUserCommand, Guid>
 {
@@ -41,91 +45,65 @@ public sealed class CreateUserHandler : ICommandHandler<CreateUserCommand, Guid>
     {
         try
         {
-            // 1. Validate duplicate username
+            // Validate duplicate username
             var existingByUsername = await _repo.GetByUsernameAsync(command.Username);
             if (existingByUsername != null)
-            {
-                return Result<Guid>.Failure(
-                    $"Username '{command.Username}' is already taken",
-                    400);
-            }
+                return Result<Guid>.Failure($"Username '{command.Username}' is already taken", 400);
 
-            // 2. Validate duplicate email
+            // Validate duplicate email
             var existingByEmail = await _repo.GetByEmailAsync(command.Email);
             if (existingByEmail != null)
-            {
-                return Result<Guid>.Failure(
-                    $"Email '{command.Email}' is already registered",
-                    400);
-            }
+                return Result<Guid>.Failure($"Email '{command.Email}' is already registered", 400);
 
-            // 3. If RoleId not provided, assign default MEMBER role
+            // Assign default MEMBER role if not provided
             Guid? roleId = command.RoleId;
             if (!roleId.HasValue)
             {
                 var memberRole = await _roleRepository.GetByNameAsync("MEMBER");
                 if (memberRole == null)
-                {
-                    return Result<Guid>.Failure(
-                        "Default role 'MEMBER' not found. Please ensure roles are seeded.",
-                        500);
-                }
+                    return Result<Guid>.Failure("Default role 'MEMBER' not found. Please ensure roles are seeded.", 500);
                 roleId = memberRole.Id;
             }
 
-            // 4. Hash password using Domain Service
             var passwordHash = string.IsNullOrWhiteSpace(command.Password)
                 ? string.Empty
                 : _passwordHasher.HashPassword(command.Password);
 
-            // 5. Use domain factory method to create user
             User user;
             try
             {
                 user = User.CreateAdminUser(
-                    command.Username,
-                    command.Email,
-                    passwordHash,
-                    command.FirstName,
-                    command.LastName,
-                    roleId, // Now guaranteed to have a value
-                    _dateTimeProvider);
+                    command.Username, command.Email, passwordHash,
+                    command.FirstName, command.LastName, roleId, _dateTimeProvider);
             }
             catch (UserValidationException ex)
             {
                 return Result<Guid>.Failure(ex.Message, ex.StatusCode);
             }
 
-            // 6. Persist user
             await _repo.AddAsync(user);
-
-            // 7. Reload user with role to get role name
             user = await _repo.GetByIdAsync(user.Id);
 
-            // 8. Publish domain event
-            await _outbox.EnqueueAsync("auth.user.created", new
+            // Publish typed UserCreatedEvent (Auth — domain state change)
+            await _outbox.EnqueueAsync(RoutingKeys.Auth.UserCreated, new UserCreatedEvent
             {
-                id = user.Id,
-                username = user.Username,
-                email = user.Email,
-                firstName = user.FirstName,
-                lastName = user.LastName,
-                roleId = user.RoleId,
-                roleName = user.Role?.Name,
-                isActive = user.IsActive,
-                createdAt = user.CreatedAt
+                Id = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                FirstName = user.FirstName ?? string.Empty,
+                LastName = user.LastName ?? string.Empty,
+                RoleId = user.RoleId ?? Guid.Empty,
+                RoleName = user.Role?.Name ?? "MEMBER",
+                IsActive = user.IsActive,
+                CreatedAt = user.CreatedAt ?? DateTime.UtcNow
             }, cancellationToken);
 
             var fullName = $"{user.FirstName} {user.LastName}".Trim();
-            return Result<Guid>.Success(
-                user.Id,
-                $"User {fullName} created successfully!");
+            return Result<Guid>.Success(user.Id, $"User {fullName} created successfully!");
         }
         catch (Exception ex)
         {
-            return Result<Guid>.Failure(
-                $"An error occurred while creating user: {ex.Message}",
-                500);
+            return Result<Guid>.Failure($"An error occurred while creating user: {ex.Message}", 500);
         }
     }
 }

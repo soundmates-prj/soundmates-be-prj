@@ -4,7 +4,7 @@ using AccountContentService.Application.Interfaces.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
-using Shared.Contracts.Events;
+using Shared.Contracts.Events.Config;
 
 namespace AccountContentService.Infrastructure.Messaging;
 

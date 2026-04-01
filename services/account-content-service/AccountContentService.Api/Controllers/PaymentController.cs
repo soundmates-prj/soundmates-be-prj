@@ -70,8 +70,11 @@ namespace AccountContentService.Api.Controllers
             command.UserId = userId;
             command.IpAddress = ipAddress;
 
-            // Use frontend-provided ReturnUrl if available, otherwise default to config-based frontend URL
-            command.ReturnUrl ??= ResolveDefaultReturnUrl();
+            // Only resolve default if not provided by frontend.
+            // If request.ReturnUrl stays null, the provider's own default from config will be used.
+            command.ReturnUrl ??= string.IsNullOrWhiteSpace(request.ReturnUrl) 
+                ? ResolveDefaultReturnUrl(request.Method) 
+                : request.ReturnUrl;
 
             var url = await _mediator.Send(command);
 
@@ -250,12 +253,28 @@ namespace AccountContentService.Api.Controllers
 
         /// <summary>
         /// Resolves the default return URL used when frontend doesn't provide one.
+        /// Must point to the backend callback endpoint so transaction & subscription
+        /// are created server-side before redirecting to the frontend result page.
         /// </summary>
-        private string ResolveDefaultReturnUrl()
+        private string ResolveDefaultReturnUrl(string method)
         {
-            var frontendUrl = _configuration["AppSettings:FrontendUrl"]?.TrimEnd('/')
-                ?? "http://localhost:5173";
-            return $"{frontendUrl}/payment/result";
+            var apiBaseUrl = _configuration["AppSettings:ApiBaseUrl"]?.TrimEnd('/');
+            
+            if (string.IsNullOrWhiteSpace(apiBaseUrl))
+            {
+                // Fallback to current request's host (protocol://domain:port)
+                // This is ideal for development/internal networks where BASE_URL is not set.
+                apiBaseUrl = $"{Request.Scheme}://{Request.Host}";
+            }
+
+            var path = method.ToLower() switch
+            {
+                "vnpay" => ApiRoutes.Payments.VNPayCallBack,
+                "payos" => ApiRoutes.Payments.PayOsReturn,
+                _ => ApiRoutes.Payments.VNPayCallBack // Default fallback
+            };
+
+            return $"{apiBaseUrl}/{path.TrimStart('/')}";
         }
     }
 

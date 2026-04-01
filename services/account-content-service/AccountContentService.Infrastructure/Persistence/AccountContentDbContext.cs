@@ -27,10 +27,14 @@ public class AccountContentDbContext : DbContext
     public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
     public DbSet<UserProfileReadModel> UserProfileReadModels => Set<UserProfileReadModel>();
 
+    public DbSet<UserVoiceModel> UserVoiceModels => Set<UserVoiceModel>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfiguration(new ThemeConfiguration());
         modelBuilder.ApplyConfiguration(new UserProfileReadModelConfiguration());
+        modelBuilder.ApplyConfiguration(new SubscriptionPlanConfiguration());
+        modelBuilder.ApplyConfiguration(new UserVoiceModelConfiguration());
 
         base.OnModelCreating(modelBuilder);
     }

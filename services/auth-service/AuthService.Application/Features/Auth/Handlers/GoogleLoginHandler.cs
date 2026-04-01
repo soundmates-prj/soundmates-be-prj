@@ -4,7 +4,10 @@ using AuthService.Application.Results;
 using AuthService.Application.Features.Auth.Commands;
 using AuthService.Domain.Entities;
 using AuthService.Domain.Interfaces;
-using Shared.Contracts.Events;
+using Microsoft.Extensions.Logging;
+using Shared.Contracts;
+using Shared.Contracts.Events.Auth;
+using Shared.Contracts.Events.Activity;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -47,58 +50,47 @@ public sealed class GoogleLoginHandler : ICommandHandler<GoogleLoginCommand, Aut
 
     public async Task<Result<AuthResult>> Handle(GoogleLoginCommand command, CancellationToken cancellationToken)
     {
-        // Verify Google token
         var googleUser = await _googleAuthService.VerifyGoogleTokenAsync(command.IdToken);
         if (googleUser == null || !googleUser.EmailVerified)
         {
-            // Publish Google login failed event
-            await _outbox.EnqueueAsync("auth.user.google.login.failed", new
+            await _outbox.EnqueueAsync(RoutingKeys.Auth.GoogleLoginFailed, new GoogleLoginFailedEvent
             {
-                reason = "Invalid Google token",
-                errorCode = 401,
-                occurredAtUtc = _dateTimeProvider.UtcNow
+                Reason = "Invalid Google token",
+                ErrorCode = 401
             }, cancellationToken);
 
             return Result<AuthResult>.Failure("Invalid Google token", 401);
         }
 
-        // Check if OAuth account exists
         var oauthAccount = await _authRepository.GetOAuthAccountAsync("Google", googleUser.Id);
         User? user = null;
 
         if (oauthAccount != null)
         {
-            // User exists, get the user
             user = await _userRepository.GetByIdAsync(oauthAccount.UserId!.Value);
         }
         else
         {
-            // Check if user exists by email
             user = await _userRepository.GetByEmailAsync(googleUser.Email);
 
             if (user == null)
             {
-                // Create new user with MEMBER role as default
                 var userRole = await _roleRepository.GetByNameAsync("MEMBER");
                 if (userRole == null)
                 {
                     return Result<AuthResult>.Failure("Default MEMBER role not found", 500);
                 }
 
-                // Generate username from email (take part before @)
                 var usernameBase = googleUser.Email.Split('@')[0];
                 var username = usernameBase;
                 var counter = 1;
-
-                // Ensure username is unique
                 while (await _userRepository.GetByUsernameAsync(username) != null)
                 {
                     username = $"{usernameBase}{counter}";
                     counter++;
                 }
 
-                // Split Google name into first and last name
-                var nameParts = googleUser.Name?.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>();
+                var nameParts = googleUser.Name?.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries) ?? [];
                 var firstName = nameParts.Length > 0 ? nameParts[0] : string.Empty;
                 var lastName = nameParts.Length > 1 ? nameParts[1] : string.Empty;
 
@@ -109,16 +101,16 @@ public sealed class GoogleLoginHandler : ICommandHandler<GoogleLoginCommand, Aut
                     Email = googleUser.Email,
                     FirstName = firstName,
                     LastName = lastName,
-                    Password = string.Empty, // No password for OAuth users
+                    Password = string.Empty,
                     RoleId = userRole.Id,
-                    IsActive = true, // Google users are automatically active (email already verified by Google)
-                    EmailVerifiedAt = _dateTimeProvider.UtcNow, // Mark as verified since Google verified it
+                    IsActive = true,
+                    EmailVerifiedAt = _dateTimeProvider.UtcNow,
                     CreatedAt = _dateTimeProvider.UtcNow
                 };
 
                 await _userRepository.AddAsync(user);
 
-                // Publish typed UserCreatedEvent for new user
+                // Publish typed UserCreatedEvent (Auth — domain state change)
                 var evt = new UserCreatedEvent
                 {
                     Id = user.Id,
@@ -131,10 +123,9 @@ public sealed class GoogleLoginHandler : ICommandHandler<GoogleLoginCommand, Aut
                     IsActive = user.IsActive,
                     CreatedAt = user.CreatedAt ?? DateTime.UtcNow
                 };
-                await _outbox.EnqueueAsync("auth.user.created", evt, cancellationToken);
+                await _outbox.EnqueueAsync(RoutingKeys.Auth.UserCreated, evt, cancellationToken);
             }
 
-            // Create or update OAuth account
             var existingOAuth = await _authRepository.GetOAuthAccountAsync("Google", googleUser.Id);
             if (existingOAuth == null)
             {
@@ -151,53 +142,42 @@ public sealed class GoogleLoginHandler : ICommandHandler<GoogleLoginCommand, Aut
 
         if (user == null)
         {
-            // Publish Google login failed event
-            await _outbox.EnqueueAsync("auth.user.google.login.failed", new
+            await _outbox.EnqueueAsync(RoutingKeys.Auth.GoogleLoginFailed, new GoogleLoginFailedEvent
             {
-                reason = "Failed to retrieve or create user",
-                errorCode = 500,
-                occurredAtUtc = _dateTimeProvider.UtcNow
+                Reason = "Failed to retrieve or create user",
+                ErrorCode = 500
             }, cancellationToken);
 
             return Result<AuthResult>.Failure("Failed to retrieve or create user", 500);
         }
 
-        // Load user with role
         user = await _userRepository.GetByIdAsync(user.Id);
         if (user == null)
-        {
             return Result<AuthResult>.Failure("User not found", 404);
-        }
 
-        // Generate token pair
         var (accessToken, refreshToken) = _jwtTokenGenerator.GenerateTokenPair(user);
 
-        // Save refresh token
         var refreshTokenEntity = new RefreshToken
         {
             Id = Guid.NewGuid(),
             UserId = user.Id,
             Token = refreshToken,
-            ExpiresAt = _dateTimeProvider.UtcNow.AddDays(7), // Refresh token expires in 7 days
+            ExpiresAt = _dateTimeProvider.UtcNow.AddDays(7),
             CreatedAt = _dateTimeProvider.UtcNow,
             IsRevoked = false
         };
 
         await _refreshTokenRepository.AddAsync(refreshTokenEntity);
-
-        // Commit transaction
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        // Map to AuthResult
         var authResult = user.ToAuthResult(accessToken, refreshToken);
 
-        // Publish event
-        await _outbox.EnqueueAsync("auth.user.google.login.successful", new
+        // Publish typed Google login successful event (Activity — audit trail)
+        await _outbox.EnqueueAsync(RoutingKeys.Auth.GoogleLoginSuccessful, new GoogleLoginSuccessfulEvent
         {
-            user.Id,
-            user.Email,
-            user.Username,
-            occurredAtUtc = DateTime.UtcNow
+            UserId = user.Id,
+            Email = user.Email,
+            Username = user.Username
         }, cancellationToken);
 
         return Result<AuthResult>.Success(authResult, "Google login successfully!");

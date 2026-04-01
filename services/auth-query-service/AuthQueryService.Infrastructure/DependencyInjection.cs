@@ -86,6 +86,8 @@ public static class DependencyInjection
         services.AddScoped<IUserEventHandler, Messaging.EventHandlers.Handlers.UserBannedEventHandler>();
         services.AddScoped<IUserEventHandler, Messaging.EventHandlers.Handlers.UserUnbannedEventHandler>();
         services.AddScoped<IUserEventHandler, Messaging.EventHandlers.Handlers.UserDeactivatedEventHandler>();
+        services.AddScoped<IUserEventHandler, Messaging.EventHandlers.Handlers.UserActivatedEventHandler>();
+        services.AddScoped<IUserEventHandler, Messaging.EventHandlers.Handlers.UserEmailVerifiedEventHandler>();
         services.AddScoped<IUserEventHandler, Messaging.EventHandlers.Handlers.UserDeletedEventHandler>();
         
         // Activity/Security Event Handlers

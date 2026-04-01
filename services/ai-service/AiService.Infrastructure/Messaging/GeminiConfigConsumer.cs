@@ -1,6 +1,6 @@
 using System.Text;
 using System.Text.Json;
-using Shared.Contracts.Events;
+using Shared.Contracts.Events.Config;
 using AiService.Application.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -116,7 +116,8 @@ public sealed class GeminiConfigConsumer : BackgroundService
         try
         {
             var payload = Encoding.UTF8.GetString(args.Body.ToArray());
-            var @event = JsonSerializer.Deserialize<GeminiConfigUpdatedEvent>(payload);
+            var @event = JsonSerializer.Deserialize<GeminiConfigUpdatedEvent>(payload,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
             if (@event is null)
             {

@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
-using Shared.Contracts.Events;
+using Shared.Contracts.Events.Auth;
 
 namespace AccountContentService.Infrastructure.Messaging.Consumers;
 

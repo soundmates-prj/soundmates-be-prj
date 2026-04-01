@@ -11,7 +11,6 @@ using LiveSessionService.Infrastructure.Repositories;
 using LiveSessionService.Infrastructure.Services.AzuraCast;
 using LiveSessionService.Infrastructure.Messaging;
 using LiveSessionService.Infrastructure.Messaging.Outbox;
-using AuthService.Infrastructure.Messaging;
 
 namespace LiveSessionService.Infrastructure;
 

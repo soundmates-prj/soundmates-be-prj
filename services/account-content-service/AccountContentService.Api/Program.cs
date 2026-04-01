@@ -3,7 +3,6 @@ using AccountContentService.Api.Middleware;
 using AccountContentService.Api.Swagger;
 using AccountContentService.Application.DependencyInjection;
 using AccountContentService.Infrastructure.Extensions;
-using AccountContentService.Infrastructure.Persistence;
 
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -43,7 +42,13 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 // DbContext
 builder.Services.AddDbContext<AccountContentDbContext>(options =>
 {
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    if (string.IsNullOrWhiteSpace(connectionString))
+    {
+        throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
+    }
+
+    options.UseNpgsql(connectionString);
 
     // Suppress PendingModelChangesWarning — migration will apply at next rebuild with new migration files
     options.ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
@@ -72,15 +77,7 @@ builder.Services.AddHttpContextAccessor();
 var app = builder.Build();
 
 
-// AUTO MIGRATION
-using (var scope = app.Services.CreateScope())
-{
-    var dbContext = scope.ServiceProvider.GetRequiredService<AccountContentDbContext>();
-
-    dbContext.Database.Migrate();
-
-    await DataSeeder.SeedAsync(dbContext);
-}
+await app.ApplyMigrationsAndSeedAsync();
 
 
 // Swagger
