@@ -76,8 +76,8 @@ builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 
-
-await app.ApplyMigrationsAndSeedAsync();
+await app.ApplyMigrationsAsync();
+await app.SeedDataAsync();
 
 
 // Swagger

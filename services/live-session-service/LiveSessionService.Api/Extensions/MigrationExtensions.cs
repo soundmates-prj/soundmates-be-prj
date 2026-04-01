@@ -1,24 +1,24 @@
-using AuthService.Infrastructure.Persistence;
+using LiveSessionService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using System.Text.RegularExpressions;
 
-namespace AuthService.Api.Extensions;
+namespace LiveSessionService.Api.Extensions;
 
 /// <summary>
 /// Extension methods for database migration and seeding
-/// Handles automatic database migrations with retry logic and default data seeding
+/// Handles automatic database migrations with retry logic
 /// </summary>
 public static class MigrationExtensions
 {
     public static async Task ApplyMigrationsAsync(this WebApplication app)
     {
         await using var scope = app.Services.CreateAsyncScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<LiveSessionDbContext>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
-        // Ensure auth_db exists before migration (docker-compose only creates 'postgres' default DB)
-        await EnsureDatabaseExistsAsync("auth_db", logger);
+        // Ensure live_session_db exists before migration
+        await EnsureDatabaseExistsAsync(logger);
 
         logger.LogInformation("Starting database migration...");
 
@@ -55,6 +55,9 @@ public static class MigrationExtensions
                     pendingMigrations.Count,
                     string.Join(", ", pendingMigrations));
 
+                // PendingModelChangesWarning is suppressed in AddDbContext (DependencyInjection)
+                // so MigrateAsync will succeed even when snapshot is out of sync with the model.
+                logger.LogInformation("Applying migrations...");
                 await dbContext.Database.MigrateAsync();
                 logger.LogInformation("Database migration completed successfully.");
 
@@ -89,11 +92,11 @@ public static class MigrationExtensions
     }
 
     /// <summary>
-    /// Creates the database if it doesn't already exist.
-    /// Enlist=false is required to avoid error 25001:
+    /// Creates the live_session_db database if it doesn't already exist.
+    /// Enlist=false is critical to avoid error 25001:
     /// "CREATE DATABASE cannot be executed from a function/transaction".
     /// </summary>
-    private static async Task EnsureDatabaseExistsAsync(string dbName, ILogger logger)
+    private static async Task EnsureDatabaseExistsAsync(ILogger logger)
     {
         var host = Environment.GetEnvironmentVariable("DB_HOST")
             ?? Environment.GetEnvironmentVariable("POSTGRES_HOST");
@@ -101,7 +104,7 @@ public static class MigrationExtensions
             ?? Environment.GetEnvironmentVariable("POSTGRES_PORT")
             ?? "5432";
         var user = Environment.GetEnvironmentVariable("DB_USER")
-            ?? Environment.GetEnvironmentVariable("POSTGRES_USER")
+            ?? Environment.GetEnvironmentVariable("POSTGRES_USERNAME")
             ?? "postgres";
         var password = Environment.GetEnvironmentVariable("DB_PASSWORD")
             ?? Environment.GetEnvironmentVariable("POSTGRES_PASSWORD")
@@ -137,33 +140,31 @@ public static class MigrationExtensions
                 await using var conn = new NpgsqlConnection(masterConnString);
                 await conn.OpenAsync();
 
-                // Check if database already exists
                 await using (var checkCmd = new NpgsqlCommand(
-                    $"SELECT 1 FROM pg_database WHERE datname = '{dbName}'", conn))
+                    "SELECT 1 FROM pg_database WHERE datname = 'live_session_db'", conn))
                 {
                     var exists = await checkCmd.ExecuteScalarAsync();
                     if (exists != null)
                     {
                         logger.LogInformation(
-                            "Database '{DbName}' already exists on host '{Host}'.", dbName, host);
+                            "Database 'live_session_db' already exists on host '{Host}'.", host);
                         return;
                     }
                 }
 
-                // CREATE DATABASE cannot be inside a transaction block (Enlist=false makes this work)
                 await using var createCmd = new NpgsqlCommand(
-                    $@"CREATE DATABASE ""{dbName}""", conn);
+                    @"CREATE DATABASE ""live_session_db""", conn);
                 await createCmd.ExecuteNonQueryAsync();
 
                 logger.LogInformation(
-                    "Database '{DbName}' created successfully on host '{Host}'.", dbName, host);
+                    "Database 'live_session_db' created successfully on host '{Host}'.", host);
                 return;
             }
             catch (PostgresException ex) when (ex.SqlState == "42P04")
             {
-                // 42P04 = duplicate_db — database was created concurrently by another process
+                // 42P04 = duplicate_db — concurrent creation
                 logger.LogInformation(
-                    "Database '{DbName}' already exists (concurrent creation on host '{Host}').", dbName, host);
+                    "Database 'live_session_db' already exists (concurrent creation on host '{Host}').", host);
                 return;
             }
             catch (NpgsqlException ex)
@@ -171,13 +172,13 @@ public static class MigrationExtensions
                 if (attempt == maxRetries)
                 {
                     logger.LogCritical(ex,
-                        "Could not create database '{DbName}' after {MaxRetries} attempts (host={Host}).",
-                        dbName, maxRetries, host);
+                        "Could not create database 'live_session_db' after {MaxRetries} attempts (host={Host}).",
+                        maxRetries, host);
                     throw;
                 }
                 logger.LogWarning(ex,
-                    "Could not create DB '{DbName}' (attempt {Attempt}/{MaxRetries}, host={Host}). Retrying in {Delay}s...",
-                    dbName, attempt, maxRetries, host, retryDelay.TotalSeconds);
+                    "Could not create DB 'live_session_db' (attempt {Attempt}/{MaxRetries}, host={Host}). Retrying in {Delay}s...",
+                    attempt, maxRetries, host, retryDelay.TotalSeconds);
             }
 
             await Task.Delay(retryDelay);
@@ -189,63 +190,5 @@ public static class MigrationExtensions
     {
         var match = Regex.Match(connString, $@"(?:^|;|\s){key}=([^;]+)", RegexOptions.IgnoreCase);
         return match.Success ? match.Groups[1].Value.Trim() : null;
-    }
-
-    public static async Task SeedDataAsync(this WebApplication app)
-    {
-        await using var scope = app.Services.CreateAsyncScope();
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-
-        try
-        {
-            await SeedDefaultRolesAsync(scope, logger);
-            logger.LogInformation("Waiting for roles to be synced to query service...");
-            await Task.Delay(TimeSpan.FromSeconds(3), CancellationToken.None);
-            logger.LogInformation("Role seeding completed.");
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex,
-                "Error during role seeding. Application will continue.");
-        }
-    }
-
-    private static async Task SeedDefaultRolesAsync(AsyncServiceScope scope, ILogger logger)
-    {
-        try
-        {
-            var roleRepository = scope.ServiceProvider
-                .GetRequiredService<AuthService.Domain.Interfaces.IRoleRepository>();
-            var commandDispatcher = scope.ServiceProvider
-                .GetRequiredService<AuthService.Application.Abstractions.Messaging.Dispatcher.Interfaces.ICommandDispatcher>();
-
-            var defaultRoles = new[] { "MEMBER", "HOST", "STAFF", "ADMIN" };
-
-            foreach (var roleName in defaultRoles)
-            {
-                var existingRole = await roleRepository.GetByNameAsync(roleName);
-                if (existingRole == null)
-                {
-                    logger.LogInformation("Creating default role: {RoleName}", roleName);
-                    var createRoleCmd = new AuthService.Application.Features.Role.Commands.CreateRoleCommand { Name = roleName };
-                    var result = await commandDispatcher.Send<
-                        AuthService.Application.Features.Role.Commands.CreateRoleCommand, Guid>(
-                        createRoleCmd, CancellationToken.None);
-
-                    if (result.IsSuccess && result.Data != Guid.Empty)
-                        logger.LogInformation("Successfully created role: {RoleName} with ID: {RoleId}", roleName, result.Data);
-                    else
-                        logger.LogWarning("Failed to create role {RoleName}: {Error}", roleName, result.ErrorMessage ?? "Unknown error");
-                }
-                else
-                {
-                    logger.LogDebug("Role {RoleName} already exists", roleName);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error seeding default roles. Continuing anyway...");
-        }
     }
 }
