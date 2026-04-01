@@ -1,4 +1,4 @@
-using LiveSessionService.Application.Abstractions.Messaging;
+﻿using LiveSessionService.Application.Abstractions.Messaging;
 using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Features.LiveSessions.Scheduling;
 using LiveSessionService.Application.Features.Results;
@@ -7,6 +7,8 @@ using LiveSessionService.Domain.Entities;
 using LiveSessionService.Domain.Enums;
 using LiveSessionService.Domain.Exceptions;
 using LiveSessionService.Domain.Interfaces;
+using Shared.Contracts.Events.Notifications;
+using System.Text.Json;
 
 namespace LiveSessionService.Application.Features.LiveSessions.Commands.CreateSessionSchedule;
 
@@ -16,14 +18,18 @@ public sealed class CreateSessionScheduleHandler : ICommandHandler<CreateSession
     private readonly ISessionScheduleRepository _scheduleRepository;
     private readonly IDateTimeProvider _dateTimeProvider;
 
+    private readonly IMessageBusPublisher _eventBus;
+
     public CreateSessionScheduleHandler(
         ILiveSessionRepository sessionRepository,
         ISessionScheduleRepository scheduleRepository,
-        IDateTimeProvider dateTimeProvider)
+        IDateTimeProvider dateTimeProvider,
+        IMessageBusPublisher eventBus)
     {
         _sessionRepository = sessionRepository;
         _scheduleRepository = scheduleRepository;
         _dateTimeProvider = dateTimeProvider;
+        _eventBus = eventBus;
     }
 
     public async Task<Result<SessionScheduleResult>> Handle(
@@ -40,18 +46,18 @@ public sealed class CreateSessionScheduleHandler : ICommandHandler<CreateSession
             return Result<SessionScheduleResult>.Failure("End date cannot be earlier than start date", ErrorCode.BadRequest);
         }
 
-            var nowUtc = _dateTimeProvider.UtcNow;
-            var scheduleNow = ConvertUtcToScheduleLocal(nowUtc);
-            var today = DateOnly.FromDateTime(scheduleNow);
-            var nowTime = TimeOnly.FromDateTime(scheduleNow);
+        var nowUtc = _dateTimeProvider.UtcNow;
+        var scheduleNow = ScheduleTimeConverter.ConvertUtcToVietnamLocal(nowUtc);
+        var today = DateOnly.FromDateTime(scheduleNow);
+        var nowTime = TimeOnly.FromDateTime(scheduleNow);
 
-            if (command.StartDate == today &&
-                (command.StartTime <= nowTime || command.EndTime <= nowTime))
-            {
-                return Result<SessionScheduleResult>.Failure(
-                    "For today schedule, start time and end time must be greater than current time",
-                    ErrorCode.BadRequest);
-            }
+        if (command.StartDate == today &&
+            (command.StartTime <= nowTime || command.EndTime <= nowTime))
+        {
+            return Result<SessionScheduleResult>.Failure(
+                "For today schedule, start time and end time must be greater than current time",
+                ErrorCode.BadRequest);
+        }
 
         if (command.IsRecurring && command.DaysOfWeek == DaysOfWeek.None)
         {
@@ -114,6 +120,20 @@ public sealed class CreateSessionScheduleHandler : ICommandHandler<CreateSession
         {
             session.Schedule(nextOccurrence.Value, _dateTimeProvider);
             await _sessionRepository.UpdateAsync(session, cancellationToken);
+
+            var @event = new LiveSessionScheduledEvent
+            {
+                SessionId = session.Id,
+                HostId = session.HostUserId,
+                StartTime = session.StartedAt ?? DateTime.UtcNow
+            };
+
+            var payload = JsonSerializer.Serialize(@event);
+
+            await _eventBus.PublishAsync(
+                nameof(LiveSessionScheduledEvent),
+                payload
+            );
         }
         catch (DomainException ex)
         {
@@ -161,4 +181,5 @@ public sealed class CreateSessionScheduleHandler : ICommandHandler<CreateSession
             } : null
         }
     };
+
 }

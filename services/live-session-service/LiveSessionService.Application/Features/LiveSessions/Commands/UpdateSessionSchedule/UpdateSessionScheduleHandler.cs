@@ -40,7 +40,7 @@ public sealed class UpdateSessionScheduleHandler : ICommandHandler<UpdateSession
         }
 
         var nowUtc = _dateTimeProvider.UtcNow;
-        var scheduleNow = ConvertUtcToScheduleLocal(nowUtc);
+        var scheduleNow = ScheduleTimeConverter.ConvertUtcToVietnamLocal(nowUtc);
         var today = DateOnly.FromDateTime(scheduleNow);
         var nowTime = TimeOnly.FromDateTime(scheduleNow);
 
@@ -150,4 +150,5 @@ public sealed class UpdateSessionScheduleHandler : ICommandHandler<UpdateSession
             } : null
         }
     };
+
 }
