@@ -24,28 +24,18 @@ public sealed class CreateUserPlaylistHandler : ICommandHandler<CreateUserPlayli
     public async Task<Result<UserPlaylistResult>> Handle(CreateUserPlaylistCommand command, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(command.PlaylistName))
-        {
             return Result<UserPlaylistResult>.Failure("Playlist name is required", ErrorCode.BadRequest);
-        }
-
-        if (command.Weight < 0)
-        {
-            return Result<UserPlaylistResult>.Failure("Weight cannot be negative", ErrorCode.BadRequest);
-        }
 
         var playlist = new UserPlaylist
         {
             Id = Guid.NewGuid(),
             UserId = command.UserId,
-            ExternalPlaylistId = 0,
             PlaylistName = command.PlaylistName.Trim(),
+            Description = string.IsNullOrWhiteSpace(command.Description) ? null : command.Description.Trim(),
+            ThumbnailUrl = string.IsNullOrWhiteSpace(command.ThumbnailUrl) ? null : command.ThumbnailUrl.Trim(),
+            Visibility = command.Visibility,
             Type = PlaylistType.Default,
-            Source = PlaylistSource.Songs,
-            PlaylistOrder = command.PlaylistOrder,
             IsEnabled = command.IsEnabled,
-            IncludeInRequests = command.IncludeInRequests,
-            IncludeInOnDemand = command.IncludeInOnDemand,
-            Weight = command.Weight,
             CreatedAt = _dateTimeProvider.UtcNow
         };
 
@@ -56,11 +46,10 @@ public sealed class CreateUserPlaylistHandler : ICommandHandler<CreateUserPlayli
             Id = playlist.Id,
             UserId = playlist.UserId,
             PlaylistName = playlist.PlaylistName,
+            Description = playlist.Description,
+            ThumbnailUrl = playlist.ThumbnailUrl,
+            Visibility = playlist.Visibility,
             IsEnabled = playlist.IsEnabled,
-            IncludeInRequests = playlist.IncludeInRequests,
-            IncludeInOnDemand = playlist.IncludeInOnDemand,
-            PlaylistOrder = playlist.PlaylistOrder,
-            Weight = playlist.Weight,
             TotalTracks = 0,
             CreatedAt = playlist.CreatedAt,
             UpdatedAt = playlist.UpdatedAt
