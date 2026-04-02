@@ -25,6 +25,23 @@ public partial class User
 
     public bool IsActive { get; set; } = false;
 
+    /// <summary>
+    /// Indicates whether the account is temporarily locked due to too many failed login attempts.
+    /// Lockout is automatic after 5 consecutive failed attempts; auto-unlocks after 15 minutes.
+    /// </summary>
+    public bool IsLocked { get; set; } = false;
+
+    /// <summary>
+    /// Timestamp when the account was locked (null if not locked).
+    /// </summary>
+    public DateTime? LockedAt { get; set; }
+
+    /// <summary>
+    /// Number of consecutive failed login attempts since the last successful login.
+    /// Resets to 0 on successful login or after lockout auto-expires.
+    /// </summary>
+    public int FailedLoginAttempts { get; set; } = 0;
+
     public string? EmailVerificationToken { get; set; }
 
     public DateTime? EmailVerifiedAt { get; set; }

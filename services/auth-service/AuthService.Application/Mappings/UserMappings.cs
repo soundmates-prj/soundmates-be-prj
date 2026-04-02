@@ -40,6 +40,17 @@ public static class UserMappings
     {
         if (user == null) throw new ArgumentNullException(nameof(user));
 
+        var roleName = user.Role?.Name?.ToUpperInvariant() ?? "MEMBER";
+
+        // P5: Compute role-based redirect URL — single source of truth, shared by all clients
+        var redirectUrl = roleName switch
+        {
+            "ADMIN" => "/admin/dashboard",
+            "STAFF" => "/staff/dashboard",
+            "HOST" => "/host/dashboard",
+            _ => "/"
+        };
+
         return new AuthResult
         {
             UserId = user.Id,
@@ -52,7 +63,8 @@ public static class UserMappings
             IsActive = user.IsActive,
             AccessToken = accessToken,
             RefreshToken = refreshToken,
-            CreatedAt = user.CreatedAt
+            CreatedAt = user.CreatedAt,
+            RedirectUrl = redirectUrl
         };
     }
 

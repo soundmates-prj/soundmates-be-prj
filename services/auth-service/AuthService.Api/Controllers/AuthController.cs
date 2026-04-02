@@ -53,7 +53,8 @@ namespace AuthService.Api.Controllers
                 Identifier = request.EmailOrUsername,
                 Password = request.Password,
                 IpAddress = ipAddress,
-                UserAgent = userAgent
+                UserAgent = userAgent,
+                RememberMe = request.RememberMe
             };
 
             // Send Login Command to Handler - returns Result<AuthResult>

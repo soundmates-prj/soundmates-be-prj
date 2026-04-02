@@ -21,7 +21,7 @@ builder.Services.AddScoped<ILiveSessionNotifier, LiveSessionNotifier>();
 
 var app = builder.Build();
 
-await app.MigrateDatabaseAsync();
+await app.ApplyMigrationsAsync();
 
 // Configure HTTP request pipeline
 app.UseHttpPipeline();
