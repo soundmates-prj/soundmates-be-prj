@@ -119,11 +119,10 @@ public sealed class UserPlaylistController : ControllerBase
         var command = new CreateUserPlaylistCommand(
             userId,
             request.PlaylistName,
-            request.IncludeInRequests,
-            request.IncludeInOnDemand,
-            request.IsEnabled,
-            request.PlaylistOrder,
-            request.Weight);
+            request.Description,
+            request.ThumbnailUrl,
+            request.Visibility,
+            request.IsEnabled);
 
         var result = await _commands.Send<CreateUserPlaylistCommand, UserPlaylistResult>(command, ct);
 
@@ -164,11 +163,10 @@ public sealed class UserPlaylistController : ControllerBase
             id,
             userId,
             request.PlaylistName,
-            request.IncludeInRequests,
-            request.IncludeInOnDemand,
-            request.IsEnabled,
-            request.PlaylistOrder,
-            request.Weight);
+            request.Description,
+            request.ThumbnailUrl,
+            request.Visibility,
+            request.IsEnabled);
 
         var result = await _commands.Send<UpdateUserPlaylistCommand, UserPlaylistResult>(command, ct);
 

@@ -1,3 +1,4 @@
+using LiveSessionService.Domain.Enums;
 using System.ComponentModel.DataAnnotations;
 
 namespace LiveSessionService.Api.Models.Requests.Playlist;
@@ -8,9 +9,12 @@ public sealed class CreateUserPlaylistRequest
     [StringLength(200, MinimumLength = 2, ErrorMessage = "Playlist name must be between 2 and 200 characters")]
     public string PlaylistName { get; set; } = null!;
 
-    public bool IncludeInRequests { get; set; }
-    public bool IncludeInOnDemand { get; set; }
+    [StringLength(1000, ErrorMessage = "Description cannot exceed 1000 characters")]
+    public string? Description { get; set; }
+
+    [StringLength(500, ErrorMessage = "Thumbnail URL cannot exceed 500 characters")]
+    public string? ThumbnailUrl { get; set; }
+
+    public PlaylistVisibility Visibility { get; set; } = PlaylistVisibility.Private;
     public bool IsEnabled { get; set; } = true;
-    public int PlaylistOrder { get; set; }
-    public int Weight { get; set; } = 1;
 }
