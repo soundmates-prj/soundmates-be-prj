@@ -52,7 +52,7 @@
     },
     // === USER COMMANDS ===
     {
-      "DownstreamPathTemplate": "/api/v1/user/{everything}",
+      "DownstreamPathTemplate": "/api/v1/users/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
@@ -60,10 +60,11 @@
           "Port": 8080
         }
       ],
-      "UpstreamPathTemplate": "/api/v1/command/user/{everything}",
+      "UpstreamPathTemplate": "/api/v1/users/{everything}",
       "UpstreamHttpMethod": [
         "POST",
         "PUT",
+        "PATCH",
         "DELETE",
         "OPTIONS"
       ],
@@ -1406,6 +1407,57 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/playlist/{everything}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
+    },
+    // === USER PLAYLIST ===
+    {
+      "DownstreamPathTemplate": "/api/v1/UserPlaylist",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "live-session-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/userplaylist",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/UserPlaylist/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "live-session-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/userplaylist/{everything}",
       "UpstreamHttpMethod": [
         "GET",
         "POST",
