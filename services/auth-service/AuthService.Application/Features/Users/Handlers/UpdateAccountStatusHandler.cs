@@ -65,12 +65,20 @@ public sealed class UpdateAccountStatusHandler : ICommandHandler<UpdateAccountSt
             switch (newStatus)
             {
                 case AccountStatusEnum.Active:
-                    user.Activate(_dateTimeProvider);
+                    // If account is pending deletion, cancel it first
+                    if (user.DeletionScheduledAt.HasValue)
+                        user.CancelDeletionRequest(_dateTimeProvider);
+                    else
+                        user.Activate(_dateTimeProvider);
                     break;
 
                 case AccountStatusEnum.Deactivated:
                 case AccountStatusEnum.Suspended:
                     user.Deactivate(_dateTimeProvider);
+                    break;
+
+                case AccountStatusEnum.PendingDeletion:
+                    user.MarkForDeletion(_dateTimeProvider);
                     break;
 
                 default:
@@ -91,9 +99,10 @@ public sealed class UpdateAccountStatusHandler : ICommandHandler<UpdateAccountSt
         var now = _dateTimeProvider.UtcNow;
         var routingKey = newStatus switch
         {
-            AccountStatusEnum.Active      => RoutingKeys.Auth.UserActivated,
-            AccountStatusEnum.Deactivated  => RoutingKeys.Auth.UserDeactivated,
-            AccountStatusEnum.Suspended    => RoutingKeys.Auth.UserBanned,
+            AccountStatusEnum.Active           => RoutingKeys.Auth.UserActivated,
+            AccountStatusEnum.Deactivated      => RoutingKeys.Auth.UserDeactivated,
+            AccountStatusEnum.Suspended        => RoutingKeys.Auth.UserBanned,
+            AccountStatusEnum.PendingDeletion  => RoutingKeys.Auth.UserDeleted,
             _ => throw new InvalidOperationException($"Unknown status: {newStatus}")
         };
 
@@ -120,6 +129,12 @@ public sealed class UpdateAccountStatusHandler : ICommandHandler<UpdateAccountSt
                 Reason = command.Reason,
                 BannedAt = now
             },
+            AccountStatusEnum.PendingDeletion => new UserDeletedEvent
+            {
+                Id = user!.Id,
+                DeletedAt = user.DeletionScheduledAt ?? now.AddDays(30),
+                Reason = command.Reason ?? "Admin marked account for deletion"
+            },
             _ => throw new InvalidOperationException($"Unknown status: {newStatus}")
         };
 
@@ -144,8 +159,9 @@ public sealed class UpdateAccountStatusHandler : ICommandHandler<UpdateAccountSt
     {
         if (user.IsActive)
             return AccountStatusEnum.Active;
-        // Suspended users have IsActive=false; the event carries the semantic via
-        // the event type (UserBannedEvent vs UserDeactivatedEvent).
+        // Pending deletion takes precedence over deactivated/suspended
+        if (user.DeletionScheduledAt.HasValue && user.DeletionScheduledAt > DateTime.UtcNow)
+            return AccountStatusEnum.PendingDeletion;
         return AccountStatusEnum.Deactivated;
     }
 }

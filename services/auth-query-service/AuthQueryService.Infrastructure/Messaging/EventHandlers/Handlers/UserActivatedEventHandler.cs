@@ -1,4 +1,5 @@
 using System.Text.Json;
+using AuthQueryService.Domain.Entities.ReadModels;
 using AuthQueryService.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 
@@ -6,6 +7,9 @@ namespace AuthQueryService.Infrastructure.Messaging.EventHandlers.Handlers;
 
 public sealed class UserActivatedEventHandler : UserEventHandlerBase
 {
+    // 1 = Active, 2 = Deactivated, 3 = Suspended, 4 = PendingDeletion
+    private const int ActiveStatus = 1;
+
     public override string EventType => "auth.user.activated";
 
     public UserActivatedEventHandler(IUserReadRepository repository, ILogger<UserActivatedEventHandler> logger)
@@ -24,6 +28,12 @@ public sealed class UserActivatedEventHandler : UserEventHandlerBase
         }
 
         existing.IsActive = true;
+        existing.AccountStatus = ActiveStatus;
+        // Clear deactivation / deletion fields when user is reactivated
+        existing.DeactivatedAt = null;
+        existing.DeactivationReason = null;
+        existing.DeletionRequestedAt = null;
+        existing.DeletionScheduledAt = null;
         existing.UpdatedAt = DateTime.UtcNow;
 
         await _repository.UpsertAsync(existing);

@@ -83,7 +83,7 @@ public sealed class VerifyEmailHandler : ICommandHandler<VerifyEmailCommand, Aut
             };
             await _refreshTokenRepository.AddAsync(refreshTokenEntity);
 
-            // Publish typed user updated event (Auth — account activated)
+            // Enqueue user updated event BEFORE commit — outbox lives in same transaction
             await _outbox.EnqueueAsync(RoutingKeys.Auth.UserUpdated, new UserUpdatedEvent
             {
                 Id = user.Id,
@@ -94,7 +94,7 @@ public sealed class VerifyEmailHandler : ICommandHandler<VerifyEmailCommand, Aut
                 RoleId = user.RoleId ?? Guid.Empty,
                 RoleName = user.Role?.Name ?? "MEMBER",
                 IsActive = true,
-                UpdatedAt = DateTime.UtcNow
+                UpdatedAt = _dateTimeProvider.UtcNow
             }, cancellationToken);
 
             await _unitOfWork.CommitAsync(cancellationToken);

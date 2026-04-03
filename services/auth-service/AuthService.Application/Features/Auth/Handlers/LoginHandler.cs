@@ -97,6 +97,15 @@ public sealed class LoginHandler : ICommandHandler<LoginCommand, AuthResult>
         // User found & password verified — now check account status
         if (!user.IsActive)
         {
+            // Check if account is pending deletion — user can still log in to cancel
+            if (user.DeletionScheduledAt.HasValue && user.DeletionScheduledAt > _dateTimeProvider.UtcNow)
+            {
+                // User can still log in during grace period to cancel deletion
+                return Result<AuthResult>.Failure(
+                    $"Tài khoản đang chờ xóa. Hạn hủy: {user.DeletionScheduledAt:dd/MM/yyyy}. Đăng nhập để hủy yêu cầu.",
+                    403);
+            }
+
             // Distinguish between email not verified vs banned/deactivated
             var reason = !user.EmailVerifiedAt.HasValue
                 ? "Email not verified"

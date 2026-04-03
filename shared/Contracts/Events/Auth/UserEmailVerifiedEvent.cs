@@ -20,4 +20,11 @@ public sealed class UserEmailVerifiedEvent : BaseIntegrationEvent
 
     [JsonPropertyName("emailVerifiedAt")]
     public DateTime EmailVerifiedAt { get; init; }
+
+    /// <summary>
+    /// Whether the account should be activated upon email verification.
+    /// Default: true (verified email = active account)
+    /// </summary>
+    [JsonPropertyName("isActive")]
+    public bool IsActive { get; init; } = true;
 }

@@ -9,7 +9,9 @@ using LiveSessionService.Application.Features.LiveSessions.Commands.UpdateSessio
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetAllSessionSchedules;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetScheduleById;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetSessionSchedules;
+using LiveSessionService.Application.Features.LiveSessions.Queries.SearchSchedules;
 using LiveSessionService.Application.Features.Results.LiveSessions;
+using LiveSessionService.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -232,6 +234,49 @@ public class ScheduleController : ControllerBase
         }
 
         return NoContent();
+    }
+
+    /// <summary>
+    /// Search session schedules by keyword with optional filters.
+    /// Public endpoint — for global search bar.
+    /// </summary>
+    [HttpGet("search")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResponse<PageResponse<SessionScheduleResult>>), 200)]
+    public async Task<IActionResult> Search(
+        [FromQuery] string? q,
+        [FromQuery] string? status,
+        [FromQuery] DateOnly? fromDate,
+        [FromQuery] DateOnly? toDate,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken ct = default)
+    {
+        // Parse status enum if provided
+        ScheduleStatus? scheduleStatus = null;
+        if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<ScheduleStatus>(status, true, out var parsed))
+        {
+            scheduleStatus = parsed;
+        }
+
+        var query = new SearchSchedulesQuery(q, scheduleStatus, fromDate, toDate, page, pageSize);
+        var result = await _queries.Send<SearchSchedulesQuery, SearchSchedulesResult>(query, ct);
+
+        if (!result.IsSuccess)
+        {
+            return StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse());
+        }
+
+        var pageResponse = new PageResponse<SessionScheduleResult>
+        {
+            Content = result.Data!.Items,
+            Page = result.Data.PageNumber,
+            Size = result.Data.PageSize,
+            TotalElements = result.Data.TotalCount,
+            TotalPages = result.Data.TotalPages
+        };
+
+        return Ok(ApiResponse<PageResponse<SessionScheduleResult>>.SuccessResponse(pageResponse, "Schedules search completed"));
     }
 
     private bool TryGetCurrentUserId(out Guid userId)

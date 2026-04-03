@@ -29,6 +29,11 @@ namespace AuthQueryService.Application.Services.Users.Queries.SearchUsers
                 RoleId = x.RoleId,
                 RoleName = x.RoleName,
                 IsActive = x.IsActive,
+                IsVerified = x.IsVerified,
+                EmailVerifiedAt = x.EmailVerifiedAt,
+                DeactivationReason = x.DeactivationReason,
+                DeletionRequestedAt = x.DeletionRequestedAt,
+                DeletionScheduledAt = x.DeletionScheduledAt,
                 CreatedAt = x.CreatedAt,
                 UpdatedAt = x.UpdatedAt
             }).ToList();

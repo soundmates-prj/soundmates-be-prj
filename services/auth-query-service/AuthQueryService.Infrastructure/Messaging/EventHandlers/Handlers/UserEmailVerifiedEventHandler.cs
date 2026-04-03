@@ -1,4 +1,5 @@
 using System.Text.Json;
+using AuthQueryService.Domain.Entities.ReadModels;
 using AuthQueryService.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 
@@ -6,6 +7,9 @@ namespace AuthQueryService.Infrastructure.Messaging.EventHandlers.Handlers;
 
 public sealed class UserEmailVerifiedEventHandler : UserEventHandlerBase
 {
+    // 1 = Active, 2 = Deactivated, 3 = Suspended, 4 = PendingDeletion
+    private const int ActiveStatus = 1;
+
     public override string EventType => "auth.user.email.verified";
 
     public UserEmailVerifiedEventHandler(IUserReadRepository repository, ILogger<UserEmailVerifiedEventHandler> logger)
@@ -24,7 +28,9 @@ public sealed class UserEmailVerifiedEventHandler : UserEventHandlerBase
         }
 
         existing.IsVerified = true;
+        // Email verification activates the account → set both IsActive and canonical AccountStatus
         existing.IsActive = true;
+        existing.AccountStatus = ActiveStatus;
         existing.EmailVerifiedAt = EventPropertyExtractor.GetDateTimeProperty(root, "emailVerifiedAt", "EmailVerifiedAt");
         existing.UpdatedAt = DateTime.UtcNow;
 

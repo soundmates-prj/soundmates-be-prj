@@ -61,7 +61,10 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<ResetPasswordCommand, bool>, ResetPasswordHandler>();
         services.AddScoped<ICommandHandler<ChangePasswordCommand, bool>, ChangePasswordHandler>();
         services.AddScoped<ICommandHandler<ResendOtpCommand, bool>, ResendOtpHandler>();
-        
+        services.AddScoped<ICommandHandler<DeactivateAccountCommand, bool>, DeactivateAccountHandler>();
+        services.AddScoped<ICommandHandler<RequestAccountDeletionCommand, bool>, RequestAccountDeletionHandler>();
+        services.AddScoped<ICommandHandler<CancelAccountDeletionCommand, bool>, CancelAccountDeletionHandler>();
+
         // Profile handler
         services.AddScoped<ICommandHandler<UpdateUserProfileCommand, UserProfileResult>, UpdateUserProfileHandler>();
         

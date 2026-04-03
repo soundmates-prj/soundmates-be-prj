@@ -12,5 +12,8 @@ public enum AccountStatusEnum
     Deactivated = 2,
 
     /// <summary>Account is suspended due to policy violation</summary>
-    Suspended = 3
+    Suspended = 3,
+
+    /// <summary>Account is pending permanent deletion (30-day grace period)</summary>
+    PendingDeletion = 4
 }

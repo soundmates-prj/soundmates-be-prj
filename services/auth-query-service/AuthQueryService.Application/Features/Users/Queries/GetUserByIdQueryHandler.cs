@@ -27,6 +27,9 @@ namespace AuthQueryService.Application.Services.Users.Queries.GetUserById
                 RoleId = u.RoleId,
                 RoleName = u.RoleName,
                 IsActive = u.IsActive,
+                DeactivationReason = u.DeactivationReason,
+                DeletionRequestedAt = u.DeletionRequestedAt,
+                DeletionScheduledAt = u.DeletionScheduledAt,
                 CreatedAt = u.CreatedAt,
                 UpdatedAt = u.UpdatedAt
             };

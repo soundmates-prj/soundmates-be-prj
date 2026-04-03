@@ -293,12 +293,12 @@ public partial class User
 
     /// <summary>
     /// Sets email verification token (legacy - now using OTP)
-    /// 
+    ///
     /// USAGE: Generate token for email verification link (old method)
     /// STATE: User just registered (INACTIVE)
     /// SIDE EFFECTS: Sets EmailVerificationToken, UpdatedAt timestamp
     /// NOTE: This method is kept for backward compatibility, but OTP is now preferred
-    /// 
+    ///
     /// Example:
     /// <code>
     /// var token = Guid.NewGuid().ToString();
@@ -310,10 +310,109 @@ public partial class User
     {
         if (string.IsNullOrWhiteSpace(token))
             throw new UserValidationException(
-                "Token cannot be empty", 
+                "Token cannot be empty",
                 UserErrorCodes.TokenEmpty);
 
         EmailVerificationToken = token;
         UpdatedAt = dateTimeProvider.UtcNow;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ACCOUNT DEACTIVATION & DELETION
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Member-initiated account deactivation (soft lock — reversible within 90 days).
+    /// Sets IsActive = false so the user cannot login, but data is preserved.
+    /// Reason is stored for analytics.
+    ///
+    /// USAGE: Member goes to Settings → Tài khoản → Vô hiệu hóa
+    /// STATE TRANSITION: ACTIVE → DEACTIVATED
+    /// SIDE EFFECTS: Sets IsActive = false, DeactivationReason, UpdatedAt
+    ///
+    /// Example:
+    /// <code>
+    /// user.DeactivateWithReason("Tạm nghỉ", dateTimeProvider);
+    /// </code>
+    /// </summary>
+    /// <exception cref="InvalidUserStateException">When user is not active</exception>
+    public void DeactivateWithReason(string reason, IDateTimeProvider dateTimeProvider)
+    {
+        if (!IsActive)
+            throw new InvalidUserStateException(
+                "Account is already inactive",
+                UserErrorCodes.AlreadyInactive);
+
+        IsActive = false;
+        DeactivationReason = reason;
+        UpdatedAt = dateTimeProvider.UtcNow;
+    }
+
+    /// <summary>
+    /// Marks the account for permanent deletion (30-day grace period).
+    /// User CAN still log in during grace period to cancel this.
+    /// After DeletionScheduledAt passes, a background job permanently deletes data.
+    ///
+    /// USAGE: Member goes to Settings → Tài khoản → Xóa vĩnh viễn
+    /// STATE TRANSITION: ACTIVE → PENDING_DELETION
+    /// SIDE EFFECTS: Sets IsActive = false, DeletionRequestedAt, DeletionScheduledAt (+30 days)
+    ///
+    /// Example:
+    /// <code>
+    /// user.MarkForDeletion(dateTimeProvider);
+    /// </code>
+    /// </summary>
+    /// <exception cref="InvalidUserStateException">When user is not active</exception>
+    public void MarkForDeletion(IDateTimeProvider dateTimeProvider)
+    {
+        if (!IsActive)
+            throw new InvalidUserStateException(
+                "Cannot mark inactive account for deletion",
+                UserErrorCodes.AlreadyInactive);
+
+        IsActive = false;
+        DeletionRequestedAt = dateTimeProvider.UtcNow;
+        DeletionScheduledAt = dateTimeProvider.UtcNow.AddDays(30);
+        UpdatedAt = dateTimeProvider.UtcNow;
+    }
+
+    /// <summary>
+    /// Cancels a pending permanent deletion request.
+    /// Restores account to active state and clears deletion metadata.
+    ///
+    /// USAGE: Member logs in during 30-day grace period and cancels deletion.
+    /// STATE TRANSITION: PENDING_DELETION → ACTIVE
+    /// SIDE EFFECTS: Sets IsActive = true, clears DeletionRequestedAt & DeletionScheduledAt
+    ///
+    /// Example:
+    /// <code>
+    /// user.CancelDeletionRequest(dateTimeProvider);
+    /// </code>
+    /// </summary>
+    /// <exception cref="InvalidUserStateException">When no deletion is pending</exception>
+    public void CancelDeletionRequest(IDateTimeProvider dateTimeProvider)
+    {
+        if (!DeletionScheduledAt.HasValue)
+            throw new InvalidUserStateException(
+                "No deletion request to cancel",
+                UserErrorCodes.AlreadyActive);
+
+        IsActive = true;
+        DeletionRequestedAt = null;
+        DeletionScheduledAt = null;
+        UpdatedAt = dateTimeProvider.UtcNow;
+    }
+
+    /// <summary>
+    /// Returns the current account status as a human-readable string.
+    /// Used by the login handler and profile endpoints.
+    /// </summary>
+    public string GetAccountStatusText()
+    {
+        if (DeletionScheduledAt.HasValue && DeletionScheduledAt > DateTime.UtcNow)
+            return "PendingDeletion";
+        if (!IsActive)
+            return "Deactivated";
+        return "Active";
     }
 }

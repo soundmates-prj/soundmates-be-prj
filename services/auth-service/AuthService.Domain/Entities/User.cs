@@ -46,6 +46,23 @@ public partial class User
 
     public DateTime? EmailVerifiedAt { get; set; }
 
+    /// <summary>
+    /// Reason for deactivation (set when member self-deactivates).
+    /// Values: "Tạm nghỉ", "Quá nhiều thông báo", "Lý do cá nhân", "Khác"
+    /// </summary>
+    public string? DeactivationReason { get; set; }
+
+    /// <summary>
+    /// When the member requested permanent deletion.
+    /// </summary>
+    public DateTime? DeletionRequestedAt { get; set; }
+
+    /// <summary>
+    /// Scheduled permanent deletion date = DeletionRequestedAt + 30 days.
+    /// After this date, a background job permanently erases the account.
+    /// </summary>
+    public DateTime? DeletionScheduledAt { get; set; }
+
     public virtual ICollection<Oauthaccount> Oauthaccounts { get; set; } = new List<Oauthaccount>();
 
     public virtual UserRole? Role { get; set; }

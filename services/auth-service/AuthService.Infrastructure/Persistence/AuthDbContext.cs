@@ -131,6 +131,13 @@ namespace AuthService.Infrastructure.Persistence
                 entity.Property(e => e.EmailVerifiedAt)
                     .HasColumnType("timestamp with time zone")
                     .HasColumnName("email_verified_at");
+                entity.Property(e => e.DeactivationReason).HasColumnName("deactivation_reason");
+                entity.Property(e => e.DeletionRequestedAt)
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("deletion_requested_at");
+                entity.Property(e => e.DeletionScheduledAt)
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("deletion_scheduled_at");
 
                 entity.HasOne(d => d.Role).WithMany(p => p.Users)
                     .HasForeignKey(d => d.RoleId)
