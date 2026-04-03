@@ -32,6 +32,9 @@ public sealed class UserActivatedEventHandler : UserEventHandlerBase
         // Clear deactivation / deletion fields when user is reactivated
         existing.DeactivatedAt = null;
         existing.DeactivationReason = null;
+        existing.BannedAt = null;
+        existing.BanReason = null;
+        existing.IsBanned = false;
         existing.DeletionRequestedAt = null;
         existing.DeletionScheduledAt = null;
         existing.UpdatedAt = DateTime.UtcNow;
