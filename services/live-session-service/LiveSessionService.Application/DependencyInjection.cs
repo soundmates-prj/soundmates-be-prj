@@ -17,6 +17,7 @@ using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSessio
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetSessionSchedules;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetScheduleById;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetStaffDashboardOverview;
+using LiveSessionService.Application.Features.LiveSessions.Queries.SearchSchedules;
 using LiveSessionService.Application.Features.Music.Commands.BulkUploadMusic;
 using LiveSessionService.Application.Features.Music.Commands.DeleteMedia;
 using LiveSessionService.Application.Features.Music.Commands.ImportSystemMediaBatch;
@@ -136,6 +137,7 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<GetSessionSchedulesQuery, List<SessionScheduleResult>>, GetSessionSchedulesHandler>();
         services.AddScoped<IQueryHandler<GetAllSessionSchedulesQuery, List<SessionScheduleResult>>, GetAllSessionSchedulesHandler>();
         services.AddScoped<IQueryHandler<GetScheduleByIdQuery, SessionScheduleResult>, GetScheduleByIdHandler>();
+        services.AddScoped<IQueryHandler<SearchSchedulesQuery, SearchSchedulesResult>, SearchSchedulesQueryHandler>();
         services.AddScoped<IQueryHandler<GetStaffDashboardOverviewQuery, StaffDashboardOverviewResult>, GetStaffDashboardOverviewHandler>();
         services.AddScoped<IQueryHandler<GetActiveLiveSessionsQuery, List<LiveSessionResult>>, GetActiveLiveSessionsHandler>();
 

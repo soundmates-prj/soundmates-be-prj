@@ -33,6 +33,18 @@ public sealed class UserCreatedEvent : BaseIntegrationEvent
     [JsonPropertyName("isActive")]
     public bool IsActive { get; init; }
 
+    /// <summary>
+    /// Canonical account status. 1=Active, 2=Deactivated, 3=Suspended, 4=PendingDeletion
+    /// </summary>
+    [JsonPropertyName("accountStatus")]
+    public int AccountStatus { get; init; } = 1;
+
+    [JsonPropertyName("isVerified")]
+    public bool IsVerified { get; init; }
+
+    [JsonPropertyName("emailVerifiedAt")]
+    public DateTime? EmailVerifiedAt { get; init; }
+
     [JsonPropertyName("createdAt")]
     public DateTime CreatedAt { get; init; }
 }

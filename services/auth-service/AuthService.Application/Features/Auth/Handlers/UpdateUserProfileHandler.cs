@@ -148,6 +148,7 @@ public sealed class UpdateUserProfileHandler : ICommandHandler<UpdateUserProfile
             LastName = user.LastName ?? string.Empty,
             RoleId = user.RoleId ?? Guid.Empty,
             RoleName = user.Role?.Name,
+            IsActive = user.IsActive,
             Profile = new UserProfileDetail
             {
                 Bio = profile?.Bio,

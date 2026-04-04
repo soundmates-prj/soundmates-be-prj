@@ -21,8 +21,10 @@ namespace AuthQueryService.Infrastructure.Messaging.EventHandlers.Handlers
             if (existing is null)
             {
                 _logger.LogWarning("User not found in MongoDB for profile update: {UserId}. Creating new entry.", userId);
-                
-                // If user doesn't exist, create new entry with profile data
+
+                // If user doesn't exist, create new entry with profile data.
+                // Read IsActive from event — do NOT hardcode to true (could re-activate deleted users)
+                var isActive = EventPropertyExtractor.GetBooleanProperty(root, "isActive", "IsActive");
                 existing = new UserReadModel
                 {
                     Id = userId,
@@ -32,7 +34,8 @@ namespace AuthQueryService.Infrastructure.Messaging.EventHandlers.Handlers
                     LastName = EventPropertyExtractor.GetOptionalStringProperty(root, "lastName", "LastName"),
                     RoleId = EventPropertyExtractor.GetNullableGuidProperty(root, "roleId", "RoleId"),
                     RoleName = EventPropertyExtractor.GetOptionalStringProperty(root, "roleName", "RoleName"),
-                    IsActive = true,
+                    IsActive = isActive,
+                    AccountStatus = GetAccountStatus(root, isActive),
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
@@ -52,6 +55,9 @@ namespace AuthQueryService.Infrastructure.Messaging.EventHandlers.Handlers
             if (!string.IsNullOrEmpty(lastName)) existing.LastName = lastName;
             if (roleId.HasValue) existing.RoleId = roleId;
             if (!string.IsNullOrEmpty(roleName)) existing.RoleName = roleName;
+
+            // Sync IsActive from event — preserves current status; new users get it from event payload
+            existing.IsActive = EventPropertyExtractor.GetBooleanProperty(root, "isActive", "IsActive");
 
             // Extract profile data from nested profile object
             if (root.TryGetProperty("profile", out var profileElement))
@@ -83,6 +89,14 @@ namespace AuthQueryService.Infrastructure.Messaging.EventHandlers.Handlers
 
             await _repository.UpsertAsync(existing);
             _logger.LogDebug("User profile updated in MongoDB: {UserId}", userId);
+        }
+
+        private static int GetAccountStatus(JsonElement data, bool isActive)
+        {
+            if (data.TryGetProperty("accountStatus", out var prop) &&
+                prop.ValueKind == JsonValueKind.Number)
+                return prop.GetInt32();
+            return isActive ? 1 : 2;
         }
     }
 }

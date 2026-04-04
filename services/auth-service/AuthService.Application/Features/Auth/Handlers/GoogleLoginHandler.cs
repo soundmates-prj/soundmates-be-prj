@@ -1,4 +1,5 @@
 using AuthService.Application.Abstractions.Messaging;
+using AuthService.Application.Enums;
 using AuthService.Application.Mappings;
 using AuthService.Application.Results;
 using AuthService.Application.Features.Auth.Commands;
@@ -120,7 +121,10 @@ public sealed class GoogleLoginHandler : ICommandHandler<GoogleLoginCommand, Aut
                     LastName = user.LastName ?? string.Empty,
                     RoleId = user.RoleId ?? Guid.Empty,
                     RoleName = userRole.Name,
-                    IsActive = user.IsActive,
+                    IsActive = true,
+                    AccountStatus = (int)AccountStatusEnum.Active,
+                    IsVerified = true,
+                    EmailVerifiedAt = _dateTimeProvider.UtcNow,
                     CreatedAt = user.CreatedAt ?? DateTime.UtcNow
                 };
                 await _outbox.EnqueueAsync(RoutingKeys.Auth.UserCreated, evt, cancellationToken);

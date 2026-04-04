@@ -1,4 +1,5 @@
 using AuthService.Application.Abstractions.Messaging;
+using AuthService.Application.Enums;
 using AuthService.Application.Results;
 using AuthService.Application.Features.Common;
 using AuthService.Application.Features.Users.Commands;
@@ -84,6 +85,12 @@ public sealed class CreateUserHandler : ICommandHandler<CreateUserCommand, Guid>
             await _repo.AddAsync(user);
             user = await _repo.GetByIdAsync(user.Id);
 
+            // Admin-created users are immediately verified (no OTP needed)
+            user.VerifyEmail(_dateTimeProvider);
+            await _repo.UpdateAsync(user);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            user = await _repo.GetByIdAsync(user.Id);
+
             // Publish typed UserCreatedEvent (Auth — domain state change)
             await _outbox.EnqueueAsync(RoutingKeys.Auth.UserCreated, new UserCreatedEvent
             {
@@ -95,7 +102,10 @@ public sealed class CreateUserHandler : ICommandHandler<CreateUserCommand, Guid>
                 RoleId = user.RoleId ?? Guid.Empty,
                 RoleName = user.Role?.Name ?? "MEMBER",
                 IsActive = user.IsActive,
-                CreatedAt = user.CreatedAt ?? DateTime.UtcNow
+                AccountStatus = (int)MapToStatus(user),
+                IsVerified = true,
+                EmailVerifiedAt = user.EmailVerifiedAt ?? _dateTimeProvider.UtcNow,
+                CreatedAt = user.CreatedAt ?? _dateTimeProvider.UtcNow
             }, cancellationToken);
 
             var fullName = $"{user.FirstName} {user.LastName}".Trim();
@@ -105,5 +115,18 @@ public sealed class CreateUserHandler : ICommandHandler<CreateUserCommand, Guid>
         {
             return Result<Guid>.Failure($"An error occurred while creating user: {ex.Message}", 500);
         }
+    }
+
+    /// <summary>
+    /// Mirrors UpdateAccountStatusHandler.MapToStatus — maps domain entity to canonical AccountStatusEnum.
+    /// </summary>
+    private static AccountStatusEnum MapToStatus(Domain.Entities.User user)
+    {
+        if (user.IsActive)
+            return AccountStatusEnum.Active;
+        // Pending deletion takes precedence over deactivated/suspended
+        if (user.DeletionScheduledAt.HasValue && user.DeletionScheduledAt > DateTime.UtcNow)
+            return AccountStatusEnum.PendingDeletion;
+        return AccountStatusEnum.Deactivated;
     }
 }

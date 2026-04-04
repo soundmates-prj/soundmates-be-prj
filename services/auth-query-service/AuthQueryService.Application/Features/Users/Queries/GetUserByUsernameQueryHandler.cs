@@ -27,7 +27,17 @@ namespace AuthQueryService.Application.Services.Users.Queries.GetUserByUsername
                 LastName = u.LastName,
                 RoleId = u.RoleId,
                 RoleName = u.RoleName,
+                AccountStatus = u.AccountStatus,
                 IsActive = u.IsActive,
+                IsVerified = u.IsVerified,
+                EmailVerifiedAt = u.EmailVerifiedAt,
+                IsBanned = u.IsBanned,
+                BannedAt = u.BannedAt,
+                BanReason = u.BanReason,
+                DeactivatedAt = u.DeactivatedAt,
+                DeactivationReason = u.DeactivationReason,
+                DeletionRequestedAt = u.DeletionRequestedAt,
+                DeletionScheduledAt = u.DeletionScheduledAt,
                 CreatedAt = u.CreatedAt,
                 UpdatedAt = u.UpdatedAt
             });

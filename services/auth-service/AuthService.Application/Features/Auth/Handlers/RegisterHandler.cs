@@ -91,6 +91,7 @@ public sealed class RegisterHandler : ICommandHandler<RegisterCommand, AuthResul
                     RoleId = user.RoleId ?? Guid.Empty,
                     RoleName = user.Role?.Name ?? "MEMBER",
                     IsActive = user.IsActive,
+                    AccountStatus = (int)Application.Enums.AccountStatusEnum.Active,
                     CreatedAt = user.CreatedAt ?? DateTime.UtcNow
                 };
                 await _outbox.EnqueueAsync(RoutingKeys.Auth.UserCreated, evt, cancellationToken);

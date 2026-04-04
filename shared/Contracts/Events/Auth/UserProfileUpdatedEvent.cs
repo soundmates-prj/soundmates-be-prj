@@ -30,6 +30,12 @@ public sealed class UserProfileUpdatedEvent : BaseIntegrationEvent
     [JsonPropertyName("roleName")]
     public string? RoleName { get; init; }
 
+    /// <summary>
+    /// Account active status — included so the read-model handler can preserve it.
+    /// </summary>
+    [JsonPropertyName("isActive")]
+    public bool IsActive { get; init; }
+
     [JsonPropertyName("profile")]
     public UserProfileDetail? Profile { get; init; }
 

@@ -18,4 +18,16 @@ public interface ISessionScheduleRepository
     Task<Dictionary<Guid, SessionSchedule>> GetLatestByLiveSessionIdsAsync(
         IReadOnlyCollection<Guid> liveSessionIds,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Search schedules with keyword, status filter, and pagination.
+    /// </summary>
+    Task<(List<SessionSchedule> Items, int TotalCount)> SearchAsync(
+        string? keyword,
+        Domain.Enums.ScheduleStatus? status,
+        DateOnly? fromDate,
+        DateOnly? toDate,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
 }

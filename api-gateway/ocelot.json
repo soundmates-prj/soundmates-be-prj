@@ -65,8 +65,7 @@
         "POST",
         "PUT",
         "PATCH",
-        "DELETE",
-        "OPTIONS"
+        "DELETE"
       ],
       "LoadBalancerOptions": {
         "Type": "RoundRobin"
@@ -147,8 +146,7 @@
       ],
       "UpstreamPathTemplate": "/api/v1/user/{everything}",
       "UpstreamHttpMethod": [
-        "GET",
-        "OPTIONS"
+        "GET"
       ],
       "LoadBalancerOptions": {
         "Type": "RoundRobin"

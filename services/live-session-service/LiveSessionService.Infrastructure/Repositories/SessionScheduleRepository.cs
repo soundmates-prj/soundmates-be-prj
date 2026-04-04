@@ -117,4 +117,58 @@ public sealed class SessionScheduleRepository : ISessionScheduleRepository
             .GroupBy(x => x.LiveSessionId)
             .ToDictionary(g => g.Key, g => g.ToList());
     }
+
+    public async Task<(List<SessionSchedule> Items, int TotalCount)> SearchAsync(
+        string? keyword,
+        Domain.Enums.ScheduleStatus? status,
+        DateOnly? fromDate,
+        DateOnly? toDate,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.SessionSchedules
+            .AsNoTracking()
+            .Include(x => x.LiveSession)
+                .ThenInclude(x => x.AzuraCastStation)
+            .AsQueryable();
+
+        // Keyword filter on title and session name
+        if (!string.IsNullOrWhiteSpace(keyword))
+        {
+            var kw = keyword.Trim().ToLower();
+            query = query.Where(x =>
+                (x.Title != null && EF.Functions.ILike(x.Title, $"%{kw}%")) ||
+                (x.LiveSession.SessionName != null && EF.Functions.ILike(x.LiveSession.SessionName, $"%{kw}%")));
+        }
+
+        // Status filter
+        if (status.HasValue)
+        {
+            query = query.Where(x => x.Status == status.Value);
+        }
+
+        // Date range filter
+        if (fromDate.HasValue)
+        {
+            query = query.Where(x => x.StartDate >= fromDate.Value);
+        }
+        if (toDate.HasValue)
+        {
+            query = query.Where(x => x.StartDate <= toDate.Value);
+        }
+
+        // Total count (before pagination)
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        // Paginated results
+        var items = await query
+            .OrderByDescending(x => x.StartDate)
+            .ThenByDescending(x => x.StartTime)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, totalCount);
+    }
 }

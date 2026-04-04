@@ -61,13 +61,30 @@ public sealed class VerifyUserEmailHandler : ICommandHandler<VerifyUserEmailComm
         // Reload user with role for event payload
         user = await _userRepository.GetByIdAsync(user.Id);
 
-        // Publish typed UserEmailVerifiedEvent (Auth — account state change)
+        // Publish UserEmailVerifiedEvent (Auth — account state change)
         await _outbox.EnqueueAsync(RoutingKeys.Auth.UserEmailVerified, new UserEmailVerifiedEvent
         {
             UserId = user.Id,
             Username = user.Username,
             Email = user.Email,
-            EmailVerifiedAt = user.EmailVerifiedAt ?? _dateTimeProvider.UtcNow
+            EmailVerifiedAt = user.EmailVerifiedAt ?? _dateTimeProvider.UtcNow,
+            IsActive = true
+        }, cancellationToken);
+
+        // Publish UserUpdatedEvent so query-service syncs isActive=true
+        // (UserEmailVerifiedEvent only syncs email verification fields;
+        // UserUpdatedEvent carries isActive to be explicit and future-proof)
+        await _outbox.EnqueueAsync(RoutingKeys.Auth.UserUpdated, new UserUpdatedEvent
+        {
+            Id = user.Id,
+            Username = user.Username,
+            Email = user.Email,
+            FirstName = user.FirstName ?? string.Empty,
+            LastName = user.LastName ?? string.Empty,
+            RoleId = user.RoleId ?? Guid.Empty,
+            RoleName = user.Role?.Name ?? "MEMBER",
+            IsActive = true,
+            UpdatedAt = _dateTimeProvider.UtcNow
         }, cancellationToken);
 
         _logger.LogInformation("Admin manually verified email for user {UserId}", user.Id);
