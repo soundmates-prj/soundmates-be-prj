@@ -7,6 +7,7 @@ using LiveSessionService.Domain.Entities;
 using LiveSessionService.Domain.Enums;
 using LiveSessionService.Domain.Exceptions;
 using LiveSessionService.Domain.Interfaces;
+using shared.Contracts.Events.Notifications;
 using Shared.Contracts.Events.Notifications;
 using System.Text.Json;
 
@@ -121,18 +122,21 @@ public sealed class CreateSessionScheduleHandler : ICommandHandler<CreateSession
             session.Schedule(nextOccurrence.Value, _dateTimeProvider);
             await _sessionRepository.UpdateAsync(session, cancellationToken);
 
-            var @event = new LiveSessionScheduledEvent
+            var @event = new NotificationEvent
             {
-                SessionId = session.Id,
-                HostId = session.HostUserId,
-                StartTime = session.StartedAt ?? DateTime.UtcNow
+                Title = "Live Session Scheduled",
+                SendUserId = schedule.CreatedBy,
+                ReceiveUserId = session.HostUserId,
+                ReferenceId = session.Id,
+                Type = "live_session",
+                Message = $"Your session is scheduled at {session.StartedAt:HH:mm dd/MM/yyyy}"
             };
 
             var payload = JsonSerializer.Serialize(@event);
 
             await _eventBus.PublishAsync(
-                nameof(LiveSessionScheduledEvent),
-                payload
+                    "notification.created",
+                    payload
             );
         }
         catch (DomainException ex)

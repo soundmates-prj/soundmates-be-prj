@@ -1,0 +1,174 @@
+﻿using AccountContentService.Application.Interfaces.Repositories;
+using AccountContentService.Domain.Entities;
+using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
+using shared.Contracts.Events.Notifications;
+using Shared.Contracts.Events.Auth;
+using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Text.Json;
+
+namespace AccountContentService.Infrastructure.Messaging.Consumers.Notifications
+{
+    public class NotificationEventConsumer : IAsyncDisposable
+    {
+        private const string ExchangeName = "soundmates.events";
+        private const string QueueName = "account-content.notification-events";
+
+        private readonly INotificationRepository _repo;
+        private readonly RabbitMqOptions _options;
+        private readonly ILogger<NotificationEventConsumer> _logger;
+        private readonly ConnectionFactory _factory;
+
+        private IConnection? _connection;
+        private IChannel? _channel;
+        private bool _started;
+
+        public NotificationEventConsumer(
+            IOptions<RabbitMqOptions> options,
+            INotificationRepository repo,
+            ILogger<NotificationEventConsumer> logger)
+        {
+            _options = options.Value;
+            _repo = repo;
+            _logger = logger;
+            _factory = new ConnectionFactory
+            {
+                HostName = _options.HostName,
+                Port = _options.Port,
+                UserName = _options.UserName,
+                Password = _options.Password,
+                VirtualHost = _options.VirtualHost,
+                AutomaticRecoveryEnabled = true,
+                NetworkRecoveryInterval = TimeSpan.FromSeconds(10)
+            };
+        }
+
+        public async Task StartAsync(CancellationToken cancellationToken)
+        {
+            if (_started) return;
+
+            _connection = await _factory.CreateConnectionAsync(
+                clientProvidedName: "account-content-service-consumer",
+                cancellationToken);
+
+            _channel = await _connection.CreateChannelAsync(cancellationToken: cancellationToken);
+
+            // Declare exchange
+            await _channel.ExchangeDeclareAsync(
+                exchange: ExchangeName,
+                type: ExchangeType.Topic,
+                durable: true,
+                autoDelete: false,
+                cancellationToken: cancellationToken);
+
+            // Declare queue
+            var queueArgs = new Dictionary<string, object?>();
+            await _channel.QueueDeclareAsync(
+                queue: QueueName,
+                durable: true,
+                exclusive: false,
+                autoDelete: false,
+                arguments: queueArgs,
+                cancellationToken: cancellationToken);
+
+            // Bind queue to exchange with wildcard routing key (all user events)
+            await _channel.QueueBindAsync(
+                queue: QueueName,
+                exchange: ExchangeName,
+                routingKey: "notification.#", 
+                cancellationToken: cancellationToken);
+
+            // Set prefetch count (process 10 messages at a time)
+            await _channel.BasicQosAsync(prefetchSize: 0, prefetchCount: 10, global: false, cancellationToken: cancellationToken);
+
+            var consumer = new AsyncEventingBasicConsumer(_channel);
+            consumer.ReceivedAsync += async (_, ea) =>
+            {
+                var routingKey = ea.RoutingKey;
+                var body = ea.Body.ToArray();
+                var json = Encoding.UTF8.GetString(body);
+
+                try
+                {
+                    await ProcessMessageAsync(routingKey, json, cancellationToken);
+                    await _channel.BasicAckAsync(ea.DeliveryTag, multiple: false, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to process message with routing key {RoutingKey}: {Json}", routingKey, json);
+                    // Negative ack — requeue once then move to DLQ
+                    await _channel.BasicNackAsync(ea.DeliveryTag, multiple: false, requeue: false, cancellationToken);
+                }
+            };
+
+            await _channel.BasicConsumeAsync(
+                queue: QueueName,
+                autoAck: false,
+                consumer: consumer,
+                cancellationToken: cancellationToken);
+
+            _started = true;
+            _logger.LogInformation(
+                "UserEventConsumer started. Listening on queue {Queue} bound to exchange {Exchange}",
+                QueueName, ExchangeName);
+        }
+
+        private async Task ProcessMessageAsync(string routingKey, string json, CancellationToken ct)
+        {
+            switch (routingKey)
+            {
+                case "notification.created":
+                    await HandleNotificationCreatedAsync(json, ct);
+                    break;
+
+                default:
+                    _logger.LogDebug("Ignoring event with routing key {RoutingKey}", routingKey);
+                    break;
+            }
+        }
+
+        private async Task HandleNotificationCreatedAsync(
+            string json,
+            CancellationToken cancellationToken)
+        {
+            var evt = JsonSerializer.Deserialize<NotificationEvent>(json, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            if (evt == null)
+            {
+                _logger.LogWarning("Failed to deserialize UserCreatedEvent: {Json}", json);
+                return;
+            }
+            var notification = new Notification
+            {
+                Id = Guid.NewGuid(),
+                UserId = evt.ReceiveUserId,
+                Title = evt.Title,
+                ReferenceId = evt.ReferenceId,
+                Type = evt.Type,
+                Message = evt.Message,
+                IsRead = false,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await _repo.AddAsync(notification, cancellationToken);
+
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            if (_channel != null) await _channel.CloseAsync();
+            _channel?.Dispose();
+            if (_connection != null) await _connection.CloseAsync();
+            _connection?.Dispose();
+        }
+    }
+}

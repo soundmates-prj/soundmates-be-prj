@@ -11,6 +11,10 @@ namespace AccountContentService.Application.Interfaces.Repositories
 
         Task<List<Notification>> GetByUserIdAsync(Guid userId, int page, int pageSize, CancellationToken cancellationToken);
 
+        Task<List<Notification>> GetNotReadByUserIdAsync(Guid userId, int page, int pageSize, CancellationToken cancellatioToken);
+
+        Task<List<Notification>> GetReadByUserIdAsync(Guid userId, int page, int pageSize, CancellationToken cancellationToken);
+
         Task<int> CountByUserIdAsync(Guid userId, CancellationToken cancellationToken);
 
         Task MarkAsReadAsync(Guid notificationId, CancellationToken cancellationToken);

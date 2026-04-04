@@ -28,7 +28,7 @@ public sealed class UserEventConsumerHostedService : BackgroundService
 
         try
         {
-            using var scope = _scopeFactory.CreateAsyncScope();
+            await using var scope = _scopeFactory.CreateAsyncScope();
             var consumer = scope.ServiceProvider.GetRequiredService<UserEventConsumer>();
             await consumer.StartAsync(stoppingToken);
 

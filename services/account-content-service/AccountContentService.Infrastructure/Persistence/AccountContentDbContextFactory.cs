@@ -30,6 +30,8 @@ public class AccountContentDbContextFactory : IDesignTimeDbContextFactory<Accoun
         {
             var candidates = new[]
             {
+                Path.Combine(Directory.GetCurrentDirectory(), ".env.local"),
+                Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "../../..", ".env.local")),
                 Path.Combine(Directory.GetCurrentDirectory(), ".env"),
                 Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "../../..", ".env")),
                 Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../../.env")),
