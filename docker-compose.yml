@@ -203,6 +203,9 @@ services:
       - Jwt__Audience=${JWT_AUDIENCE}
       - AzuraCast__BaseUrl=${AZURACAST_BASE_URL}
       - AzuraCast__ApiKey=${AZURACAST_API_KEY}
+      - Cloudinary__CloudName=${CLOUDINARY_CLOUD_NAME}
+      - Cloudinary__ApiKey=${CLOUDINARY_API_KEY}
+      - Cloudinary__ApiSecret=${CLOUDINARY_API_SECRET}
     ports:
       - "8003:8080"
     depends_on:

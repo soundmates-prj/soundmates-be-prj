@@ -106,6 +106,10 @@ public sealed class ImportSystemMediaBatchHandler
                     continue;
                 }
 
+                media.AzuraCastMediaId = uploaded.UniqueId;
+                media.UpdatedAt = DateTime.UtcNow;
+                await _mediaFileRepository.UpdateAsync(media, cancellationToken);
+
                 importedItems.Add(new ImportedSystemMediaItemResult
                 {
                     MediaFileId = media.Id,

@@ -54,7 +54,7 @@ public sealed class GetMediaFilesByStationHandler
                 .Where(x => !string.IsNullOrWhiteSpace(x))
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            var entities = await _mediaFiles.GetByFilePathsAsync(stationUniqueIds.ToList(), cancellationToken);
+            var entities = await _mediaFiles.GetByAzuraCastMediaIdsAsync(stationUniqueIds.ToList(), cancellationToken);
 
             _logger.LogInformation("GetMediaFilesByStation: Retrieved {Count} media files for StationId={StationId}",
                 entities.Count, query.StationId);
