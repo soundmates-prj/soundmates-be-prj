@@ -1,5 +1,6 @@
 ﻿using AccountContentService.Application.Interfaces.Repositories;
 using AccountContentService.Domain.Entities;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -37,6 +38,34 @@ namespace AccountContentService.Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
         }
 
+        public async Task<List<Notification>> GetNotReadByUserIdAsync(
+            Guid userId,
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken)
+        {
+            return await _context.Notifications
+                .Where(x => x.UserId == userId && !x.IsRead)
+                .OrderByDescending(x => x.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<List<Notification>> GetReadByUserIdAsync(
+            Guid userId,
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken)
+        {
+            return await _context.Notifications
+                .Where(x => x.UserId == userId && x.IsRead)
+                .OrderByDescending(x => x.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+        }
+
         public async Task<int> CountByUserIdAsync(Guid userId, CancellationToken cancellationToken)
         {
             return await _context.Notifications
@@ -51,6 +80,8 @@ namespace AccountContentService.Infrastructure.Repositories
             if (notification == null) return;
 
             notification.IsRead = true;
+            _context.Notifications.Update(notification);
+            await _context.SaveChangesAsync(cancellationToken);
         }
 
         public async Task MarkAllAsReadAsync(Guid userId, CancellationToken cancellationToken)
@@ -62,7 +93,9 @@ namespace AccountContentService.Infrastructure.Repositories
             foreach (var noti in notifications)
             {
                 noti.IsRead = true;
+                _context.Notifications.Update(noti);
             }
+            await _context.SaveChangesAsync(cancellationToken);
         }
     }
 }

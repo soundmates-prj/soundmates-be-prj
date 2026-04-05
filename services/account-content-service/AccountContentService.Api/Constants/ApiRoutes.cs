@@ -141,6 +141,9 @@
 
             /// <summary>Retrieve Transaction follow a user.</summary>
             public const string GetUserTransactions = $"{BaseRoute}/users/{{userId:guid}}";
+
+            /// <summary>Retrieve notifications follow a user.</summary>
+            public const string GetUserNotifications = $"{BaseRoute}/users/{{userId:guid}}/notifications";
         }
 
         // =====================================================
@@ -171,6 +174,16 @@
 
             /// <summary>Retrieve current user's transaction history.</summary>
             public const string MyTransctionHistory = $"{BaseRoute}/transaction/history";
+
+            /// <summary>Retrieve current user's all notifications.</summary>
+            public const string MyNotifications = $"{BaseRoute}/notifications";
+
+            /// <summary>Retrieve current user's read notifications.</summary>
+            public const string MyReadNotifications = $"{BaseRoute}/notifications/read";
+
+            /// <summary>Retrieve current user's not read notification.</summary>
+            public const string MyNotReadNotifications = $"{BaseRoute}/notifications/not-read";
+
         }
 
         // =====================================================

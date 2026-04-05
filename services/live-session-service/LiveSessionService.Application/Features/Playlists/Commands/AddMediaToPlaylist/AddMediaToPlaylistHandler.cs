@@ -47,16 +47,18 @@ public sealed class AddMediaToPlaylistHandler
         if (mediaFile == null)
             return Result<PlaylistMediaResult>.Failure("Media file not found", ErrorCode.NotFound);
 
-        var azuraMediaId = mediaFile.FilePath;
+        var azuraMediaId = mediaFile.AzuraCastMediaId;
         var title = mediaFile.Title;
         var artist = mediaFile.Artist;
         var album = mediaFile.Album;
         var duration = mediaFile.DurationSeconds;
 
-        if (!string.IsNullOrWhiteSpace(mediaFile.FilePath)
-            && mediaFile.FilePath.StartsWith(SystemMediaPrefix, StringComparison.OrdinalIgnoreCase))
+        var localPath = mediaFile.FilePath;
+        if (string.IsNullOrWhiteSpace(azuraMediaId)
+            && !string.IsNullOrWhiteSpace(localPath)
+            && localPath.StartsWith(SystemMediaPrefix, StringComparison.OrdinalIgnoreCase))
         {
-            var relativePath = mediaFile.FilePath.Substring(SystemMediaPrefix.Length)
+            var relativePath = localPath.Substring(SystemMediaPrefix.Length)
                 .Replace('/', Path.DirectorySeparatorChar)
                 .Replace('\\', Path.DirectorySeparatorChar);
             var absolutePath = Path.Combine(AppContext.BaseDirectory, "storage", relativePath);
@@ -92,13 +94,21 @@ public sealed class AddMediaToPlaylistHandler
             }
 
             azuraMediaId = uploaded.UniqueId;
-            title = uploaded.Title;
-            artist = uploaded.Artist;
-            album = uploaded.Album;
-            duration = uploaded.DurationSeconds;
+            title = mediaFile.Title;
+            artist = mediaFile.Artist;
+            album = mediaFile.Album;
+            duration = mediaFile.DurationSeconds;
+
+            mediaFile.AzuraCastMediaId = uploaded.UniqueId;
+            await _mediaFileRepo.UpdateAsync(mediaFile, cancellationToken);
         }
 
-        // 3. Assign in AzuraCast (FilePath stores the AzuraCast unique_id)
+        if (string.IsNullOrWhiteSpace(azuraMediaId))
+        {
+            return Result<PlaylistMediaResult>.Failure("Media has not been synchronized to AzuraCast", ErrorCode.BadRequest);
+        }
+
+        // 3. Assign in AzuraCast
         await _azuraCast.AssignMediaToPlaylistAsync(
             playlist.AzuraCastStation.ExternalStationId,
             azuraMediaId,

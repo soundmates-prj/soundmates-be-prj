@@ -1,3 +1,4 @@
+using AccountContentService.Application.Abstractions;
 using AccountContentService.Application.DTOs;
 using AccountContentService.Application.Exceptions;
 using AccountContentService.Application.Interfaces.Repositories;
@@ -6,6 +7,8 @@ using AccountContentService.Domain.Entities;
 using AccountContentService.Domain.Enums;
 using AutoMapper;
 using MediatR;
+using shared.Contracts.Events.Notifications;
+using System.Text.Json;
 
 namespace AccountContentService.Application.Features.BlogComments.Commands.CreateComment
 {
@@ -15,17 +18,20 @@ namespace AccountContentService.Application.Features.BlogComments.Commands.Creat
         private readonly IBlogPostRepository _postRepository;
         private readonly IMapper _mapper;
         private readonly IUserProfileCache _userProfileCache;
+        private readonly IMessageBusPublisher _eventBus;
 
         public CreateCommentHandler(
             ICommentRepository repository,
             IBlogPostRepository postRepository,
             IMapper mapper,
-            IUserProfileCache userProfileCache)
+            IUserProfileCache userProfileCache,
+            IMessageBusPublisher eventBus)
         {
             _repository = repository;
             _postRepository = postRepository;
             _mapper = mapper;
             _userProfileCache = userProfileCache;
+            _eventBus = eventBus;
         }
 
         public async Task<CommentDto> Handle(
@@ -48,6 +54,24 @@ namespace AccountContentService.Application.Features.BlogComments.Commands.Creat
             comment.UserFullName = userProfile.FullName;
 
             await _repository.AddAsync(comment);
+
+
+            var @event = new NotificationEvent
+            {
+                Title = "New Comment",
+                SendUserId = comment.UserId,
+                ReceiveUserId = post.UserId,
+                ReferenceId = post.Id,
+                Type = "post-comment",
+                Message = $"{userProfile.FullName} commented on your post: {comment.Content}"
+            };
+
+            var payload = JsonSerializer.Serialize(@event);
+
+            await _eventBus.PublishAsync(
+                    "notification.created",
+                    payload
+            );
             return _mapper.Map<CommentDto>(comment);
         }
     }

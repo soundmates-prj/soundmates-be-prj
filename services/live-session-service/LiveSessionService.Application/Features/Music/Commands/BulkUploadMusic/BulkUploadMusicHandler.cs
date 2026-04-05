@@ -181,6 +181,7 @@ public sealed class BulkUploadMusicHandler
             Album = album,
             DurationSeconds = 0,
             FilePath = $"{SystemMediaPrefix}{relativePath}",
+            AzuraCastMediaId = null,
             FileType = extension,
             FileSizeBytes = entry.FileStream.Length,
             UploadedByUserId = uploadedByUserId,

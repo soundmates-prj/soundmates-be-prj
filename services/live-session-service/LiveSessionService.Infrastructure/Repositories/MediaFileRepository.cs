@@ -35,8 +35,14 @@ public sealed class MediaFileRepository : IMediaFileRepository
     }
 
     public Task<MediaFile?> GetByFilePathAsync(string filePath, CancellationToken cancellationToken = default)
-        => _db.MediaFiles.FirstOrDefaultAsync(f => f.FilePath == filePath, cancellationToken);
+        => _db.MediaFiles.FirstOrDefaultAsync(
+            f => f.FilePath == filePath || f.AzuraCastMediaId == filePath,
+            cancellationToken);
 
+    public Task<MediaFile?> GetByAzuraCastMediaIdAsync(string azuraCastMediaId, CancellationToken cancellationToken = default)
+        => _db.MediaFiles.FirstOrDefaultAsync(
+            f => f.AzuraCastMediaId == azuraCastMediaId,
+            cancellationToken);
 
     public async Task<IReadOnlyList<MediaFile>> GetAllAsync(CancellationToken cancellationToken = default)
         => await _db.MediaFiles
@@ -54,6 +60,20 @@ public sealed class MediaFileRepository : IMediaFileRepository
         return await _db.MediaFiles
             .AsNoTracking()
             .Where(f => filePaths.Contains(f.FilePath))
+            .OrderByDescending(f => f.UploadedAt)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<MediaFile>> GetByAzuraCastMediaIdsAsync(IReadOnlyCollection<string> azuraCastMediaIds, CancellationToken cancellationToken = default)
+    {
+        if (azuraCastMediaIds.Count == 0)
+        {
+            return Array.Empty<MediaFile>();
+        }
+
+        return await _db.MediaFiles
+            .AsNoTracking()
+            .Where(f => f.AzuraCastMediaId != null && azuraCastMediaIds.Contains(f.AzuraCastMediaId))
             .OrderByDescending(f => f.UploadedAt)
             .ToListAsync(cancellationToken);
     }

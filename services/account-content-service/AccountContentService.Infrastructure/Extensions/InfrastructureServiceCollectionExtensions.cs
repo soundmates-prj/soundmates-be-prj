@@ -1,11 +1,12 @@
+using AccountContentService.Application.Interfaces;
 using AccountContentService.Application.Interfaces.Repositories;
 using AccountContentService.Application.Interfaces.Services;
-using AccountContentService.Application.Interfaces;
 using AccountContentService.Application.Services;
 using AccountContentService.Infrastructure.Configurations;
 using AccountContentService.Infrastructure.Integrations.Services;
 using AccountContentService.Infrastructure.Messaging;
 using AccountContentService.Infrastructure.Messaging.Consumers;
+using AccountContentService.Infrastructure.Messaging.Consumers.Notifications;
 using AccountContentService.Infrastructure.NotificationService.PaymentGateway;
 using AccountContentService.Infrastructure.Persistence;
 using AccountContentService.Infrastructure.Repositories;
@@ -39,6 +40,8 @@ public static class InfrastructureServiceCollectionExtensions
         // EDA — RabbitMQ user-event consumer
         services.AddScoped<UserEventConsumer>();
         services.AddHostedService<UserEventConsumerHostedService>();
+        services.AddScoped<NotificationEventConsumer>();
+        services.AddHostedService<NotificationEventConsumerHostedService>();
 
         // Payment configs
         services.Configure<VNPayConfig>(configuration.GetSection("VNPay"));
@@ -62,6 +65,7 @@ public static class InfrastructureServiceCollectionExtensions
         // Config event publishers (RabbitMQ)
         services.AddSingleton<IGeminiConfigEventPublisher, GeminiConfigEventPublisher>();
         services.AddSingleton<IAzuraCastConfigEventPublisher, AzuraCastConfigEventPublisher>();
+        services.AddScoped<IMessageBusPublisher, RabbitMqPublisher>();
 
         services.Configure<RabbitMqOptions>(configuration.GetSection("RabbitMq"));
 

@@ -11,6 +11,8 @@ using LiveSessionService.Infrastructure.Repositories;
 using LiveSessionService.Infrastructure.Services.AzuraCast;
 using LiveSessionService.Infrastructure.Messaging;
 using LiveSessionService.Infrastructure.Messaging.Outbox;
+using AuthService.Infrastructure.Messaging;
+using LiveSessionService.Infrastructure.Services.Cloudinary;
 
 namespace LiveSessionService.Infrastructure;
 
@@ -92,6 +94,9 @@ public static class DependencyInjection
         services.AddScoped<ISongRequestRepository, SongRequestRepository>();
         services.AddScoped<IPodcastRepository, PodcastRepository>();
         services.AddScoped<IOutboxRepository, OutboxRepository>();
+
+        // Cloudinary media storage
+        services.AddSingleton<ICloudinaryMediaStorage, CloudinaryMediaStorage>();
 
         // External Services - AzuraCast
         // Read from environment variables (Docker) or config

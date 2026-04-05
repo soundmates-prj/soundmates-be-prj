@@ -9,7 +9,9 @@ using System.Text;
 namespace AccountContentService.Application.Features.Notifications.Queries.GetNotifications
 {
     public class GetNotificationsHandler
-    : IRequestHandler<GetNotificationsQuery, PaginationResult<NotificationDto>>
+    : IRequestHandler<GetNotificationsQuery, PaginationResult<NotificationDto>>,
+      IRequestHandler<GetNotReadNotificationsQuery, PaginationResult<NotificationDto>>,
+      IRequestHandler<GetReadNotificationsQuery, PaginationResult<NotificationDto>>
     {
         private readonly INotificationRepository _repository;
 
@@ -23,6 +25,68 @@ namespace AccountContentService.Application.Features.Notifications.Queries.GetNo
             CancellationToken cancellationToken)
         {
             var items = await _repository.GetByUserIdAsync(
+                request.UserId,
+                request.Page,
+                request.PageSize,
+                cancellationToken);
+
+            var total = await _repository.CountByUserIdAsync(
+                request.UserId,
+                cancellationToken);
+
+            return new PaginationResult<NotificationDto>
+            {
+                Items = items.Select(x => new NotificationDto
+                {
+                    Id = x.Id,
+                    Type = x.Type,
+                    ReferenceId = x.ReferenceId,
+                    Message = x.Message,
+                    IsRead = x.IsRead,
+                    CreatedAt = x.CreatedAt
+                }),
+                TotalCount = total,
+                Page = request.Page,
+                PageSize = request.PageSize
+            };
+        }
+
+        public async Task<PaginationResult<NotificationDto>> Handle(
+            GetNotReadNotificationsQuery request,
+            CancellationToken cancellationToken)
+        {
+            var items = await _repository.GetNotReadByUserIdAsync(
+                request.UserId,
+                request.Page,
+                request.PageSize,
+                cancellationToken);
+
+            var total = await _repository.CountByUserIdAsync(
+                request.UserId,
+                cancellationToken);
+
+            return new PaginationResult<NotificationDto>
+            {
+                Items = items.Select(x => new NotificationDto
+                {
+                    Id = x.Id,
+                    Type = x.Type,
+                    ReferenceId = x.ReferenceId,
+                    Message = x.Message,
+                    IsRead = x.IsRead,
+                    CreatedAt = x.CreatedAt
+                }),
+                TotalCount = total,
+                Page = request.Page,
+                PageSize = request.PageSize
+            };
+        }
+
+        public async Task<PaginationResult<NotificationDto>> Handle(
+            GetReadNotificationsQuery request,
+            CancellationToken cancellationToken)
+        {
+            var items = await _repository.GetReadByUserIdAsync(
                 request.UserId,
                 request.Page,
                 request.PageSize,
