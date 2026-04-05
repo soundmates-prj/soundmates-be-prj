@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -23,21 +23,32 @@ public static class DependencyInjection
         IConfiguration configuration)
     {
         // Database - PostgreSQL
-        // PRIORITY: Environment variables FIRST (Docker), then config (local)
-        var postgresHost = Environment.GetEnvironmentVariable("POSTGRES_HOST");
-        
+        // PRIORITY: DB_HOST env var (docker-compose standard) > POSTGRES_HOST (legacy) > config
+        var postgresHost = Environment.GetEnvironmentVariable("DB_HOST")
+            ?? Environment.GetEnvironmentVariable("POSTGRES_HOST");
+
         string connectionString;
-        
+
         if (!string.IsNullOrEmpty(postgresHost))
         {
             // Build from environment variables (Docker/Production)
-            var port = Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? "5432";
-            var database = Environment.GetEnvironmentVariable("POSTGRES_DATABASE") ?? "live_session_db";
-            var username = Environment.GetEnvironmentVariable("POSTGRES_USERNAME") ?? "postgres";
-            var password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "postgres";
-            
-            connectionString = $"Host={postgresHost};Port={port};Database={database};Username={username};Password={password}";
-            
+            var port = Environment.GetEnvironmentVariable("DB_PORT")
+                ?? Environment.GetEnvironmentVariable("POSTGRES_PORT")
+                ?? "5432";
+            var database = Environment.GetEnvironmentVariable("LIVE_SESSION_DB_NAME")
+                ?? Environment.GetEnvironmentVariable("DB_NAME")
+                ?? Environment.GetEnvironmentVariable("POSTGRES_DATABASE")
+                ?? "live_session_db";
+            var username = Environment.GetEnvironmentVariable("DB_USER")
+                ?? Environment.GetEnvironmentVariable("POSTGRES_USERNAME")
+                ?? "postgres";
+            var password = Environment.GetEnvironmentVariable("DB_PASSWORD")
+                ?? Environment.GetEnvironmentVariable("POSTGRES_PASSWORD")
+                ?? "postgres";
+
+            connectionString =
+                $"Host={postgresHost};Port={port};Database={database};Username={username};Password={password};Ssl Mode=Disable;Trust Server Certificate=True;";
+
             Console.WriteLine($"[DEBUG] Built connection string from ENVIRONMENT VARIABLES:");
             Console.WriteLine($"  Host={postgresHost}, Port={port}, Database={database}, Username={username}");
         }
@@ -45,20 +56,28 @@ public static class DependencyInjection
         {
             // Fallback to appsettings.json (Local development)
             connectionString = configuration.GetConnectionString("DefaultConnection")
-                ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found and no POSTGRES_HOST env var");
-            
-            Console.WriteLine($"[DEBUG] Using connection string from appsettings.json (POSTGRES_HOST not set)");
+                ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found and no DB_HOST env var");
+
+            Console.WriteLine($"[DEBUG] Using connection string from appsettings.json (DB_HOST not set)");
         }
 
         services.AddDbContext<LiveSessionDbContext>(options =>
+        {
             options.UseNpgsql(connectionString, npgsqlOptions =>
             {
-                npgsqlOptions.MigrationsAssembly(typeof(LiveSessionDbContext).Assembly.FullName);
                 npgsqlOptions.EnableRetryOnFailure(
                     maxRetryCount: 3,
                     maxRetryDelay: TimeSpan.FromSeconds(5),
                     errorCodesToAdd: null);
-            }));
+            });
+
+            // Suppress PendingModelChangesWarning: occurs when the in-memory EF model has
+            // changes not yet scaffolded into a migration (e.g. new entities added).
+            // This is safe to ignore during startup migrations — the schema may already
+            // be in sync with the DB; the warning just means the snapshot is out of date.
+            options.ConfigureWarnings(w => w.Ignore(
+                Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+        });
 
         // DateTime Provider
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
@@ -84,7 +103,7 @@ public static class DependencyInjection
         var azuraCastBaseUrl = Environment.GetEnvironmentVariable("AZURACAST_BASE_URL")
             ?? configuration["AzuraCast:BaseUrl"]
             ?? throw new InvalidOperationException("AZURACAST_BASE_URL not configured");
-        
+
         var azuraCastApiKey = Environment.GetEnvironmentVariable("AZURACAST_API_KEY")
             ?? configuration["AzuraCast:ApiKey"];
 

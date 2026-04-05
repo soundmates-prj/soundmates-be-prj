@@ -5,13 +5,18 @@ using AuthService.Application.Features.Auth.Commands;
 using AuthService.Domain.Entities;
 using AuthService.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
+using Shared.Contracts;
+using Shared.Contracts.Events.Activity;
 using System;
-using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace AuthService.Application.Features.Auth.Handlers;
 
 public sealed class LoginHandler : ICommandHandler<LoginCommand, AuthResult>
 {
+    private const int MaxFailedAttempts = 5;
+
     private readonly IAuthRepository _repo;
     private readonly IJwtTokenGenerator _jwt;
     private readonly IRefreshTokenRepository _refreshTokenRepository;
@@ -21,7 +26,7 @@ public sealed class LoginHandler : ICommandHandler<LoginCommand, AuthResult>
     private readonly IUnitOfWork _unitOfWork;
 
     public LoginHandler(
-        IAuthRepository repo, 
+        IAuthRepository repo,
         IJwtTokenGenerator jwt,
         IRefreshTokenRepository refreshTokenRepository,
         IOutboxRepository outbox,
@@ -40,65 +45,119 @@ public sealed class LoginHandler : ICommandHandler<LoginCommand, AuthResult>
 
     public async Task<Result<AuthResult>> Handle(LoginCommand command, CancellationToken cancellationToken)
     {
-        // Connect to repository to validate user credentials (by username or email)
-        var user = await _repo.LoginByUsernameOrEmailAsync(command.Identifier, command.Password);
-        if (user is null)
+        // EF-01 / P3: Find user by identifier (separate from password check) so we can
+        // track failed attempts even when the password is wrong.
+        var user = await _repo.GetByUsernameOrEmailAsync(command.Identifier);
+
+        if (user is null || !BCrypt.Net.BCrypt.Verify(command.Password, user.Password))
         {
-            // Publish login failed event
-            await _outbox.EnqueueAsync("auth.user.login.failed", new
+            // Increment failed attempts for the account if it exists
+            if (user != null)
             {
-                identifier = command.Identifier,
-                reason = "Invalid username/email or password",
-                errorCode = 401,
-                occurredAtUtc = _dateTimeProvider.UtcNow
+                user.FailedLoginAttempts++;
+
+                // Lock the account after MaxFailedAttempts consecutive failures
+                if (user.FailedLoginAttempts >= MaxFailedAttempts)
+                {
+                    user.IsLocked = true;
+                    user.LockedAt = _dateTimeProvider.UtcNow;
+
+                    _logger.LogWarning(
+                        "Account {UserId} ({Email}) has been locked after {Attempts} failed login attempts",
+                        user.Id, user.Email, user.FailedLoginAttempts);
+
+                    await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                    await _outbox.EnqueueAsync(RoutingKeys.Auth.LoginFailed, new LoginFailedEvent
+                    {
+                        Identifier = command.Identifier,
+                        UserId = user.Id,
+                        Reason = "Account locked due to too many failed attempts",
+                        ErrorCode = 403
+                    }, cancellationToken);
+
+                    return Result<AuthResult>.Failure(
+                        "Your account has been locked due to too many failed login attempts. Please try again in 15 minutes or contact support.",
+                        403);
+                }
+
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+
+            await _outbox.EnqueueAsync(RoutingKeys.Auth.LoginFailed, new LoginFailedEvent
+            {
+                Identifier = command.Identifier,
+                Reason = "Invalid username/email or password",
+                ErrorCode = 401
             }, cancellationToken);
-            
+
             return Result<AuthResult>.Failure("Invalid username/email or password", 401);
         }
 
-        // Check if user has verified their email
+        // User found & password verified — now check account status
         if (!user.IsActive)
         {
-            // Publish login failed event (email not verified)
-            await _outbox.EnqueueAsync("auth.user.login.failed", new
+            // Check if account is pending deletion — user can still log in to cancel
+            if (user.DeletionScheduledAt.HasValue && user.DeletionScheduledAt > _dateTimeProvider.UtcNow)
             {
-                identifier = command.Identifier,
-                userId = user.Id,
-                reason = "Email not verified",
-                errorCode = 403,
-                occurredAtUtc = _dateTimeProvider.UtcNow
+                // User can still log in during grace period to cancel deletion
+                return Result<AuthResult>.Failure(
+                    $"Tài khoản đang chờ xóa. Hạn hủy: {user.DeletionScheduledAt:dd/MM/yyyy}. Đăng nhập để hủy yêu cầu.",
+                    403);
+            }
+
+            // Distinguish between email not verified vs banned/deactivated
+            var reason = !user.EmailVerifiedAt.HasValue
+                ? "Email not verified"
+                : "Account has been deactivated or banned";
+
+            await _outbox.EnqueueAsync(RoutingKeys.Auth.LoginFailed, new LoginFailedEvent
+            {
+                Identifier = command.Identifier,
+                UserId = user.Id,
+                Reason = reason,
+                ErrorCode = 403
             }, cancellationToken);
-            
-            return Result<AuthResult>.Failure("Please verify your email address before logging in. Check your inbox for the verification OTP code.", 403);
+
+            return Result<AuthResult>.Failure(
+                !user.EmailVerifiedAt.HasValue
+                    ? "Please verify your email address before logging in. Check your inbox for the verification OTP code."
+                    : "Your account has been deactivated or banned. Please contact support for assistance.",
+                403);
         }
 
-        // Log login activity for security monitoring
-        var loginLogPayload = JsonSerializer.Serialize(new
+        // EF-03: Check if account is temporarily locked (brute-force protection)
+        if (user.IsLocked)
         {
-            userId = user.Id,
-            email = user.Email,
-            username = user.Username,
-            ipAddress = command.IpAddress ?? "Unknown",
-            userAgent = command.UserAgent ?? "Unknown",
-            loginTime = _dateTimeProvider.UtcNow,
-            isSuccessful = true
-        });
+            await _outbox.EnqueueAsync(RoutingKeys.Auth.LoginFailed, new LoginFailedEvent
+            {
+                Identifier = command.Identifier,
+                UserId = user.Id,
+                Reason = "Account locked due to too many failed attempts",
+                ErrorCode = 403
+            }, cancellationToken);
 
-        // Log to outbox for async processing (can be used for security alerts, analytics, etc.)
-        await _outbox.EnqueueAsync("auth.user.login.activity", loginLogPayload, cancellationToken);
+            return Result<AuthResult>.Failure(
+                "Your account has been locked due to too many failed login attempts. Please try again in 15 minutes or contact support.",
+                403);
+        }
 
-        // Log suspicious activity (different IP/location, unusual time, etc.)
-        // This is a simple implementation - in production, you might want to:
-        // 1. Store last login IP/location in user profile
-        // 2. Compare with current login
-        // 3. Use geolocation API to detect location changes
-        // 4. Check for unusual login times
         _logger.LogInformation(
             "User {UserId} ({Email}) logged in from IP: {IpAddress}, User-Agent: {UserAgent}",
             user.Id, user.Email, command.IpAddress ?? "Unknown", command.UserAgent ?? "Unknown");
 
+        // Reset failed login attempts on successful login
+        user.FailedLoginAttempts = 0;
+        user.IsLocked = false;
+        user.LockedAt = null;
+
         // Generate token pair
         var (accessToken, refreshToken) = _jwt.GenerateTokenPair(user);
+
+        // P4: Extend refresh token lifetime if "Remember Me" is checked (30 days vs 7 days)
+        var refreshTokenExpiry = command.RememberMe
+            ? _dateTimeProvider.UtcNow.AddDays(30)
+            : _dateTimeProvider.UtcNow.AddDays(7);
 
         // Save refresh token
         var refreshTokenEntity = new RefreshToken
@@ -106,26 +165,25 @@ public sealed class LoginHandler : ICommandHandler<LoginCommand, AuthResult>
             Id = Guid.NewGuid(),
             UserId = user.Id,
             Token = refreshToken,
-            ExpiresAt = _dateTimeProvider.UtcNow.AddDays(7),
+            ExpiresAt = refreshTokenExpiry,
             CreatedAt = _dateTimeProvider.UtcNow,
             IsRevoked = false
         };
 
         await _refreshTokenRepository.AddAsync(refreshTokenEntity);
-        
+
         // Commit transaction
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         // Map to AuthResult
         var authResult = user.ToAuthResult(accessToken, refreshToken);
 
-        // Publish login successful event
-        await _outbox.EnqueueAsync("auth.user.login.successful", new
+        // Publish typed login successful event (Activity — audit trail)
+        await _outbox.EnqueueAsync(RoutingKeys.Auth.LoginSuccessful, new LoginSuccessfulEvent
         {
-            userId = user.Id,
-            username = user.Username,
-            email = user.Email,
-            occurredAtUtc = _dateTimeProvider.UtcNow
+            UserId = user.Id,
+            Username = user.Username,
+            Email = user.Email
         }, cancellationToken);
 
         return Result<AuthResult>.Success(authResult, "Login successful");

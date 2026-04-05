@@ -118,10 +118,26 @@ namespace AuthService.Infrastructure.Persistence
                 entity.Property(e => e.IsActive)
                     .HasDefaultValue(false)
                     .HasColumnName("is_active");
+                entity.Property(e => e.IsLocked)
+                    .HasDefaultValue(false)
+                    .HasColumnName("is_locked");
+                entity.Property(e => e.LockedAt)
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("locked_at");
+                entity.Property(e => e.FailedLoginAttempts)
+                    .HasDefaultValue(0)
+                    .HasColumnName("failed_login_attempts");
                 entity.Property(e => e.EmailVerificationToken).HasColumnName("email_verification_token");
                 entity.Property(e => e.EmailVerifiedAt)
                     .HasColumnType("timestamp with time zone")
                     .HasColumnName("email_verified_at");
+                entity.Property(e => e.DeactivationReason).HasColumnName("deactivation_reason");
+                entity.Property(e => e.DeletionRequestedAt)
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("deletion_requested_at");
+                entity.Property(e => e.DeletionScheduledAt)
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("deletion_scheduled_at");
 
                 entity.HasOne(d => d.Role).WithMany(p => p.Users)
                     .HasForeignKey(d => d.RoleId)

@@ -28,6 +28,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<ISubscriptionRepository, SubscriptionRepository>();
         services.AddScoped<IPaymentRepository, PaymentRepository>();
         services.AddScoped<IPaymentTransactionRepository, PaymentTransactionRepository>();
+        services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<ISystemSettingReposiotry, SystemSettingReposiotry>();
         services.AddScoped<IThemeRepository, ThemeRepository>();
 

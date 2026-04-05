@@ -174,11 +174,13 @@ public partial class AiDbContext : DbContext
             entity.Property(e => e.Gender).HasMaxLength(20).HasColumnName("gender");
             entity.Property(e => e.Model).HasMaxLength(100).HasColumnName("model");
             entity.Property(e => e.IsActive).HasDefaultValue(true).HasColumnName("is_active");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("now() at time zone 'utc'")
                 .HasColumnType("timestamp with time zone")
                 .HasColumnName("created_at");
 
+            entity.HasIndex(e => e.UserId).HasDatabaseName("IX_tts_voices_user_id");
             entity.HasIndex(e => new { e.Provider, e.VoiceCode }, "tts_voices_provider_voice_code_key").IsUnique();
         });
 

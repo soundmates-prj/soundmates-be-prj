@@ -42,7 +42,11 @@ namespace AuthService.Application.Enums
 
         // External service errors (1500-1599)
         EmailSendFailed = 1501,
-        
+
+        // Account status errors (1600-1699)
+        AccountLocked = 1601,
+        AccountBanned = 1602,
+
         // Generic errors
         Unknown = 1999
     }

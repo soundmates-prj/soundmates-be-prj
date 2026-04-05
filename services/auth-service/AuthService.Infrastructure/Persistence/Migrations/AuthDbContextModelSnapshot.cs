@@ -391,6 +391,18 @@ namespace AuthService.Infrastructure.Migrations
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("now() at time zone 'utc'");
 
+                    b.Property<string>("DeactivationReason")
+                        .HasColumnType("text")
+                        .HasColumnName("deactivation_reason");
+
+                    b.Property<DateTime?>("DeletionRequestedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deletion_requested_at");
+
+                    b.Property<DateTime?>("DeletionScheduledAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deletion_scheduled_at");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("text")
@@ -404,6 +416,12 @@ namespace AuthService.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("email_verified_at");
 
+                    b.Property<int>("FailedLoginAttempts")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("failed_login_attempts");
+
                     b.Property<string>("FirstName")
                         .HasColumnType("text")
                         .HasColumnName("first_name");
@@ -414,9 +432,19 @@ namespace AuthService.Infrastructure.Migrations
                         .HasDefaultValue(false)
                         .HasColumnName("is_active");
 
+                    b.Property<bool>("IsLocked")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_locked");
+
                     b.Property<string>("LastName")
                         .HasColumnType("text")
                         .HasColumnName("last_name");
+
+                    b.Property<DateTime?>("LockedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("locked_at");
 
                     b.Property<string>("Password")
                         .IsRequired()

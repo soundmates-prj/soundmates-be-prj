@@ -34,6 +34,9 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<BanUserCommand, bool>, BanUserHandler>();
         services.AddScoped<ICommandHandler<UnbanUserCommand, bool>, UnbanUserHandler>();
         services.AddScoped<ICommandHandler<DeactivateUserCommand, bool>, DeactivateUserHandler>();
+        services.AddScoped<ICommandHandler<ActivateUserCommand, bool>, ActivateUserHandler>();
+        services.AddScoped<ICommandHandler<UpdateAccountStatusCommand, bool>, UpdateAccountStatusHandler>();
+        services.AddScoped<ICommandHandler<VerifyUserEmailCommand, bool>, VerifyUserEmailHandler>();
         services.AddScoped<ICommandHandler<CreateUserFavouriteCommand, Guid>, CreateUserFavouriteHandler>();
         services.AddScoped<ICommandHandler<UpdateUserFavouriteCommand, bool>, UpdateUserFavouriteHandler>();
         services.AddScoped<ICommandHandler<DeleteUserFavouriteCommand, bool>, DeleteUserFavouriteHandler>();
@@ -58,7 +61,10 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<ResetPasswordCommand, bool>, ResetPasswordHandler>();
         services.AddScoped<ICommandHandler<ChangePasswordCommand, bool>, ChangePasswordHandler>();
         services.AddScoped<ICommandHandler<ResendOtpCommand, bool>, ResendOtpHandler>();
-        
+        services.AddScoped<ICommandHandler<DeactivateAccountCommand, bool>, DeactivateAccountHandler>();
+        services.AddScoped<ICommandHandler<RequestAccountDeletionCommand, bool>, RequestAccountDeletionHandler>();
+        services.AddScoped<ICommandHandler<CancelAccountDeletionCommand, bool>, CancelAccountDeletionHandler>();
+
         // Profile handler
         services.AddScoped<ICommandHandler<UpdateUserProfileCommand, UserProfileResult>, UpdateUserProfileHandler>();
         

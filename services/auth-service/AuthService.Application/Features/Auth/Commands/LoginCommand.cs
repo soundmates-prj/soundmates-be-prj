@@ -12,4 +12,9 @@ public sealed class LoginCommand : ICommand<AuthResult>
     public required string Password { get; init; }
     public string? IpAddress { get; init; }
     public string? UserAgent { get; init; }
+
+    /// <summary>
+    /// If true, issues a longer-lived refresh token (30 days instead of 7).
+    /// </summary>
+    public bool RememberMe { get; init; } = false;
 }

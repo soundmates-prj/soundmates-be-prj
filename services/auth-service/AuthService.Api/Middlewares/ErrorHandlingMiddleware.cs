@@ -47,6 +47,8 @@ public class ErrorHandlingMiddleware
                     AuthErrorCode.UserAlreadyExists => (HttpStatusCode.Conflict, ApiStatusCode.HB40901),
                     AuthErrorCode.RegistrationFailed => (HttpStatusCode.BadRequest, ApiStatusCode.HB40001),
                     AuthErrorCode.EmailSendFailed => (HttpStatusCode.ServiceUnavailable, ApiStatusCode.HB50001),
+                    AuthErrorCode.AccountLocked => (HttpStatusCode.Forbidden, ApiStatusCode.HB40302),
+                    AuthErrorCode.AccountBanned => (HttpStatusCode.Forbidden, ApiStatusCode.HB40302),
                     _ => (HttpStatusCode.BadRequest, ApiStatusCode.HB40001)
                 };
                 message = authEx.Message;

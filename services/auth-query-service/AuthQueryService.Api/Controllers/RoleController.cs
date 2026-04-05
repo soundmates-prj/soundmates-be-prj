@@ -109,6 +109,7 @@ namespace AuthQueryService.Api.Controllers
         /// <param name="pageSize">Page size (default: 20)</param>
         /// <param name="ct">Cancellation token</param>
         /// <returns>Paginated list of roles matching search criteria</returns>
+        [AllowAnonymous]
         [HttpGet("search")]
         [ProducesResponseType(typeof(ApiResponse<PagedResult<RoleDto>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> Search(

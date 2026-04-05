@@ -44,5 +44,14 @@ public class VoiceRepository : IVoiceRepository
         return _db.TtsVoices
             .FirstOrDefaultAsync(v => v.Provider == provider && v.VoiceCode == voiceCode, cancellationToken);
     }
+
+    public async Task<IReadOnlyList<TtsVoice>> GetByUserAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        return await _db.TtsVoices
+            .AsNoTracking()
+            .Where(v => v.UserId == userId)
+            .OrderBy(v => v.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
 }
 

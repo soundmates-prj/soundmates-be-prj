@@ -3,6 +3,11 @@ using AuthService.Application.Results;
 using AuthService.Application.Features.Users.Commands;
 using AuthService.Domain.Exceptions;
 using AuthService.Domain.Interfaces;
+using Shared.Contracts;
+using Shared.Contracts.Events.Auth;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace AuthService.Application.Features.Users.Handlers;
 
@@ -29,40 +34,28 @@ public sealed class UpdateUserHandler : ICommandHandler<UpdateUserCommand, bool>
     {
         var user = await _repo.GetByIdAsync(command.Id);
         if (user is null)
-        {
             return Result<bool>.Failure("User not found", 404);
-        }
 
-        // Validate duplicate username (if changed)
         if (user.Username != command.Username)
         {
-            var existingByUsername = await _repo.GetByUsernameAsync(command.Username);
-            if (existingByUsername != null && existingByUsername.Id != command.Id)
-            {
+            var existing = await _repo.GetByUsernameAsync(command.Username);
+            if (existing != null && existing.Id != command.Id)
                 return Result<bool>.Failure($"Username '{command.Username}' is already taken", 400);
-            }
         }
 
-        // Validate duplicate email (if changed)
         if (user.Email != command.Email)
         {
-            var existingByEmail = await _repo.GetByEmailAsync(command.Email);
-            if (existingByEmail != null && existingByEmail.Id != command.Id)
-            {
+            var existing = await _repo.GetByEmailAsync(command.Email);
+            if (existing != null && existing.Id != command.Id)
                 return Result<bool>.Failure($"Email '{command.Email}' is already registered", 400);
-            }
         }
 
-        // Use domain method instead of directly setting properties
         try
         {
             user.UpdateProfile(
-                command.Username,
-                command.Email,
-                command.FirstName,
-                command.LastName,
-                command.RoleId,
-                _dateTimeProvider);
+                command.Username, command.Email,
+                command.FirstName, command.LastName,
+                command.RoleId, _dateTimeProvider);
         }
         catch (UserValidationException ex)
         {
@@ -70,25 +63,22 @@ public sealed class UpdateUserHandler : ICommandHandler<UpdateUserCommand, bool>
         }
 
         await _repo.UpdateAsync(user);
-        
-        // Commit transaction
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        // Reload user with role to get role name
         user = await _repo.GetByIdAsync(user.Id);
 
-        await _outbox.EnqueueAsync("auth.user.updated", new
+        // Publish typed UserUpdatedEvent (Auth — domain state change)
+        await _outbox.EnqueueAsync(RoutingKeys.Auth.UserUpdated, new UserUpdatedEvent
         {
-            id = user.Id,
-            username = user.Username,
-            email = user.Email,
-            firstName = user.FirstName,
-            lastName = user.LastName,
-            roleId = user.RoleId,
-            roleName = user.Role?.Name,
-            isActive = user.IsActive,
-            createdAt = user.CreatedAt,
-            updatedAt = user.UpdatedAt
+            Id = user!.Id,
+            Username = user.Username,
+            Email = user.Email,
+            FirstName = user.FirstName ?? string.Empty,
+            LastName = user.LastName ?? string.Empty,
+            RoleId = user.RoleId ?? Guid.Empty,
+            RoleName = user.Role?.Name,
+            IsActive = user.IsActive,
+            UpdatedAt = user.UpdatedAt ?? DateTime.UtcNow
         }, cancellationToken);
 
         return Result<bool>.Success(true, "Update User Successfully!");

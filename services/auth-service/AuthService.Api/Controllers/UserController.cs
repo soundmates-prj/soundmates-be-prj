@@ -6,171 +6,202 @@ using AuthService.Application.Features.Users.Commands;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace AuthService.Api.Controllers
+namespace AuthService.Api.Controllers;
+
+/// <summary>
+/// User account management endpoints (Admin only unless noted).
+/// </summary>
+[Route("api/v1/users")]
+[ApiController]
+[Authorize(Roles = "ADMIN")]
+public class UserController : ControllerBase
 {
-    /// <summary>
-    /// CRUD user account management endpoints.
-    /// </summary>
-    [Route("api/v1/users")]
-    [ApiController]
-    [Authorize(Roles = "ADMIN")]
-    public class UserController : ControllerBase
+    private readonly ICommandDispatcher _commands;
+
+    public UserController(ICommandDispatcher commands)
     {
-        private readonly ICommandDispatcher _commands;
+        _commands = commands;
+    }
 
-        public UserController(ICommandDispatcher commands)
+    /// <summary>
+    /// Get paginated list of users.
+    /// </summary>
+    [HttpGet]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAll(CancellationToken ct)
+    {
+        // Handled by auth-query-service — this is a placeholder to satisfy the route
+        return Ok(ApiResponse<object>.SuccessResponse(null, "Query users via auth-query-service"));
+    }
+
+    /// <summary>
+    /// Create a new user (Admin only).
+    /// </summary>
+    [HttpPost]
+    [ProducesResponseType(typeof(ApiResponse<Guid>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ApiResponse<Guid>), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Create(
+        [FromBody] CreateUserRequest request,
+        CancellationToken ct)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ApiResponse<Guid>.FailureResponse("Invalid input", 400));
+
+        var cmd = new CreateUserCommand
         {
-            _commands = commands;
+            Username = request.Username,
+            Email = request.Email,
+            FirstName = request.FirstName,
+            LastName = request.LastName,
+            RoleId = request.RoleId,
+            Password = request.Password
+        };
+
+        var result = await _commands.Send<CreateUserCommand, Guid>(cmd, ct);
+
+        if (!result.IsSuccess)
+            return BadRequest(ApiResponse<Guid>.FailureResponse(
+                result.ErrorMessage ?? "Failed to create user", result.ErrorCode ?? 400));
+
+        return StatusCode(StatusCodes.Status201Created,
+            ApiResponse<Guid>.SuccessResponse(result.Data!, "User created successfully"));
+    }
+
+    /// <summary>
+    /// Update user information (Admin only).
+    /// </summary>
+    [HttpPut("{id:guid}")]
+    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Update(
+        Guid id,
+        [FromBody] UpdateUserRequest request,
+        CancellationToken ct)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ApiResponse<bool>.FailureResponse("Invalid input", 400));
+
+        var cmd = new UpdateUserCommand(id)
+        {
+            Username = request.Username,
+            Email = request.Email,
+            FirstName = request.FirstName,
+            LastName = request.LastName,
+            RoleId = request.RoleId
+        };
+
+        var result = await _commands.Send<UpdateUserCommand, bool>(cmd, ct);
+
+        if (!result.IsSuccess)
+            return NotFound(ApiResponse<bool>.FailureResponse(
+                result.ErrorMessage ?? "User not found", 404));
+
+        return Ok(ApiResponse<bool>.SuccessResponse(true, "User updated successfully"));
+    }
+
+    /// <summary>
+    /// Get user by ID.
+    /// </summary>
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
+    {
+        // Handled by auth-query-service
+        return Ok(ApiResponse<object>.SuccessResponse(null, "Query user via auth-query-service"));
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // STATUS — Unified PATCH endpoint (replaces deactivate/activate/ban/unban)
+    // ═══════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Update account status (PATCH semantics — idempotent).
+    /// Replaces: POST /deactivate, POST /activate, POST /ban, POST /unban.
+    /// Idempotent: setting the same status twice is a no-op (returns 200 OK).
+    /// </summary>
+    /// <remarks>
+    /// - ACTIVE: User can login and use the system.
+    /// - DEACTIVATED: User account is temporarily locked.
+    /// - SUSPENDED: User account is locked due to policy violation.
+    /// Both DEACTIVATED and SUSPENDED call the same domain method (IsActive=false).
+    /// The semantic difference is stored in the outbox event metadata (reason/note).
+    /// </remarks>
+    [HttpPatch("{id:guid}/status")]
+    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateStatus(
+        Guid id,
+        [FromBody] UpdateAccountStatusRequest request,
+        CancellationToken ct)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ApiResponse<bool>.FailureResponse("Invalid input", 400));
+
+        var cmd = new UpdateAccountStatusCommand(
+            UserId: id,
+            Status: request.Status,
+            Reason: request.Reason,
+            Note: request.Note);
+
+        var result = await _commands.Send<UpdateAccountStatusCommand, bool>(cmd, ct);
+
+        if (!result.IsSuccess)
+        {
+            if (result.ErrorCode == 404)
+                return NotFound(ApiResponse<bool>.FailureResponse(
+                    result.ErrorMessage ?? "User not found", 404));
+            return BadRequest(ApiResponse<bool>.FromResult(result));
         }
 
-        /// <summary>
-        /// Create a new user (Admin only)
-        /// </summary>
-        [HttpPost]
-        [ProducesResponseType(typeof(ApiResponse<Guid>), StatusCodes.Status201Created)]
-        [ProducesResponseType(typeof(ApiResponse<Guid>), StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> Create([FromBody] CreateUserRequest request, CancellationToken ct)
-        {
-            if (!ModelState.IsValid)
-                return BadRequest(ApiResponse<Guid>.FailureResponse("Invalid input", 400));
+        return Ok(ApiResponse<bool>.SuccessResponse(true, result.ErrorMessage ?? "Status updated"));
+    }
 
-            var cmd = new CreateUserCommand
-            {
-                Username = request.Username,
-                Email = request.Email,
-                FirstName = request.FirstName,
-                LastName = request.LastName,
-                RoleId = request.RoleId,
-                Password = request.Password
-            };
+    // ═══════════════════════════════════════════════════════════════════
+    // EMAIL VERIFICATION
+    // ═══════════════════════════════════════════════════════════════════
 
-            var result = await _commands.Send<CreateUserCommand, Guid>(cmd, ct);
+    /// <summary>
+    /// Manually verify a user's email (Admin only).
+    /// Activates the account without requiring OTP.
+    /// </summary>
+    [HttpPatch("{id:guid}/email-verification")]
+    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> VerifyEmail(Guid id, CancellationToken ct)
+    {
+        var cmd = new VerifyUserEmailCommand(id);
+        var result = await _commands.Send<VerifyUserEmailCommand, bool>(cmd, ct);
 
-            if (!result.IsSuccess)
-                return BadRequest(ApiResponse<Guid>.FailureResponse(result.ErrorMessage ?? "Failed to create user", result.ErrorCode ?? 400));
+        if (!result.IsSuccess)
+            return BadRequest(ApiResponse<bool>.FailureResponse(
+                result.ErrorMessage ?? "Failed to verify email",
+                result.ErrorCode ?? 400));
 
-            return StatusCode(StatusCodes.Status201Created, 
-                ApiResponse<Guid>.SuccessResponse(result.Data, "User created successfully"));
-        }
+        return Ok(ApiResponse<bool>.SuccessResponse(true,
+            result.ErrorMessage ?? "Email verified and account activated"));
+    }
 
-        /// <summary>
-        /// Update user information (Admin only)
-        /// </summary>
-        [HttpPut("{id:guid}")]
-        [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> Update(Guid id, [FromBody] UpdateUserRequest request, CancellationToken ct)
-        {
-            if (!ModelState.IsValid)
-                return BadRequest(ApiResponse<bool>.FailureResponse("Invalid input", 400));
+    // ═══════════════════════════════════════════════════════════════════
+    // DELETE
+    // ═══════════════════════════════════════════════════════════════════
 
-            var cmd = new UpdateUserCommand(id)
-            {
-                Username = request.Username,
-                Email = request.Email,
-                FirstName = request.FirstName,
-                LastName = request.LastName,
-                RoleId = request.RoleId
-            };
+    /// <summary>
+    /// Permanently delete a user account (Admin only).
+    /// WARNING: This cannot be undone. Consider using PATCH /status instead.
+    /// </summary>
+    [HttpDelete("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    {
+        var cmd = new DeleteUserCommand(id);
+        var result = await _commands.Send<DeleteUserCommand, bool>(cmd, ct);
 
-            var result = await _commands.Send<UpdateUserCommand, bool>(cmd, ct);
+        if (!result.IsSuccess)
+            return NotFound(ApiResponse<bool>.FailureResponse(
+                result.ErrorMessage ?? "User not found", 404));
 
-            if (!result.IsSuccess)
-                return NotFound(ApiResponse<bool>.FailureResponse(result.ErrorMessage ?? "User not found", 404));
-
-            return Ok(ApiResponse<bool>.SuccessResponse(true, "User updated successfully"));
-        }
-
-        /// <summary>
-        /// Ban a user account (Admin only)
-        /// </summary>
-        [HttpPost("{id:guid}/ban")]
-        [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> Ban(Guid id, [FromBody] BanUserRequest? request, CancellationToken ct)
-        {
-            var cmd = new BanUserCommand(id, request?.Reason);
-            var result = await _commands.Send<BanUserCommand, bool>(cmd, ct);
-
-            if (!result.IsSuccess)
-                return BadRequest(ApiResponse<bool>.FailureResponse(result.ErrorMessage ?? "Failed to ban user", result.ErrorCode ?? 400));
-
-            return Ok(ApiResponse<bool>.SuccessResponse(true, "User banned successfully"));
-        }
-
-        /// <summary>
-        /// Unban a user account (Admin only)
-        /// </summary>
-        [HttpPost("{id:guid}/unban")]
-        [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> Unban(Guid id, CancellationToken ct)
-        {
-            var cmd = new UnbanUserCommand(id);
-            var result = await _commands.Send<UnbanUserCommand, bool>(cmd, ct);
-
-            if (!result.IsSuccess)
-                return BadRequest(ApiResponse<bool>.FailureResponse(result.ErrorMessage ?? "Failed to unban user", result.ErrorCode ?? 400));
-
-            return Ok(ApiResponse<bool>.SuccessResponse(true, "User unbanned successfully"));
-        }
-
-        /// <summary>
-        /// Deactivate user account (Soft delete)
-        /// </summary>
-        /// <remarks>
-        /// Any authenticated user can deactivate their own account.
-        /// Admin can deactivate any user account.
-        /// </remarks>
-        [HttpPost("{id:guid}/deactivate")]
-        [Authorize]
-        [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status403Forbidden)]
-        public async Task<IActionResult> Deactivate(Guid id, CancellationToken ct)
-        {
-            // Get current user ID from JWT
-            if (!User.TryGetCurrentUserId(out var currentUserId))
-            {
-                return Unauthorized(ApiResponse<bool>.FailureResponse("Invalid or missing user token", 401));
-            }
-
-            // Check if user is admin or deactivating their own account
-            var isAdmin = User.IsInRole("ADMIN");
-            if (!isAdmin && currentUserId != id)
-            {
-                return StatusCode(StatusCodes.Status403Forbidden, 
-                    ApiResponse<bool>.FailureResponse("You can only deactivate your own account", 403));
-            }
-
-            var cmd = new DeactivateUserCommand(id);
-            var result = await _commands.Send<DeactivateUserCommand, bool>(cmd, ct);
-
-            if (!result.IsSuccess)
-                return BadRequest(ApiResponse<bool>.FailureResponse(result.ErrorMessage ?? "Failed to deactivate user", result.ErrorCode ?? 400));
-
-            return Ok(ApiResponse<bool>.SuccessResponse(true, "User account deactivated successfully"));
-        }
-
-        /// <summary>
-        /// Delete user account (Hard delete - Use with caution!)
-        /// </summary>
-        /// <remarks>
-        /// WARNING: This permanently deletes the user. Consider using Deactivate instead.
-        /// Only ADMIN can perform hard delete.
-        /// </remarks>
-        [HttpDelete("{id:guid}")]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
-        {
-            var cmd = new DeleteUserCommand(id);
-            var result = await _commands.Send<DeleteUserCommand, bool>(cmd, ct);
-
-            if (!result.IsSuccess)
-                return NotFound(ApiResponse<bool>.FailureResponse(result.ErrorMessage ?? "User not found", 404));
-
-            return NoContent();
-        }
+        return NoContent();
     }
 }
