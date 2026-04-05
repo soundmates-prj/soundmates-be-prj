@@ -46,8 +46,10 @@ public sealed class SyncMediaFilesHandler : ICommandHandler<SyncMediaFilesComman
             var localFiles = await _mediaFileRepository.GetAllAsync(cancellationToken);
 
             var localFilesByUniqueId = localFiles
-                .Where(f => !string.IsNullOrWhiteSpace(f.FilePath))
-                .ToDictionary(f => f.FilePath, StringComparer.OrdinalIgnoreCase);
+                .Where(f => !string.IsNullOrWhiteSpace(f.AzuraCastMediaId))
+                .ToDictionary(
+                    f => f.AzuraCastMediaId!,
+                    StringComparer.OrdinalIgnoreCase);
 
             var newFiles = 0;
             var updatedFiles = 0;
@@ -69,11 +71,16 @@ public sealed class SyncMediaFilesHandler : ICommandHandler<SyncMediaFilesComman
 
                 if (localFilesByUniqueId.TryGetValue(azuraFile.UniqueId, out var existing))
                 {
+                    var isSystemManagedMedia = !string.IsNullOrWhiteSpace(existing.FilePath)
+                        && !string.Equals(existing.FilePath, existing.AzuraCastMediaId, StringComparison.OrdinalIgnoreCase);
+
+                    var nextArtUrl = isSystemManagedMedia ? existing.ArtUrl : azuraFile.Art;
+
                     var hasChanges = existing.Title != title
                                      || existing.Artist != azuraFile.Artist
                                      || existing.Album != azuraFile.Album
                                      || existing.Genre != azuraFile.Genre
-                                     || existing.ArtUrl != azuraFile.Art
+                                     || existing.ArtUrl != nextArtUrl
                                      || existing.DurationSeconds != (int)azuraFile.Length
                                      || existing.FileType != fileType;
 
@@ -87,9 +94,10 @@ public sealed class SyncMediaFilesHandler : ICommandHandler<SyncMediaFilesComman
                     existing.Artist = azuraFile.Artist;
                     existing.Album = azuraFile.Album;
                     existing.Genre = azuraFile.Genre;
-                    existing.ArtUrl = azuraFile.Art;
+                    existing.ArtUrl = nextArtUrl;
                     existing.DurationSeconds = (int)azuraFile.Length;
                     existing.FileType = fileType;
+                    existing.AzuraCastMediaId = azuraFile.UniqueId;
                     existing.UpdatedAt = _dateTimeProvider.UtcNow;
 
                     await _mediaFileRepository.UpdateAsync(existing, cancellationToken);
@@ -111,6 +119,7 @@ public sealed class SyncMediaFilesHandler : ICommandHandler<SyncMediaFilesComman
                     ArtUrl = azuraFile.Art,
                     DurationSeconds = (int)azuraFile.Length,
                     FilePath = azuraFile.UniqueId,
+                    AzuraCastMediaId = azuraFile.UniqueId,
                     FileType = fileType,
                     FileSizeBytes = 0,
                     UploadedByUserId = Guid.Empty,

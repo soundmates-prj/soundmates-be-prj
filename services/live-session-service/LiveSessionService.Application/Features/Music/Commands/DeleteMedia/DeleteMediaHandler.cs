@@ -37,14 +37,17 @@ public sealed class DeleteMediaHandler : ICommandHandler<DeleteMediaCommand>
         if (mediaFile == null)
             return Result.Failure("Media file not found", ErrorCode.NotFound);
 
-        var isSystemMedia = !string.IsNullOrWhiteSpace(mediaFile.FilePath)
-            && mediaFile.FilePath.StartsWith(SystemMediaPrefix, StringComparison.OrdinalIgnoreCase);
+        var localPath = mediaFile.FilePath;
+        var azuraMediaId = mediaFile.AzuraCastMediaId;
+
+        var isSystemMedia = !string.IsNullOrWhiteSpace(localPath)
+            && localPath.StartsWith(SystemMediaPrefix, StringComparison.OrdinalIgnoreCase);
 
         if (isSystemMedia)
         {
             try
             {
-                var relativePath = mediaFile.FilePath.Substring(SystemMediaPrefix.Length)
+                var relativePath = localPath.Substring(SystemMediaPrefix.Length)
                     .Replace('/', Path.DirectorySeparatorChar)
                     .Replace('\\', Path.DirectorySeparatorChar);
                 var absolutePath = Path.Combine(AppContext.BaseDirectory, "storage", relativePath);
@@ -58,56 +61,57 @@ public sealed class DeleteMediaHandler : ICommandHandler<DeleteMediaCommand>
             catch (Exception ex)
             {
                 _logger.LogError(ex,
-                    "Failed to delete local system media file {UniqueId}",
-                    mediaFile.FilePath);
+                    "Failed to delete local system media file {LocalPath}",
+                    localPath);
                 return Result.Failure("Failed to delete local system media file", ErrorCode.InternalServerError);
             }
         }
-        else
+
+        if (!string.IsNullOrWhiteSpace(azuraMediaId))
         {
             var stations = await _stationRepository.GetAllEnabledAsync(cancellationToken);
-            if (stations.Count == 0)
-                return Result.Failure("No enabled station found", ErrorCode.NotFound);
-
-            var deletedInAzuraCast = false;
-            foreach (var station in stations)
+            if (stations.Count > 0)
             {
-                try
+                var deletedInAzuraCast = false;
+                foreach (var station in stations)
                 {
-                    await _azuraCastClient.DeleteMediaAsync(
-                        station.ExternalStationId,
-                        mediaFile.FilePath,
-                        cancellationToken);
+                    try
+                    {
+                        await _azuraCastClient.DeleteMediaAsync(
+                            station.ExternalStationId,
+                            azuraMediaId,
+                            cancellationToken);
 
-                    deletedInAzuraCast = true;
-                    _logger.LogInformation(
-                        "Deleted media file {MediaFileId} ({UniqueId}) from AzuraCast station {StationId}",
-                        mediaFile.Id,
-                        mediaFile.FilePath,
-                        station.Id);
-                    break;
+                        deletedInAzuraCast = true;
+                        _logger.LogInformation(
+                            "Deleted media file {MediaFileId} ({AzuraCastMediaId}) from AzuraCast station {StationId}",
+                            mediaFile.Id,
+                            azuraMediaId,
+                            station.Id);
+                        break;
+                    }
+                    catch (AzuraCastException ex) when (ex.ErrorCode == ErrorCode.NotFound)
+                    {
+                        _logger.LogDebug(
+                            "Media file {AzuraCastMediaId} not found on station {StationId}, trying next station",
+                            azuraMediaId,
+                            station.Id);
+                    }
+                    catch (AzuraCastException ex)
+                    {
+                        _logger.LogError(ex,
+                            "Failed to delete media file {AzuraCastMediaId} from AzuraCast",
+                            azuraMediaId);
+                        return Result.Failure(ex.Message, ex.ErrorCode);
+                    }
                 }
-                catch (AzuraCastException ex) when (ex.ErrorCode == ErrorCode.NotFound)
-                {
-                    _logger.LogDebug(
-                        "Media file {UniqueId} not found on station {StationId}, trying next station",
-                        mediaFile.FilePath,
-                        station.Id);
-                }
-                catch (AzuraCastException ex)
-                {
-                    _logger.LogError(ex,
-                        "Failed to delete media file {UniqueId} from AzuraCast",
-                        mediaFile.FilePath);
-                    return Result.Failure(ex.Message, ex.ErrorCode);
-                }
-            }
 
-            if (!deletedInAzuraCast)
-            {
-                _logger.LogWarning(
-                    "Media file {UniqueId} was not found on any enabled AzuraCast station. Continuing local cleanup.",
-                    mediaFile.FilePath);
+                if (!deletedInAzuraCast)
+                {
+                    _logger.LogWarning(
+                        "Media file {AzuraCastMediaId} was not found on any enabled AzuraCast station. Continuing local cleanup.",
+                        azuraMediaId);
+                }
             }
         }
 

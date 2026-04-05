@@ -74,7 +74,7 @@ public class MusicCatalogController : ControllerBase
     /// <remarks>
     /// Supported formats: MP3, FLAC, WAV, OGG
     /// Max file size: 100MB
-    /// File is stored in standalone system media storage (not auto-pushed to AzuraCast station)
+    /// File is stored in standalone system media storage (Auto-pushed to AzuraCast station)
     /// </remarks>
     [HttpPost("upload")]
     [Consumes("multipart/form-data")]

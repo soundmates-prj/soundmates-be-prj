@@ -20,7 +20,15 @@ public class MediaFile
 
     public int DurationSeconds { get; set; }
 
+    /// <summary>
+    /// Local storage path token (e.g. system://system-media/xxx.mp3).
+    /// </summary>
     public string FilePath { get; set; } = null!;
+
+    /// <summary>
+    /// AzuraCast unique_id for synchronized media.
+    /// </summary>
+    public string? AzuraCastMediaId { get; set; }
 
     public string FileType { get; set; } = null!;
 
