@@ -6,6 +6,9 @@ using AccountContentService.Domain.Entities;
 using AccountContentService.Domain.Enums;
 using AutoMapper;
 using MediatR;
+using shared.Contracts.Events.Notifications;
+using System.Text.Json;
+using System.Xml.Linq;
 
 namespace AccountContentService.Application.Features.BlogComments.Commands.ReplyComment
 {
@@ -14,15 +17,18 @@ namespace AccountContentService.Application.Features.BlogComments.Commands.Reply
         private readonly ICommentRepository _repository;
         private readonly IMapper _mapper;
         private readonly IUserProfileCache _userProfileCache;
+        private readonly IMessageBusPublisher _eventBus;
 
         public ReplyCommentHandler(
             ICommentRepository repository,
             IMapper mapper,
-            IUserProfileCache userProfileCache)
+            IUserProfileCache userProfileCache,
+            IMessageBusPublisher eventBus)
         {
             _repository = repository;
             _mapper = mapper;
             _userProfileCache = userProfileCache;
+            _eventBus = eventBus;
         }
 
         public async Task<CommentDto> Handle(
@@ -42,6 +48,24 @@ namespace AccountContentService.Application.Features.BlogComments.Commands.Reply
             reply.UserFullName = userProfile.FullName;
 
             await _repository.AddAsync(reply);
+
+
+            var @event = new NotificationEvent
+            {
+                Title = "Reply Comment",
+                SendUserId = reply.UserId,
+                ReceiveUserId = parent.UserId,
+                ReferenceId = parent.Id,
+                Type = "comment-reply",
+                Message = $"{userProfile.FullName} replied on your comment: {reply.Content}"
+            };
+
+            var payload = JsonSerializer.Serialize(@event);
+
+            await _eventBus.PublishAsync(
+                    "notification.created",
+                    payload
+            );
 
             return _mapper.Map<CommentDto>(reply);
         }

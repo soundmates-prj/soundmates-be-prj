@@ -1,8 +1,11 @@
 ﻿using AccountContentService.Api.Common;
 using AccountContentService.Api.Constants;
+using AccountContentService.Api.Contracts.Responses;
 using AccountContentService.Application.Features.Notifications.Commands.MarkAllNotificationsAsRead;
 using AccountContentService.Application.Features.Notifications.Commands.MarkNotificationAsRead;
 using AccountContentService.Application.Features.Notifications.Queries.GetNotifications;
+using AccountContentService.Domain.Entities;
+using AutoMapper;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,14 +21,55 @@ namespace AccountContentService.Api.Controllers
     public class NotificationsController : ControllerBase
     {
         private readonly IMediator _mediator;
+        private readonly IMapper _mapper;
 
         /// <summary>
         /// Initializes a new instance of <see cref="NotificationsController"/>.
         /// </summary>
         /// <param name="mediator">Mediator instance for handling CQRS requests.</param>
-        public NotificationsController(IMediator mediator)
+        /// <param name="mapper"></param>
+        public NotificationsController(IMediator mediator, IMapper mapper)
         {
             _mediator = mediator;
+            _mapper = mapper;
+        }
+
+        /// <summary>
+        /// Retrieves a paginated list of notifications for the current user.
+        /// </summary>
+        /// <param name="userId">User following retrive notifications</param>
+        /// <param name="page">Page number (default is 1).</param>
+        /// <param name="pageSize">Number of items per page (default is 10).</param>
+        /// <returns>
+        /// A paginated list of notifications including read/unread status.
+        /// </returns>
+        /// <remarks>
+        /// This API is used to display notifications in the notification center.
+        /// Supports pagination for performance optimization.
+        /// </remarks>
+        /// <response code="200">Returns the list of notifications.</response>
+        /// <response code="401">Unauthorized - user is not authenticated.</response>
+        [HttpGet(ApiRoutes.Users.GetUserNotifications)]
+        public async Task<IActionResult> GetNotifications(
+            [FromRoute] Guid userId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
+        {
+            var result = await _mediator.Send(new GetNotificationsQuery
+            {
+                UserId = userId,
+                Page = page,
+                PageSize = pageSize
+            });
+            var items = _mapper.Map<IEnumerable<NotificationResponse>>(result.Items);
+
+            var response = new PaginationResponse<NotificationResponse>(
+                items,
+                result.Page,
+                result.PageSize,
+                result.TotalCount);
+
+            return Ok(ApiResponse<PaginationResponse<NotificationResponse>>.Ok(response, "Get posts successfully"));
         }
 
         /// <summary>
@@ -42,7 +86,7 @@ namespace AccountContentService.Api.Controllers
         /// </remarks>
         /// <response code="200">Returns the list of notifications.</response>
         /// <response code="401">Unauthorized - user is not authenticated.</response>
-        [HttpGet(ApiRoutes.Notifications.GetAll)]
+        [HttpGet(ApiRoutes.Me.MyNotifications)]
         public async Task<IActionResult> GetNotifications(
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10)
@@ -54,14 +98,95 @@ namespace AccountContentService.Api.Controllers
                 Page = page,
                 PageSize = pageSize
             });
+            var items = _mapper.Map<IEnumerable<NotificationResponse>>(result.Items);
 
-            return Ok(result);
+            var response = new PaginationResponse<NotificationResponse>(
+                items,
+                result.Page,
+                result.PageSize,
+                result.TotalCount);
+
+            return Ok(ApiResponse<PaginationResponse<NotificationResponse>>.Ok(response, "Get posts successfully"));
+        }
+
+        /// <summary>
+        /// Retrieves a paginated list of notifications for the current user.
+        /// </summary>
+        /// <param name="page">Page number (default is 1).</param>
+        /// <param name="pageSize">Number of items per page (default is 10).</param>
+        /// <returns>
+        /// A paginated list of read notifications.
+        /// </returns>
+        /// <remarks>
+        /// This API is used to display notifications in the notification center.
+        /// Supports pagination for performance optimization.
+        /// </remarks>
+        /// <response code="200">Returns the list of notifications.</response>
+        /// <response code="401">Unauthorized - user is not authenticated.</response>
+        [HttpGet(ApiRoutes.Me.MyReadNotifications)]
+        public async Task<IActionResult> GetReadNotifications(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
+        {
+            var userId = UserContext.GetUserId(HttpContext);
+            var result = await _mediator.Send(new GetReadNotificationsQuery
+            {
+                UserId = userId,
+                Page = page,
+                PageSize = pageSize
+            });
+            var items = _mapper.Map<IEnumerable<NotificationResponse>>(result.Items);
+
+            var response = new PaginationResponse<NotificationResponse>(
+                items,
+                result.Page,
+                result.PageSize,
+                result.TotalCount);
+
+            return Ok(ApiResponse<PaginationResponse<NotificationResponse>>.Ok(response, "Get posts successfully"));
+        }
+
+        /// <summary>
+        /// Retrieves a paginated list of notifications for the current user.
+        /// </summary>
+        /// <param name="page">Page number (default is 1).</param>
+        /// <param name="pageSize">Number of items per page (default is 10).</param>
+        /// <returns>
+        /// A paginated list of not read notifications
+        /// </returns>
+        /// <remarks>
+        /// This API is used to display notifications in the notification center.
+        /// Supports pagination for performance optimization.
+        /// </remarks>
+        /// <response code="200">Returns the list of notifications.</response>
+        /// <response code="401">Unauthorized - user is not authenticated.</response>
+        [HttpGet(ApiRoutes.Me.MyNotReadNotifications)]
+        public async Task<IActionResult> GetNotReadNotifications(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
+        {
+            var userId = UserContext.GetUserId(HttpContext);
+            var result = await _mediator.Send(new GetNotReadNotificationsQuery
+            {
+                UserId = userId,
+                Page = page,
+                PageSize = pageSize
+            });
+            var items = _mapper.Map<IEnumerable<NotificationResponse>>(result.Items);
+
+            var response = new PaginationResponse<NotificationResponse>(
+                items,
+                result.Page,
+                result.PageSize,
+                result.TotalCount);
+
+            return Ok(ApiResponse<PaginationResponse<NotificationResponse>>.Ok(response, "Get posts successfully"));
         }
 
         /// <summary>
         /// Marks a specific notification as read.
         /// </summary>
-        /// <param name="id">The unique identifier of the notification.</param>
+        /// <param name="notificationId">The unique identifier of the notification.</param>
         /// <returns>
         /// True if the notification was successfully marked as read; otherwise false.
         /// </returns>
@@ -73,9 +198,9 @@ namespace AccountContentService.Api.Controllers
         /// <response code="401">Unauthorized.</response>
         /// <response code="404">Notification not found.</response>
         [HttpPut(ApiRoutes.Notifications.Read)]
-        public async Task<IActionResult> MarkAsRead([FromRoute] Guid id)
+        public async Task<IActionResult> MarkAsRead([FromRoute] Guid notificationId)
         {
-            var result = await _mediator.Send(new MarkNotificationAsReadCommand(id));
+            var result = await _mediator.Send(new MarkNotificationAsReadCommand(notificationId));
 
             return Ok(ApiResponse<bool>.Ok(result, $"Status: {result}"));
         }
