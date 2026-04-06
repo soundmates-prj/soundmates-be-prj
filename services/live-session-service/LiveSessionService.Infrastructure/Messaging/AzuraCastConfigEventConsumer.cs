@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using Shared.Contracts.Events.Config;
 
 namespace LiveSessionService.Infrastructure.Messaging;
 
@@ -130,7 +131,8 @@ public sealed class AzuraCastConfigEventConsumer : BackgroundService
         try
         {
             var payload = Encoding.UTF8.GetString(args.Body.ToArray());
-            var evt = JsonSerializer.Deserialize<AzuraCastConfigUpdatedEvent>(payload);
+            var evt = JsonSerializer.Deserialize<AzuraCastConfigUpdatedEvent>(payload,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
             if (evt is null)
             {

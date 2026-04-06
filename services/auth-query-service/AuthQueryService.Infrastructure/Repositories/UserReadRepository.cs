@@ -118,8 +118,8 @@ namespace AuthQueryService.Infrastructure.Repositories
                 filter = builder.Or(
                     builder.Regex(x => x.Username, new MongoDB.Bson.BsonRegularExpression(searchTerm, "i")),
                     builder.Regex(x => x.Email, new MongoDB.Bson.BsonRegularExpression(searchTerm, "i")),
-                    builder.Regex(x => x.FirstName ?? "", new MongoDB.Bson.BsonRegularExpression(searchTerm, "i")),
-                    builder.Regex(x => x.LastName ?? "", new MongoDB.Bson.BsonRegularExpression(searchTerm, "i"))
+                    builder.Regex(x => x.FirstName, new MongoDB.Bson.BsonRegularExpression(searchTerm, "i")),
+                    builder.Regex(x => x.LastName, new MongoDB.Bson.BsonRegularExpression(searchTerm, "i"))
                 );
             }
 

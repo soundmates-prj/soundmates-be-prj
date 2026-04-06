@@ -15,9 +15,12 @@ using LiveSessionService.Application.Features.LiveSessions.Queries.GetAllSession
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSession;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSessionNowPlaying;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetSessionSchedules;
+using LiveSessionService.Application.Features.LiveSessions.Queries.GetScheduleById;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetStaffDashboardOverview;
+using LiveSessionService.Application.Features.LiveSessions.Queries.SearchSchedules;
 using LiveSessionService.Application.Features.Music.Commands.BulkUploadMusic;
 using LiveSessionService.Application.Features.Music.Commands.DeleteMedia;
+using LiveSessionService.Application.Features.Music.Commands.ImportSystemMediaBatch;
 using LiveSessionService.Application.Features.Music.Commands.SyncMediaFiles;
 using LiveSessionService.Application.Features.Music.Commands.UploadMusic;
 using LiveSessionService.Application.Features.Music.Queries.GetAllMediaFiles;
@@ -120,6 +123,7 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<UploadMusicCommand, MusicResult>, UploadMusicHandler>();
         services.AddScoped<ICommandHandler<BulkUploadMusicCommand, BulkUploadMusicResult>, BulkUploadMusicHandler>();
         services.AddScoped<ICommandHandler<SyncMediaFilesCommand, SyncMediaFilesResult>, SyncMediaFilesHandler>();
+        services.AddScoped<ICommandHandler<ImportSystemMediaBatchCommand, ImportSystemMediaBatchResult>, ImportSystemMediaBatchHandler>();
         services.AddScoped<ICommandHandler<DeleteMediaCommand>, DeleteMediaHandler>();
 
         // Register Music Query Handlers
@@ -132,6 +136,8 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<GetAllLiveSessionsQuery, PagedResult<LiveSessionResult>>, GetAllLiveSessionsHandler>();
         services.AddScoped<IQueryHandler<GetSessionSchedulesQuery, List<SessionScheduleResult>>, GetSessionSchedulesHandler>();
         services.AddScoped<IQueryHandler<GetAllSessionSchedulesQuery, List<SessionScheduleResult>>, GetAllSessionSchedulesHandler>();
+        services.AddScoped<IQueryHandler<GetScheduleByIdQuery, SessionScheduleResult>, GetScheduleByIdHandler>();
+        services.AddScoped<IQueryHandler<SearchSchedulesQuery, SearchSchedulesResult>, SearchSchedulesQueryHandler>();
         services.AddScoped<IQueryHandler<GetStaffDashboardOverviewQuery, StaffDashboardOverviewResult>, GetStaffDashboardOverviewHandler>();
         services.AddScoped<IQueryHandler<GetActiveLiveSessionsQuery, List<LiveSessionResult>>, GetActiveLiveSessionsHandler>();
 

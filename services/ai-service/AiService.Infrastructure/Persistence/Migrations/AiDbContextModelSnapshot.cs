@@ -354,8 +354,14 @@ namespace AiService.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("voice_code");
 
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
                     b.HasKey("VoiceId")
                         .HasName("tts_voices_pkey");
+
+                    b.HasIndex("UserId");
 
                     b.HasIndex(new[] { "Provider", "VoiceCode" }, "tts_voices_provider_voice_code_key")
                         .IsUnique();

@@ -73,6 +73,33 @@ namespace AuthQueryService.Infrastructure.Messaging.EventHandlers
             return false;
         }
 
+        public static DateTime? GetDateTimeProperty(JsonElement element, params string[] propertyNames)
+        {
+            foreach (var name in propertyNames)
+            {
+                if (element.TryGetProperty(name, out var prop))
+                {
+                    if (prop.ValueKind == JsonValueKind.String)
+                    {
+                        var str = prop.GetString();
+                        if (!string.IsNullOrEmpty(str) && DateTime.TryParse(str, out var dt))
+                            return dt;
+                    }
+                    else if (prop.ValueKind == JsonValueKind.Number)
+                    {
+                        // Unix timestamp (seconds)
+                        var unix = prop.GetInt64();
+                        return DateTimeOffset.FromUnixTimeSeconds(unix).UtcDateTime;
+                    }
+                    else if (prop.ValueKind == JsonValueKind.Null)
+                    {
+                        return null;
+                    }
+                }
+            }
+            return null;
+        }
+
         public static JsonElement GetDataElement(JsonElement root)
         {
             if (root.TryGetProperty("data", out var dataElement)) return dataElement;

@@ -435,5 +435,38 @@
             public const string GetAllActive = $"{BaseRoute}/active";
 
         }
+
+        // =====================================================
+        // TRANSACTIONS
+        // =====================================================
+
+        /// <summary>
+        /// Endpoints for payment processing.
+        /// </summary>
+        public static class Notifications
+        {
+            private const string BaseRoute = $"{Base}/notifications";
+
+            /// <summary>Create new notification value.</summary>
+            public const string Create = BaseRoute;
+
+            /// <summary>Update notification value.</summary>
+            public const string Update = $"{BaseRoute}/{{notificationId:guid}}";
+
+            /// <summary>Delete notification value.</summary>
+            public const string Delete = $"{BaseRoute}/{{notificationId:guid}}";
+
+            /// <summary>Retrieve notification details by Id.</summary>
+            public const string GetById = $"{BaseRoute}/{{notificationId:guid}}";
+
+            /// <summary>Retrieve all notification values.</summary>
+            public const string GetAll = BaseRoute;
+
+            /// <summary>Mark as read notification .</summary>
+            public const string Read = $"{BaseRoute}/{{notificationId:guid}}/read";
+
+            /// <summary>Mark as read all notifications .</summary>
+            public const string ReadAll = $"{BaseRoute}/read-all";
+        }
     }
 }

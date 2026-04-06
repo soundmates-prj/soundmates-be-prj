@@ -1,5 +1,6 @@
 using AuthService.Api.Models.Requests;
 using AuthService.Api.Models.Requests.User;
+using AuthService.Api.Models.Requests.Auth;
 using AuthService.Api.Models.Responses;
 using AuthService.Api.Extensions;
 using AuthService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
@@ -53,7 +54,8 @@ namespace AuthService.Api.Controllers
                 Identifier = request.EmailOrUsername,
                 Password = request.Password,
                 IpAddress = ipAddress,
-                UserAgent = userAgent
+                UserAgent = userAgent,
+                RememberMe = request.RememberMe
             };
 
             // Send Login Command to Handler - returns Result<AuthResult>
@@ -362,11 +364,91 @@ namespace AuthService.Api.Controllers
             };
 
             var result = await _commands.Send<UpdateUserProfileCommand, UserProfileResult>(cmd, ct);
-            
+
             if (!result.IsSuccess)
                 return BadRequest(ApiResponse<UserProfileResult>.FailureResponse(result.ErrorMessage ?? "Profile update failed", result.ErrorCode ?? 400));
 
             return Ok(ApiResponse<UserProfileResult>.SuccessResponse(result.Data!, result.ErrorMessage ?? "Profile updated successfully"));
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════════
+        // ACCOUNT DEACTIVATION & DELETION (Member self-service)
+        // ═══════════════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Member-initiated account deactivation.
+        /// User is logged out and can reactivate by logging in within 90 days.
+        /// </summary>
+        [HttpPost("deactivate-account")]
+        [Authorize]
+        public async Task<IActionResult> DeactivateAccount([FromBody] DeactivateAccountRequest request, CancellationToken ct)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ApiResponse<bool>.FailureResponse("Invalid input", 400));
+
+            if (!User.TryGetCurrentUserId(out var userId))
+                return Unauthorized(ApiResponse<bool>.FailureResponse("Invalid or missing user token", 401));
+
+            var cmd = new DeactivateAccountCommand(
+                UserId: userId,
+                Password: request.Password,
+                Reason: request.Reason,
+                AdditionalNote: request.AdditionalNote);
+
+            var result = await _commands.Send<DeactivateAccountCommand, bool>(cmd, ct);
+
+            if (!result.IsSuccess)
+                return BadRequest(ApiResponse<bool>.FailureResponse(result.ErrorMessage ?? "Deactivation failed", result.ErrorCode ?? 400));
+
+            // Revoke current session tokens immediately
+            return Ok(ApiResponse<bool>.SuccessResponse(true, result.ErrorMessage ?? "Account deactivated successfully"));
+        }
+
+        /// <summary>
+        /// Member-initiated permanent account deletion request.
+        /// Sets 30-day grace period. User can still log in to cancel during this period.
+        /// </summary>
+        [HttpPost("request-account-deletion")]
+        [Authorize]
+        public async Task<IActionResult> RequestAccountDeletion([FromBody] RequestAccountDeletionRequest request, CancellationToken ct)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ApiResponse<bool>.FailureResponse("Invalid input", 400));
+
+            if (!User.TryGetCurrentUserId(out var userId))
+                return Unauthorized(ApiResponse<bool>.FailureResponse("Invalid or missing user token", 401));
+
+            var cmd = new RequestAccountDeletionCommand(
+                UserId: userId,
+                Password: request.Password,
+                ConfirmationText: request.ConfirmationText);
+
+            var result = await _commands.Send<RequestAccountDeletionCommand, bool>(cmd, ct);
+
+            if (!result.IsSuccess)
+                return BadRequest(ApiResponse<bool>.FailureResponse(result.ErrorMessage ?? "Deletion request failed", result.ErrorCode ?? 400));
+
+            return Ok(ApiResponse<bool>.SuccessResponse(true, result.ErrorMessage ?? "Deletion request submitted"));
+        }
+
+        /// <summary>
+        /// Cancels a pending account deletion within the 30-day grace period.
+        /// Restores account to active state.
+        /// </summary>
+        [HttpPost("cancel-account-deletion")]
+        [Authorize]
+        public async Task<IActionResult> CancelAccountDeletion(CancellationToken ct)
+        {
+            if (!User.TryGetCurrentUserId(out var userId))
+                return Unauthorized(ApiResponse<bool>.FailureResponse("Invalid or missing user token", 401));
+
+            var cmd = new CancelAccountDeletionCommand(UserId: userId);
+            var result = await _commands.Send<CancelAccountDeletionCommand, bool>(cmd, ct);
+
+            if (!result.IsSuccess)
+                return BadRequest(ApiResponse<bool>.FailureResponse(result.ErrorMessage ?? "Failed to cancel deletion", result.ErrorCode ?? 400));
+
+            return Ok(ApiResponse<bool>.SuccessResponse(true, result.ErrorMessage ?? "Deletion request cancelled"));
         }
     }
 }

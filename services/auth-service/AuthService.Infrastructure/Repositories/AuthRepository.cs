@@ -120,6 +120,15 @@ public class AuthRepository : IAuthRepository
             .FirstOrDefaultAsync(u => u.Username == username);
     }
 
+    public async Task<User?> GetByUsernameOrEmailAsync(string emailOrUsername)
+    {
+        return await _db.Users
+            .Include(u => u.Role)
+            .FirstOrDefaultAsync(u =>
+                u.Email.ToLower() == emailOrUsername.ToLower() ||
+                u.Username.ToLower() == emailOrUsername.ToLower());
+    }
+
     public async Task<Oauthaccount?> GetOAuthAccountAsync(string provider, string providerAccountId)
     {
         return await _db.Oauthaccounts

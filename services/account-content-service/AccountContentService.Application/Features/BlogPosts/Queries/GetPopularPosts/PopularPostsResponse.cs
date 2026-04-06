@@ -10,6 +10,10 @@ namespace AccountContentService.Application.Features.BlogPosts.Queries.GetPopula
 
         public Guid UserId { get; set; }
 
+        public string UserFullName { get; set; } = string.Empty;
+
+        public string UserAvatarUrl { get; set; } = string.Empty;
+
         public string Title { get; set; } = string.Empty;
 
         public string ContentText { get; set; } = string.Empty;

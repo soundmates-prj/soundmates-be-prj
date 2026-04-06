@@ -2,6 +2,11 @@ using AuthService.Application.Abstractions.Messaging;
 using AuthService.Application.Results;
 using AuthService.Application.Features.Users.Commands;
 using AuthService.Domain.Interfaces;
+using Shared.Contracts;
+using Shared.Contracts.Events.Auth;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace AuthService.Application.Features.Users.Handlers;
 
@@ -23,15 +28,16 @@ public sealed class DeleteUserHandler : ICommandHandler<DeleteUserCommand, bool>
 
     public async Task<Result<bool>> Handle(DeleteUserCommand command, CancellationToken cancellationToken)
     {
+        var user = await _repo.GetByIdAsync(command.Id);
         await _repo.DeleteAsync(command.Id);
-        
-        // Commit transaction
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        // Create outbox event
-        await _outbox.EnqueueAsync("auth.user.deleted", new
+        // Publish typed UserDeletedEvent (Auth — domain state change)
+        await _outbox.EnqueueAsync(RoutingKeys.Auth.UserDeleted, new UserDeletedEvent
         {
-            command.Id
+            Id = user?.Id ?? command.Id,
+            DeletedAt = DateTime.UtcNow,
+            Reason = "Hard delete by admin"
         }, cancellationToken);
 
         return Result<bool>.Success(true, $"Delete {command.Id} Successfully!");

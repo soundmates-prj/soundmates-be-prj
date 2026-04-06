@@ -780,6 +780,10 @@ namespace LiveSessionService.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("created_by");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
                     b.Property<int>("DaysOfWeek")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")

@@ -1,0 +1,68 @@
+﻿using AccountContentService.Application.Interfaces.Repositories;
+using AccountContentService.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace AccountContentService.Infrastructure.Repositories
+{
+    public class NotificationRepository : INotificationRepository
+    {
+        private readonly AccountContentDbContext _context;
+
+        public NotificationRepository(AccountContentDbContext context)
+        {
+            _context = context;
+        }
+
+        public async Task<Notification> AddAsync(Notification notification, CancellationToken cancellationToken)
+        {
+            await _context.Notifications.AddAsync(notification, cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken);
+            return notification;
+        }
+
+        public async Task<List<Notification>> GetByUserIdAsync(
+            Guid userId,
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken)
+        {
+            return await _context.Notifications
+                .Where(x => x.UserId == userId)
+                .OrderByDescending(x => x.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<int> CountByUserIdAsync(Guid userId, CancellationToken cancellationToken)
+        {
+            return await _context.Notifications
+                .CountAsync(x => x.UserId == userId, cancellationToken);
+        }
+
+        public async Task MarkAsReadAsync(Guid notificationId, CancellationToken cancellationToken)
+        {
+            var notification = await _context.Notifications
+                .FirstOrDefaultAsync(x => x.Id == notificationId, cancellationToken);
+
+            if (notification == null) return;
+
+            notification.IsRead = true;
+        }
+
+        public async Task MarkAllAsReadAsync(Guid userId, CancellationToken cancellationToken)
+        {
+            var notifications = await _context.Notifications
+                .Where(x => x.UserId == userId && !x.IsRead)
+                .ToListAsync(cancellationToken);
+
+            foreach (var noti in notifications)
+            {
+                noti.IsRead = true;
+            }
+        }
+    }
+}

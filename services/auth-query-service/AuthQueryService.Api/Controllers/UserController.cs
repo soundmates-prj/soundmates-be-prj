@@ -189,7 +189,7 @@ namespace AuthQueryService.Api.Controllers
         /// <param name="pageSize">Page size (default: 20)</param>
         /// <param name="ct">Cancellation token</param>
         /// <returns>Paginated list of users matching search criteria</returns>
-        [Authorize(Roles = "ADMIN")]
+        [AllowAnonymous]
         [HttpGet]
         [ProducesResponseType(typeof(ApiResponse<PagedResult<UserReadDto>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> SearchUsers(

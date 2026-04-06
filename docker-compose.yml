@@ -11,7 +11,6 @@ services:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./docker/postgres/init-multiple-dbs.sql:/docker-entrypoint-initdb.d/00-init-multiple-dbs.sql
     networks:
       - soundmates-network
     healthcheck:
@@ -250,6 +249,7 @@ services:
       - AESEncryption__Key=${AES_KEY}
       - AESEncryption__IV=${AES_IV}
       - AppSettings__FrontendUrl=${FRONTEND_URL}
+      - AppSettings__BaseUrl=${BASE_URL}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
@@ -280,6 +280,7 @@ services:
       - auth-service
       - auth-query-service
       - live-session-service
+      - account-content-service
     networks:
       - soundmates-network
     restart: unless-stopped

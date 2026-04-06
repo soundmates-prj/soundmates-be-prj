@@ -2,7 +2,6 @@ using LiveSessionService.Application.Abstractions;
 using LiveSessionService.Application.Abstractions.Messaging;
 using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Exceptions;
-using LiveSessionService.Application.Exceptions;
 using LiveSessionService.Application.Features.Results;
 using LiveSessionService.Application.Features.Results.Playlists;
 using LiveSessionService.Domain.Entities;

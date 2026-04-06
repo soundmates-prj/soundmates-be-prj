@@ -18,6 +18,12 @@ namespace AccountContentService.Application.Features.SubscriptionPlans.Commands.
 
         public int RequestLimit { get; set; }
 
+        public int VoiceModelLimit { get; set; }
+
+        public int TtsMinuteLimit { get; set; }
+
+        public int PodcastRequestLimit { get; set; }
+
         public string? Description { get; set; }
     }
 }

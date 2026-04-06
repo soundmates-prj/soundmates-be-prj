@@ -38,7 +38,17 @@ namespace AuthQueryService.Application.Services.Users.Queries.GetUsersByRole
                 LastName = x.LastName,
                 RoleId = x.RoleId,
                 RoleName = x.RoleName,
+                AccountStatus = x.AccountStatus,
                 IsActive = x.IsActive,
+                IsVerified = x.IsVerified,
+                EmailVerifiedAt = x.EmailVerifiedAt,
+                IsBanned = x.IsBanned,
+                BannedAt = x.BannedAt,
+                BanReason = x.BanReason,
+                DeactivatedAt = x.DeactivatedAt,
+                DeactivationReason = x.DeactivationReason,
+                DeletionRequestedAt = x.DeletionRequestedAt,
+                DeletionScheduledAt = x.DeletionScheduledAt,
                 CreatedAt = x.CreatedAt,
                 UpdatedAt = x.UpdatedAt
             }).ToList();

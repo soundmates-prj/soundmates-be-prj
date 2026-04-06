@@ -1,5 +1,5 @@
-using AuthService.Infrastructure.Messaging;
 using LiveSessionService.Domain.Entities;
+using LiveSessionService.Domain.Interfaces;
 using LiveSessionService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;

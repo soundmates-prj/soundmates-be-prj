@@ -7,6 +7,7 @@ public interface ISessionScheduleRepository
     Task AddAsync(SessionSchedule schedule, CancellationToken cancellationToken = default);
     Task<List<SessionSchedule>> GetAllAsync(CancellationToken cancellationToken = default);
     Task<SessionSchedule?> GetByIdAsync(Guid scheduleId, CancellationToken cancellationToken = default);
+    Task<SessionSchedule?> GetByIdWithSessionAsync(Guid scheduleId, CancellationToken cancellationToken = default);
     Task<List<SessionSchedule>> GetByLiveSessionIdAsync(Guid liveSessionId, CancellationToken cancellationToken = default);
     Task<Dictionary<Guid, List<SessionSchedule>>> GetByLiveSessionIdsAsync(
         IReadOnlyCollection<Guid> liveSessionIds,
@@ -16,5 +17,17 @@ public interface ISessionScheduleRepository
     Task<SessionSchedule?> GetLatestByLiveSessionIdAsync(Guid liveSessionId, CancellationToken cancellationToken = default);
     Task<Dictionary<Guid, SessionSchedule>> GetLatestByLiveSessionIdsAsync(
         IReadOnlyCollection<Guid> liveSessionIds,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Search schedules with keyword, status filter, and pagination.
+    /// </summary>
+    Task<(List<SessionSchedule> Items, int TotalCount)> SearchAsync(
+        string? keyword,
+        Domain.Enums.ScheduleStatus? status,
+        DateOnly? fromDate,
+        DateOnly? toDate,
+        int page,
+        int pageSize,
         CancellationToken cancellationToken = default);
 }

@@ -23,6 +23,12 @@ public class VoiceService : IVoiceService
         return Result<IReadOnlyList<TtsVoice>>.Success(voices);
     }
 
+    public async Task<Result<IReadOnlyList<TtsVoice>>> GetByUserAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var voices = await _voices.GetByUserAsync(userId, cancellationToken);
+        return Result<IReadOnlyList<TtsVoice>>.Success(voices);
+    }
+
     public async Task<Result<TtsVoice>> CreateAsync(TtsVoice voice, CancellationToken cancellationToken)
     {
         voice.VoiceId = voice.VoiceId == Guid.Empty ? Guid.NewGuid() : voice.VoiceId;

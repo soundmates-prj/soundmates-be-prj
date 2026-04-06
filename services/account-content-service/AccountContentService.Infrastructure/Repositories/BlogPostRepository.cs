@@ -271,6 +271,8 @@ namespace AccountContentService.Infrastructure.Repositories
             {
                 Id = x.Post.Id,
                 UserId = x.Post.UserId,
+                UserFullName = x.Post.UserFullName,
+                UserAvatarUrl = x.Post.UserAvatarUrl,
                 Title = x.Post.Title,
                 ContentText = x.Post.ContentText,
                 AudioUrl = x.Post.AudioUrl,
@@ -334,6 +336,8 @@ namespace AccountContentService.Infrastructure.Repositories
                 {
                     Id = x.Post.Id,
                     UserId = x.Post.UserId,
+                    UserFullName = x.Post.UserFullName,
+                    UserAvatarUrl = x.Post.UserAvatarUrl,
                     Title = x.Post.Title,
                     ContentText = x.Post.ContentText,
                     AudioUrl = x.Post.AudioUrl,
