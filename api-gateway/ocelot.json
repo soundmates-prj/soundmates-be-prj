@@ -2,28 +2,7 @@
   "GlobalConfiguration": {
     "BaseUrl": "http://0.0.0.0:8080"
   },
-  // ─────────────────────────────────────────────────────────────────────────────
-  // QoSOptions  (Circuit Breaker via Polly — requires Ocelot.Provider.Polly)
-  //   ExceptionsAllowedBeforeBreaking : consecutive failures before circuit OPENS
-  //   DurationOfBreak                 : ms the circuit stays OPEN (rejects fast)
-  //   TimeoutValue                    : ms per individual downstream request
-  //
-  // LoadBalancerOptions  (Ocelot built-in — no extra package needed)
-  //   Type : RoundRobin | LeastConnection | NoLoadBalancer | CookieStickySessions
-  //   To scale a service, add more objects to DownstreamHostAndPorts.
-  //   Example for 2 auth-service replicas:
-  //     "DownstreamHostAndPorts": [
-  //       { "Host": "auth-service",   "Port": 8080 },
-  //       { "Host": "auth-service-2", "Port": 8080 }
-  //     ]
-  // ─────────────────────────────────────────────────────────────────────────────
   "Routes": [
-    // ═══════════════════════════════════════════════════════════
-    // AUTH SERVICE  (Command Side — writes, latency-sensitive)
-    //   Circuit Breaker : opens after 5 errors, stays open 30 s
-    //   Timeout         : 5 s per request
-    // ═══════════════════════════════════════════════════════════
-    // === AUTH COMMANDS ===
     {
       "DownstreamPathTemplate": "/api/v1/auth/{everything}",
       "DownstreamScheme": "http",
@@ -32,7 +11,6 @@
           "Host": "auth-service",
           "Port": 8080
         }
-        // scale: add { "Host": "auth-service-2", "Port": 8080 }
       ],
       "UpstreamPathTemplate": "/api/v1/auth/{everything}",
       "UpstreamHttpMethod": [
@@ -50,7 +28,6 @@
         "TimeoutValue": 20000
       }
     },
-    // === USER COMMANDS ===
     {
       "DownstreamPathTemplate": "/api/v1/users/{everything}",
       "DownstreamScheme": "http",
@@ -76,7 +53,6 @@
         "TimeoutValue": 5000
       }
     },
-    // === ROLE COMMANDS (/api/v1/command/role) ===
     {
       "DownstreamPathTemplate": "/api/v1/roles/{everything}",
       "DownstreamScheme": "http",
@@ -102,7 +78,6 @@
         "TimeoutValue": 5000
       }
     },
-    // === ROLE COMMANDS (/api/v1/command/roles) ===
     {
       "DownstreamPathTemplate": "/api/v1/roles/{everything}",
       "DownstreamScheme": "http",
@@ -128,12 +103,6 @@
         "TimeoutValue": 5000
       }
     },
-    // ═══════════════════════════════════════════════════════════
-    // AUTH QUERY SERVICE  (Query Side — reads, higher tolerance)
-    //   Circuit Breaker : opens after 5 errors, stays open 20 s
-    //   Timeout         : 3 s per request (reads should be fast)
-    // ═══════════════════════════════════════════════════════════
-    // === USER QUERIES (/api/v1/user) ===
     {
       "DownstreamPathTemplate": "/api/v1/user/{everything}",
       "DownstreamScheme": "http",
@@ -142,7 +111,6 @@
           "Host": "auth-query-service",
           "Port": 8080
         }
-        // scale: add { "Host": "auth-query-service-2", "Port": 8080 }
       ],
       "UpstreamPathTemplate": "/api/v1/user/{everything}",
       "UpstreamHttpMethod": [
@@ -157,7 +125,6 @@
         "TimeoutValue": 3000
       }
     },
-    // === USER QUERIES (/api/v1/users) ===
     {
       "DownstreamPathTemplate": "/api/v1/users",
       "DownstreamScheme": "http",
@@ -181,7 +148,6 @@
         "TimeoutValue": 3000
       }
     },
-    // === USER QUERIES (/api/v1/users/{everything}) ===
     {
       "DownstreamPathTemplate": "/api/v1/users/{everything}",
       "DownstreamScheme": "http",
@@ -205,7 +171,6 @@
         "TimeoutValue": 3000
       }
     },
-    // === ROLE QUERIES (/api/v1/query/role) ===
     {
       "DownstreamPathTemplate": "/api/v1/roles/{everything}",
       "DownstreamScheme": "http",
@@ -229,7 +194,6 @@
         "TimeoutValue": 3000
       }
     },
-    // === ROLE QUERIES (friendly: /api/v1/role) ===
     {
       "DownstreamPathTemplate": "/api/v1/roles",
       "DownstreamScheme": "http",
@@ -276,7 +240,6 @@
         "TimeoutValue": 3000
       }
     },
-    // === ROLE QUERIES (plural: /api/v1/roles) ===
     {
       "DownstreamPathTemplate": "/api/v1/roles",
       "DownstreamScheme": "http",
@@ -323,12 +286,6 @@
         "TimeoutValue": 3000
       }
     },
-    // ═══════════════════════════════════════════════════════════
-    // LIVE SESSION SERVICE  (AzuraCast proxy + streaming)
-    //   Circuit Breaker : opens after 5 errors, stays open 30 s
-    //   Timeout         : 8 s (AzuraCast calls may be slower)
-    // ═══════════════════════════════════════════════════════════
-    // === LIVE SESSION: Station ===
     {
       "DownstreamPathTemplate": "/api/v1/Station",
       "DownstreamScheme": "http",
@@ -400,10 +357,60 @@
         "TimeoutValue": 8000
       }
     },
-    // ═══════════════════════════════════════════════════════════
-    // ACCOUNT CONTENT SERVICE
-    // ═══════════════════════════════════════════════════════════
-    // === POSTS ===
+    {
+      "DownstreamPathTemplate": "/api/v1/themes",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-content-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/themes",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/themes/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-content-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/themes/{everything}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
+    },
     {
       "DownstreamPathTemplate": "/api/v1/posts",
       "DownstreamScheme": "http",
@@ -458,7 +465,6 @@
         "TimeoutValue": 8000
       }
     },
-    // === COMMENTS ===
     {
       "DownstreamPathTemplate": "/api/v1/comments",
       "DownstreamScheme": "http",
@@ -513,7 +519,6 @@
         "TimeoutValue": 8000
       }
     },
-    // === REACTIONS ===
     {
       "DownstreamPathTemplate": "/api/v1/reactions",
       "DownstreamScheme": "http",
@@ -568,7 +573,6 @@
         "TimeoutValue": 8000
       }
     },
-    // === ME ===
     {
       "DownstreamPathTemplate": "/api/v1/me/posts",
       "DownstreamScheme": "http",
@@ -684,7 +688,6 @@
         "TimeoutValue": 8000
       }
     },
-    // === SUBSCRIPTIONS & PAYMENTS ===
     {
       "DownstreamPathTemplate": "/api/v1/subscription-plans",
       "DownstreamScheme": "http",
@@ -847,7 +850,6 @@
         "TimeoutValue": 8000
       }
     },
-    // === TRANSACTIONS ===
     {
       "DownstreamPathTemplate": "/api/v1/transaction",
       "DownstreamScheme": "http",
@@ -917,7 +919,6 @@
         "TimeoutValue": 8000
       }
     },
-    // === SPOTIFY AUTH (auth-service) ===
     {
       "DownstreamPathTemplate": "/api/v1/spotify-auth/{everything}",
       "DownstreamScheme": "http",
@@ -945,7 +946,6 @@
         "TimeoutValue": 8000
       }
     },
-    // === SPOTIFY QUERY (auth-query-service) ===
     {
       "DownstreamPathTemplate": "/api/v1/spotify/{everything}",
       "DownstreamScheme": "http",
@@ -969,7 +969,6 @@
         "TimeoutValue": 8000
       }
     },
-    // === FAVORITES: READ (auth-query-service) ===
     {
       "DownstreamPathTemplate": "/api/v1/me/favorites",
       "DownstreamScheme": "http",
@@ -992,7 +991,6 @@
         "TimeoutValue": 3000
       }
     },
-    // === FAVORITES: WRITE (auth-service) ===
     {
       "DownstreamPathTemplate": "/api/v1/me/favorites",
       "DownstreamScheme": "http",
@@ -1018,7 +1016,6 @@
         "TimeoutValue": 5000
       }
     },
-    // === AI SERVICE (Gemini + TTS) ===
     {
       "DownstreamPathTemplate": "/api/voices",
       "DownstreamScheme": "http",
@@ -1277,7 +1274,6 @@
         "TimeoutValue": 300000
       }
     },
-    // === VOICE CLONE (ai-service) ===
     {
       "DownstreamPathTemplate": "/api/voice-clone/{everything}",
       "DownstreamScheme": "http",
@@ -1303,7 +1299,6 @@
         "TimeoutValue": 300000
       }
     },
-    // === PODCASTS (ai-service) ===
     {
       "DownstreamPathTemplate": "/api/v1/podcasts/{everything}",
       "DownstreamScheme": "http",
@@ -1328,12 +1323,6 @@
         "TimeoutValue": 300000
       }
     },
-    // ═══════════════════════════════════════════════════════════
-    // LIVE SESSION SERVICE — Direct routes (no prefix)
-    //   Timeout: 8s (AzuraCast calls may be slower)
-    //   Upload:  30s (music file uploads)
-    // ═══════════════════════════════════════════════════════════
-    // === SIGNALR HUBS (WebSockets via Gateway) ===
     {
       "DownstreamPathTemplate": "/hubs/live-session",
       "DownstreamScheme": "ws",
@@ -1370,7 +1359,6 @@
         "Type": "RoundRobin"
       }
     },
-    // === PLAYLIST ===
     {
       "DownstreamPathTemplate": "/api/v1/Playlist",
       "DownstreamScheme": "http",
@@ -1421,7 +1409,6 @@
         "TimeoutValue": 8000
       }
     },
-    // === USER PLAYLIST ===
     {
       "DownstreamPathTemplate": "/api/v1/UserPlaylist",
       "DownstreamScheme": "http",
@@ -1472,7 +1459,6 @@
         "TimeoutValue": 8000
       }
     },
-    // === MUSIC CATALOG (direct /musiccatalog) ===
     {
       "DownstreamPathTemplate": "/api/v1/musiccatalog",
       "DownstreamScheme": "http",
@@ -1573,7 +1559,6 @@
         "TimeoutValue": 30000
       }
     },
-    // === LIVE SESSION ===
     {
       "DownstreamPathTemplate": "/api/v1/livesession",
       "DownstreamScheme": "http",
@@ -1676,7 +1661,6 @@
         "TimeoutValue": 8000
       }
     },
-    // === PODCAST (direct /podcast) ===
     {
       "DownstreamPathTemplate": "/api/v1/Podcast",
       "DownstreamScheme": "http",
@@ -1727,7 +1711,6 @@
         "TimeoutValue": 8000
       }
     },
-    // === SCHEDULE ===
     {
       "DownstreamPathTemplate": "/api/v1/Schedule",
       "DownstreamScheme": "http",
@@ -1777,7 +1760,6 @@
         "TimeoutValue": 8000
       }
     },
-    // === AZURACAST HEALTH ===
     {
       "DownstreamPathTemplate": "/api/v1/AzuraCastHealth/{everything}",
       "DownstreamScheme": "http",
@@ -1801,7 +1783,6 @@
         "TimeoutValue": 8000
       }
     },
-    // === AZURACAST CONFIG (Admin Settings) ===
     {
       "DownstreamPathTemplate": "/api/v1/azuracast-config/{everything}",
       "DownstreamScheme": "http",
@@ -1828,7 +1809,6 @@
         "TimeoutValue": 15000
       }
     },
-    // === GEMINI CONFIG (Staff Settings) ===
     {
       "DownstreamPathTemplate": "/api/v1/gemini/{everything}",
       "DownstreamScheme": "http",

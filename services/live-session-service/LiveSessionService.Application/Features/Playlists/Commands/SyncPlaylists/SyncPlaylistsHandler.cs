@@ -76,6 +76,7 @@ public sealed class SyncPlaylistsHandler : ICommandHandler<SyncPlaylistsCommand,
                     TotalPlaylistsInAzuraCast = 0,
                     NewPlaylistsSynced = 0,
                     ExistingPlaylists = 0,
+                    DeletedPlaylists = 0,
                     Playlists = new List<PlaylistResult>()
                 });
             }
@@ -109,6 +110,22 @@ public sealed class SyncPlaylistsHandler : ICommandHandler<SyncPlaylistsCommand,
             var allPlaylists = new List<PlaylistResult>();
 
             // Sync playlists and their media
+            var azuraPlaylistIds = azuraPlaylists.Select(p => p.Id).ToHashSet();
+
+            // Find playlists that exist in DB but were removed from AzuraCast
+            var playlistsToDelete = existingPlaylists
+                .Where(p => !azuraPlaylistIds.Contains(p.ExternalPlaylistId))
+                .ToList();
+
+            foreach (var playlistToDelete in playlistsToDelete)
+            {
+                await _playlistMediaRepository.DeleteByPlaylistIdAsync(playlistToDelete.Id, cancellationToken);
+                await _playlistRepository.DeleteAsync(playlistToDelete, cancellationToken);
+                _logger.LogInformation(
+                    "Deleted playlist {PlaylistName} (External ID: {ExternalId}) because it was removed from AzuraCast",
+                    playlistToDelete.PlaylistName, playlistToDelete.ExternalPlaylistId);
+            }
+
             foreach (var azuraPlaylist in azuraPlaylists)
             {
                 StationPlaylist playlist;
@@ -246,15 +263,16 @@ public sealed class SyncPlaylistsHandler : ICommandHandler<SyncPlaylistsCommand,
                 StationName = station.StationName,
                 TotalPlaylistsInAzuraCast = azuraPlaylists.Count,
                 NewPlaylistsSynced = newPlaylistCount,
-                ExistingPlaylists = existingPlaylists.Count,
+                ExistingPlaylists = existingPlaylists.Count - playlistsToDelete.Count,
+                DeletedPlaylists = playlistsToDelete.Count,
                 Playlists = allPlaylists,
                 TotalMediaFilesSynced = totalMediaSynced
             };
 
             _logger.LogInformation(
                 "Successfully synced playlists for station {StationName}: " +
-                "{TotalPlaylists} playlists, {NewPlaylists} new, {MediaFiles} media files synced",
-                station.StationName, azuraPlaylists.Count, newPlaylistCount, totalMediaSynced);
+                "{TotalPlaylists} playlists, {NewPlaylists} new, {DeletedPlaylists} deleted, {MediaFiles} media files synced",
+                station.StationName, azuraPlaylists.Count, newPlaylistCount, playlistsToDelete.Count, totalMediaSynced);
 
             return Result<SyncPlaylistsResult>.Success(result);
         }

@@ -16,7 +16,6 @@ public sealed class BulkUploadMusicHandler
 {
     private readonly IAzuraCastStationRepository _stationRepo;
     private readonly IMediaFileRepository _mediaFileRepo;
-    private readonly IAzuraCastClient _azuraCast;
     private readonly ICloudinaryMediaStorage _cloudinaryStorage;
     private readonly IDateTimeProvider _dateTime;
     private readonly ILogger<BulkUploadMusicHandler> _logger;
@@ -28,14 +27,12 @@ public sealed class BulkUploadMusicHandler
     public BulkUploadMusicHandler(
         IAzuraCastStationRepository stationRepo,
         IMediaFileRepository mediaFileRepo,
-        IAzuraCastClient azuraCast,
         ICloudinaryMediaStorage cloudinaryStorage,
         IDateTimeProvider dateTime,
         ILogger<BulkUploadMusicHandler> logger)
     {
         _stationRepo = stationRepo;
         _mediaFileRepo = mediaFileRepo;
-        _azuraCast = azuraCast;
         _cloudinaryStorage = cloudinaryStorage;
         _dateTime = dateTime;
         _logger = logger;
@@ -52,19 +49,6 @@ public sealed class BulkUploadMusicHandler
             throw new AzuraCastException(
                 "No files provided for bulk upload.",
                 ErrorCode.BadRequest);
-        }
-
-        if (!command.StationId.HasValue)
-        {
-            throw new AzuraCastException(
-                "StationId is required for bulk upload.",
-                ErrorCode.BadRequest);
-        }
-
-        var station = await _stationRepo.GetByIdAsync(command.StationId.Value, cancellationToken);
-        if (station == null)
-        {
-            throw new AzuraCastException("Station not found", ErrorCode.NotFound);
         }
 
         // Pre-validate: check file count and total size
@@ -95,7 +79,6 @@ public sealed class BulkUploadMusicHandler
                 var result = await ProcessSingleFileAsync(
                     entry,
                     command.UploadedByUserId,
-                    station.ExternalStationId,
                     cancellationToken);
                 uploadedFiles.Add(result);
             }
@@ -133,7 +116,6 @@ public sealed class BulkUploadMusicHandler
     private async Task<MusicResult> ProcessSingleFileAsync(
         BulkUploadFileEntry entry,
         Guid uploadedByUserId,
-        int externalStationId,
         CancellationToken cancellationToken)
     {
         // Validate extension
@@ -181,26 +163,8 @@ public sealed class BulkUploadMusicHandler
             if (entry.FileStream.CanSeek)
                 entry.FileStream.Position = 0;
 
-            var uploadedToAzura = await _azuraCast.UploadMediaAsync(
-                externalStationId,
-                entry.FileStream,
-                entry.FileName,
-                entry.ContentType,
-                title,
-                artist,
-                album,
-                cancellationToken);
-
-            if (uploadedToAzura == null || string.IsNullOrWhiteSpace(uploadedToAzura.UniqueId))
-            {
-                throw new AzuraCastException("Failed to upload media to AzuraCast", ErrorCode.InternalServerError);
-            }
-
-            if (entry.FileStream.CanSeek)
-                entry.FileStream.Position = 0;
-
-            var cloudAudioFileName = $"audio-{Guid.NewGuid():N}{extensionWithDot}";
-            audioUpload = await _cloudinaryStorage.UploadAudioAsync(entry.FileStream, cloudAudioFileName, cancellationToken);
+            var safeFileName = $"audio-{Guid.NewGuid():N}{extensionWithDot}";
+            audioUpload = await _cloudinaryStorage.UploadAudioAsync(entry.FileStream, safeFileName, cancellationToken);
 
             var mediaFile = new MediaFile
             {
@@ -211,7 +175,7 @@ public sealed class BulkUploadMusicHandler
                 ArtUrl = artworkUpload?.Url,
                 DurationSeconds = durationSeconds,
                 FilePath = audioUpload.Url,
-                AzuraCastMediaId = uploadedToAzura.UniqueId,
+                AzuraCastMediaId = null,
                 FileType = extension,
                 FileSizeBytes = fileSizeBytes,
                 UploadedByUserId = uploadedByUserId,
@@ -221,7 +185,7 @@ public sealed class BulkUploadMusicHandler
             await _mediaFileRepo.AddAsync(mediaFile, cancellationToken);
 
             _logger.LogInformation(
-                "Bulk uploaded media '{Title}' by '{Artist}' from '{FileName}'",
+                "Bulk uploaded system media '{Title}' by '{Artist}' from '{FileName}'",
                 mediaFile.Title,
                 mediaFile.Artist,
                 entry.FileName);

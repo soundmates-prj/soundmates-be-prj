@@ -275,7 +275,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./api-gateway/ocelot.json:/app/ocelot.json
+      - ./api-gateway/ocelot.json:/app/ocelot.json:ro
     depends_on:
       - auth-service
       - auth-query-service

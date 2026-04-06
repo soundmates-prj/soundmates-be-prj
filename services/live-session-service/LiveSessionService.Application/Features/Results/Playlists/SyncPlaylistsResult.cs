@@ -10,6 +10,7 @@ public sealed class SyncPlaylistsResult
     public int TotalPlaylistsInAzuraCast { get; init; }
     public int NewPlaylistsSynced { get; init; }
     public int ExistingPlaylists { get; init; }
+    public int DeletedPlaylists { get; init; }
     public int TotalMediaFilesSynced { get; init; }
     public List<PlaylistResult> Playlists { get; init; } = new();
 }

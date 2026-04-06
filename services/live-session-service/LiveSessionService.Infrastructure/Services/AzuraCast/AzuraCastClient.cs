@@ -504,7 +504,7 @@ public sealed class AzuraCastClient : IAzuraCastClient
 
             triedIds.Add(candidate);
 
-            if (response.StatusCode != HttpStatusCode.NotFound)
+            if (response.StatusCode != HttpStatusCode.NotFound && response.StatusCode != HttpStatusCode.MethodNotAllowed)
             {
                 await EnsureAzuraCastSuccessAsync(response, $"queue song request on station {stationId}", cancellationToken);
             }
