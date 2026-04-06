@@ -1,4 +1,4 @@
-﻿using AccountContentService.Domain.Entities;
+using AccountContentService.Domain.Entities;
 using AccountContentService.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,42 +8,144 @@ public static class DataSeeder
 {
     public static async Task SeedAsync(AccountContentDbContext context)
     {
-        if (await context.BlogPosts.AnyAsync()) return; // Data already seeded
-
         var now = DateTime.UtcNow;
-
         var userId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
-        // THEMES
-        var chillTheme = new Theme
+        // ALWAYS SEED MISSING THEMES
+        if (!await context.Themes.AnyAsync(t => t.Name == "Dark Theme"))
         {
-            Id = Guid.NewGuid(),
-            Name = "Dark Theme",
-            Mode = "dark",
-            IsActive = true,
-            PrimaryColor = "#000000",
-            BackgroundColor = "#121212",
-            TextColor = "#FFFFFF",
-            Mood = "chill",
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
-
-        var loveTheme = new Theme
+            context.Themes.Add(new Theme
+            {
+                Id = Guid.NewGuid(),
+                Name = "Dark Theme",
+                Mode = "dark",
+                IsActive = true,
+                PrimaryColor = "#000000",
+                BackgroundColor = "#121212",
+                TextColor = "#FFFFFF",
+                Mood = "chill",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            });
+        }
+        else
         {
-            Id = Guid.NewGuid(),
-            Name = "Love Theme",
-            Mode = "light",
-            IsActive = true,
-            PrimaryColor = "#FF4D6D",
-            BackgroundColor = "#FFF0F3",
-            TextColor = "#000000",
-            Mood = "love",
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
+            var existing = await context.Themes.FirstAsync(t => t.Name == "Dark Theme");
+            existing.PrimaryColor = "#000000";
+            existing.SecondaryColor = null;
+            existing.BackgroundColor = "#121212";
+            existing.TextColor = "#FFFFFF";
+            existing.ConfigJson = null;
+            existing.GradientBackground = null;
+        }
 
-        context.Themes.AddRange(chillTheme, loveTheme);
+        if (!await context.Themes.AnyAsync(t => t.Name == "Chill Lofi"))
+        {
+            context.Themes.Add(new Theme
+            {
+                Id = Guid.NewGuid(),
+                Name = "Chill Lofi",
+                Mode = "dark",
+                IsActive = true,
+                PrimaryColor = "#8b5cf6", // Purple
+                SecondaryColor = "#c084fc",
+                BackgroundColor = "#1e1b4b", // Deep dark purple
+                TextColor = "#f1f5f9",
+                Mood = "chill",
+                FontFamily = "'Inter', sans-serif",
+                GradientBackground = "linear-gradient(to bottom, #1e1b4b, #312e81)",
+                PlayerColor = "#a855f7",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                ConfigJson = System.Text.Json.JsonDocument.Parse("""
+                {
+                    "borderRadius": "12px",
+                    "boxShadow": "0 4px 20px rgba(139, 92, 246, 0.2)",
+                    "backgroundImage": "https://www.transparenttextures.com/patterns/stardust.png"
+                }
+                """).RootElement
+            });
+        }
+
+        if (!await context.Themes.AnyAsync(t => t.Name == "Love Theme"))
+        {
+            context.Themes.Add(new Theme
+            {
+                Id = Guid.NewGuid(),
+                Name = "Love Theme",
+                Mode = "light",
+                IsActive = true,
+                PrimaryColor = "#FF4D6D", // Soft Red/Pink
+                SecondaryColor = "#FF758F",
+                BackgroundColor = "#FFF0F3", // Very light pink background
+                TextColor = "#590D22", // Deep burgundy for text
+                Mood = "love",
+                FontFamily = "'Ephesis', 'Inter', cursive",
+                GradientBackground = "linear-gradient(135deg, #FFF0F3 0%, #FFCCD5 100%)",
+                PlayerColor = "#C9184A",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                ConfigJson = System.Text.Json.JsonDocument.Parse("""
+                {
+                    "borderRadius": "24px",
+                    "boxShadow": "0 8px 24px rgba(255, 77, 109, 0.2)",
+                    "iconStyle": "heart",
+                    "backgroundImage": "https://www.transparenttextures.com/patterns/hearts.png"
+                }
+                """).RootElement
+            });
+        }
+        else 
+        {
+            // Update existing Love Theme
+            var existing = await context.Themes.FirstAsync(t => t.Name == "Love Theme");
+            existing.PrimaryColor = "#FF4D6D";
+            existing.SecondaryColor = "#FF758F";
+            existing.BackgroundColor = "#FFF0F3";
+            existing.TextColor = "#590D22";
+            existing.ConfigJson = System.Text.Json.JsonDocument.Parse("""
+                {
+                    "borderRadius": "24px",
+                    "boxShadow": "0 8px 24px rgba(255, 77, 109, 0.2)",
+                    "iconStyle": "heart",
+                    "backgroundImage": "https://www.transparenttextures.com/patterns/hearts.png"
+                }
+                """).RootElement;
+        }
+
+        if (!await context.Themes.AnyAsync(t => t.Name == "Orange Cat"))
+        {
+            context.Themes.Add(new Theme
+            {
+                Id = Guid.NewGuid(),
+                Name = "Orange Cat",
+                Mode = "light",
+                IsActive = true,
+                PrimaryColor = "#FF8C00", // Orange
+                SecondaryColor = "#FFB74D", // Lighter orange
+                BackgroundColor = "#FFF3E0", // Very light orange/yellow background
+                TextColor = "#4E342E", // Dark brown for text
+                Mood = "playful",
+                FontFamily = "'Comic Neue', 'Nunito', sans-serif", // Playful font
+                GradientBackground = "linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%)",
+                PlayerColor = "#F57C00",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                ConfigJson = System.Text.Json.JsonDocument.Parse("""
+                {
+                    "borderRadius": "16px",
+                    "boxShadow": "0 4px 12px rgba(255, 140, 0, 0.15)",
+                    "iconStyle": "rounded",
+                    "backgroundImage": "https://www.transparenttextures.com/patterns/little-pluses.png",
+                    "backgroundSize": "auto"
+                }
+                """).RootElement
+            });
+        }
+        
+        await context.SaveChangesAsync();
+
+        if (await context.BlogPosts.AnyAsync()) return; // Data already seeded
 
         // SUBSCRIPTION PLANS
         var freePlan = new SubscriptionPlan

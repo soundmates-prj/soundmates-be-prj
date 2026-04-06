@@ -43,9 +43,12 @@ public sealed class ReviewSongRequestHandler : ICommandHandler<ReviewSongRequest
             if (station == null)
                 return Result<SongRequestResult>.Failure("Live session station not found", ErrorCode.BadRequest);
 
+            if (string.IsNullOrWhiteSpace(songRequest.MediaFile.AzuraCastMediaId))
+                return Result<SongRequestResult>.Failure("Media file has not been synced to AzuraCast yet", ErrorCode.BadRequest);
+
             await _azuraCastClient.QueueSongRequestAsync(
                 station.ExternalStationId,
-                songRequest.MediaFile.FilePath,
+                songRequest.MediaFile.AzuraCastMediaId,
                 cancellationToken);
 
             songRequest.Status = SongRequestStatus.Approved;

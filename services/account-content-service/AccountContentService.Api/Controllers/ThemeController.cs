@@ -1,4 +1,4 @@
-﻿using AccountContentService.Api.Common;
+using AccountContentService.Api.Common;
 using AccountContentService.Api.Constants;
 using AccountContentService.Api.Contracts.Requests;
 using AccountContentService.Api.Contracts.Responses;
@@ -41,6 +41,7 @@ namespace AccountContentService.Api.Controllers
         /// <param name="themeName">Optional theme name to filter.</param>
         /// <returns>List of themes.</returns>
         [HttpGet(ApiRoutes.Themes.GetAllActive)]
+        [AllowAnonymous]
         public async Task<IActionResult> GetAllActive(
             [FromQuery] string? themeName, [FromQuery] PaginationNoFilterRequest request)
         {

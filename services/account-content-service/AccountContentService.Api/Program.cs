@@ -92,7 +92,10 @@ if (app.Environment.IsDevelopment())
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 
-app.UseHttpsRedirection();
+// COMMENTED OUT — HttpsRedirection causes requests to hang when the gateway proxies over plain HTTP.
+// When the gateway runs on plain HTTP (no TLS), redirecting to HTTPS here breaks the connection.
+// If you need HTTPS in production, configure TLS at the container/reverse-proxy level instead.
+// app.UseHttpsRedirection();
 
 app.UseAuthentication();
 
