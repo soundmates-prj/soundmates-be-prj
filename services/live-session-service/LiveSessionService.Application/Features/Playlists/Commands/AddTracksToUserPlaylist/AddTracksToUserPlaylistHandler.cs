@@ -85,6 +85,10 @@ public sealed class AddTracksToUserPlaylistHandler : ICommandHandler<AddTracksTo
             Title = x.Title,
             Artist = x.Artist,
             Album = x.Album,
+            ArtworkUrl = x.ArtUrl,
+            FileUrl = x.FilePath,
+            FileType = x.FileType,
+            FileSize = x.FileSizeBytes,
             DurationSeconds = x.DurationSeconds,
             AddedAt = now
         }).ToList();
