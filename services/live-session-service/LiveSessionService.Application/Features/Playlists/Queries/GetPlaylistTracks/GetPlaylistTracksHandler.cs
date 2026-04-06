@@ -43,6 +43,10 @@ public sealed class GetPlaylistTracksHandler : IQueryHandler<GetPlaylistTracksQu
                 Title = track.SongTitle,
                 Artist = track.SongArtist,
                 Album = track.SongAlbum,
+                ArtworkUrl = track.MediaFile?.ArtUrl ?? track.SongArtUrl,
+                FileUrl = track.MediaFile?.FilePath ?? track.FilePath,
+                FileType = track.MediaFile?.FileType,
+                FileSize = track.MediaFile?.FileSizeBytes,
                 DurationSeconds = track.DurationSeconds,
                 AddedAt = track.CreatedAt
             }).ToList();

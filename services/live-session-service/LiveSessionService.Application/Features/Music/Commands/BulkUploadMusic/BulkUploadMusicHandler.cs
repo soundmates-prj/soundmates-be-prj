@@ -14,21 +14,29 @@ namespace LiveSessionService.Application.Features.Music.Commands.BulkUploadMusic
 public sealed class BulkUploadMusicHandler
     : ICommandHandler<BulkUploadMusicCommand, BulkUploadMusicResult>
 {
+    private readonly IAzuraCastStationRepository _stationRepo;
     private readonly IMediaFileRepository _mediaFileRepo;
+    private readonly IAzuraCastClient _azuraCast;
+    private readonly ICloudinaryMediaStorage _cloudinaryStorage;
     private readonly IDateTimeProvider _dateTime;
     private readonly ILogger<BulkUploadMusicHandler> _logger;
-    private const string SystemMediaPrefix = "system://";
 
     private static readonly string[] AllowedExtensions = { ".mp3", ".flac", ".wav", ".ogg" };
     private const long MaxIndividualFileSize = 100 * 1024 * 1024; // 100MB
     private const long MaxTotalFileSize = 500 * 1024 * 1024; // 500MB
 
     public BulkUploadMusicHandler(
+        IAzuraCastStationRepository stationRepo,
         IMediaFileRepository mediaFileRepo,
+        IAzuraCastClient azuraCast,
+        ICloudinaryMediaStorage cloudinaryStorage,
         IDateTimeProvider dateTime,
         ILogger<BulkUploadMusicHandler> logger)
     {
+        _stationRepo = stationRepo;
         _mediaFileRepo = mediaFileRepo;
+        _azuraCast = azuraCast;
+        _cloudinaryStorage = cloudinaryStorage;
         _dateTime = dateTime;
         _logger = logger;
     }
@@ -44,6 +52,19 @@ public sealed class BulkUploadMusicHandler
             throw new AzuraCastException(
                 "No files provided for bulk upload.",
                 ErrorCode.BadRequest);
+        }
+
+        if (!command.StationId.HasValue)
+        {
+            throw new AzuraCastException(
+                "StationId is required for bulk upload.",
+                ErrorCode.BadRequest);
+        }
+
+        var station = await _stationRepo.GetByIdAsync(command.StationId.Value, cancellationToken);
+        if (station == null)
+        {
+            throw new AzuraCastException("Station not found", ErrorCode.NotFound);
         }
 
         // Pre-validate: check file count and total size
@@ -72,7 +93,10 @@ public sealed class BulkUploadMusicHandler
             try
             {
                 var result = await ProcessSingleFileAsync(
-                    entry, command.UploadedByUserId, cancellationToken);
+                    entry,
+                    command.UploadedByUserId,
+                    station.ExternalStationId,
+                    cancellationToken);
                 uploadedFiles.Add(result);
             }
             catch (Exception ex)
@@ -109,6 +133,7 @@ public sealed class BulkUploadMusicHandler
     private async Task<MusicResult> ProcessSingleFileAsync(
         BulkUploadFileEntry entry,
         Guid uploadedByUserId,
+        int externalStationId,
         CancellationToken cancellationToken)
     {
         // Validate extension
@@ -128,85 +153,157 @@ public sealed class BulkUploadMusicHandler
                 ErrorCode.BadRequest);
         }
 
-        // Ensure stream is at position 0
-        if (entry.FileStream.CanSeek)
-            entry.FileStream.Position = 0;
+        var fileSizeBytes = entry.FileStream.CanSeek ? entry.FileStream.Length : 0;
 
-        // Extract metadata from tags (same logic as single upload)
-        string? tagTitle = null, tagArtist = null, tagAlbum = null;
-        try
-        {
-            entry.FileStream.Position = 0;
-            var abstraction = new TagLibStreamAbstraction(entry.FileStream, entry.FileName);
-            using var tagFile = TagLib.File.Create(abstraction);
-            tagTitle = string.IsNullOrWhiteSpace(tagFile.Tag.Title) ? null : tagFile.Tag.Title.Trim();
-            tagArtist = tagFile.Tag.Performers?.Length > 0
-                ? string.Join(", ", tagFile.Tag.Performers).Trim()
-                : null;
-            tagAlbum = string.IsNullOrWhiteSpace(tagFile.Tag.Album) ? null : tagFile.Tag.Album.Trim();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Could not read tags from {FileName}", entry.FileName);
-        }
+        var (tagTitle, tagArtist, tagAlbum, artworkBytes, artworkExtension, durationSeconds) =
+            await ExtractLocalMetadataAsync(entry.FileStream, entry.FileName, cancellationToken);
 
         // Priority: request field > file tag > fallback
-        entry.FileStream.Position = 0;
         var title = (!string.IsNullOrWhiteSpace(entry.Title) ? entry.Title : tagTitle)
                     ?? Path.GetFileNameWithoutExtension(entry.FileName);
         var artist = (!string.IsNullOrWhiteSpace(entry.Artist) ? entry.Artist : tagArtist)
                      ?? "Unknown Artist";
         var album = !string.IsNullOrWhiteSpace(entry.Album) ? entry.Album : tagAlbum;
 
-        // Save file to storage
         var extension = extensionWithDot.TrimStart('.');
-        var safeFileName = $"{Guid.NewGuid():N}{extensionWithDot}";
-        var mediaDir = Path.Combine(AppContext.BaseDirectory, "storage", "system-media");
-        Directory.CreateDirectory(mediaDir);
 
-        var absolutePath = Path.Combine(mediaDir, safeFileName);
-        var relativePath = $"system-media/{safeFileName}";
+        CloudinaryUploadResult? artworkUpload = null;
+        CloudinaryUploadResult? audioUpload = null;
 
-        entry.FileStream.Position = 0;
-        await using (var fileStream = new FileStream(absolutePath, FileMode.Create, FileAccess.Write, FileShare.None))
+        try
         {
-            await entry.FileStream.CopyToAsync(fileStream, cancellationToken);
+            if (artworkBytes is { Length: > 0 })
+            {
+                var artworkFileName = $"art-{Guid.NewGuid():N}{artworkExtension ?? ".jpg"}";
+                artworkUpload = await _cloudinaryStorage.UploadImageAsync(artworkBytes, artworkFileName, cancellationToken);
+            }
+
+            if (entry.FileStream.CanSeek)
+                entry.FileStream.Position = 0;
+
+            var uploadedToAzura = await _azuraCast.UploadMediaAsync(
+                externalStationId,
+                entry.FileStream,
+                entry.FileName,
+                entry.ContentType,
+                title,
+                artist,
+                album,
+                cancellationToken);
+
+            if (uploadedToAzura == null || string.IsNullOrWhiteSpace(uploadedToAzura.UniqueId))
+            {
+                throw new AzuraCastException("Failed to upload media to AzuraCast", ErrorCode.InternalServerError);
+            }
+
+            if (entry.FileStream.CanSeek)
+                entry.FileStream.Position = 0;
+
+            var cloudAudioFileName = $"audio-{Guid.NewGuid():N}{extensionWithDot}";
+            audioUpload = await _cloudinaryStorage.UploadAudioAsync(entry.FileStream, cloudAudioFileName, cancellationToken);
+
+            var mediaFile = new MediaFile
+            {
+                Id = Guid.NewGuid(),
+                Title = title,
+                Artist = artist,
+                Album = album,
+                ArtUrl = artworkUpload?.Url,
+                DurationSeconds = durationSeconds,
+                FilePath = audioUpload.Url,
+                AzuraCastMediaId = uploadedToAzura.UniqueId,
+                FileType = extension,
+                FileSizeBytes = fileSizeBytes,
+                UploadedByUserId = uploadedByUserId,
+                UploadedAt = _dateTime.UtcNow
+            };
+
+            await _mediaFileRepo.AddAsync(mediaFile, cancellationToken);
+
+            _logger.LogInformation(
+                "Bulk uploaded media '{Title}' by '{Artist}' from '{FileName}'",
+                mediaFile.Title,
+                mediaFile.Artist,
+                entry.FileName);
+
+            return new MusicResult
+            {
+                Id = mediaFile.Id,
+                SourceType = "system",
+                Title = mediaFile.Title,
+                Artist = mediaFile.Artist ?? string.Empty,
+                Album = mediaFile.Album,
+                ArtworkUrl = mediaFile.ArtUrl,
+                Duration = mediaFile.DurationSeconds,
+                FileUrl = mediaFile.FilePath,
+                FileType = mediaFile.FileType,
+                FileSize = mediaFile.FileSizeBytes,
+                UploadedAt = mediaFile.UploadedAt
+            };
+        }
+        catch
+        {
+            if (audioUpload != null)
+                await _cloudinaryStorage.DeleteAudioAsync(audioUpload.PublicId, cancellationToken);
+
+            if (artworkUpload != null)
+                await _cloudinaryStorage.DeleteImageAsync(artworkUpload.PublicId, cancellationToken);
+
+            throw;
+        }
+    }
+
+    private async Task<(string? TagTitle, string? TagArtist, string? TagAlbum, byte[]? ArtworkBytes, string? ArtworkExtension, int DurationSeconds)> ExtractLocalMetadataAsync(
+        Stream fileStream,
+        string fileName,
+        CancellationToken cancellationToken)
+    {
+        string? tagTitle = null, tagArtist = null, tagAlbum = null;
+        byte[]? artworkBytes = null;
+        string? artworkExtension = null;
+        var durationSeconds = 0;
+
+        try
+        {
+            if (fileStream.CanSeek)
+                fileStream.Position = 0;
+
+            var abstraction = new TagLibStreamAbstraction(fileStream, fileName);
+            using var tagFile = TagLib.File.Create(abstraction);
+
+            tagTitle = string.IsNullOrWhiteSpace(tagFile.Tag.Title) ? null : tagFile.Tag.Title.Trim();
+            tagArtist = tagFile.Tag.Performers?.Length > 0
+                ? string.Join(", ", tagFile.Tag.Performers).Trim()
+                : null;
+            tagAlbum = string.IsNullOrWhiteSpace(tagFile.Tag.Album) ? null : tagFile.Tag.Album.Trim();
+
+            durationSeconds = (int)Math.Max(0, tagFile.Properties.Duration.TotalSeconds);
+
+            var picture = tagFile.Tag.Pictures?.FirstOrDefault();
+            if (picture?.Data != null && picture.Data.Count > 0)
+            {
+                artworkBytes = picture.Data.Data;
+                artworkExtension = picture.MimeType?.ToLowerInvariant() switch
+                {
+                    "image/jpeg" => ".jpg",
+                    "image/png" => ".png",
+                    "image/gif" => ".gif",
+                    "image/webp" => ".webp",
+                    _ => ".jpg"
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not read tags/metadata from {FileName}", fileName);
+        }
+        finally
+        {
+            if (fileStream.CanSeek)
+                fileStream.Position = 0;
         }
 
-        var mediaFile = new MediaFile
-        {
-            Id = Guid.NewGuid(),
-            Title = title,
-            Artist = artist,
-            Album = album,
-            DurationSeconds = 0,
-            FilePath = $"{SystemMediaPrefix}{relativePath}",
-            AzuraCastMediaId = null,
-            FileType = extension,
-            FileSizeBytes = entry.FileStream.Length,
-            UploadedByUserId = uploadedByUserId,
-            UploadedAt = _dateTime.UtcNow
-        };
-
-        await _mediaFileRepo.AddAsync(mediaFile, cancellationToken);
-
-        _logger.LogInformation(
-            "Bulk uploaded system media '{Title}' by '{Artist}' from '{FileName}'",
-            mediaFile.Title, mediaFile.Artist, entry.FileName);
-
-        return new MusicResult
-        {
-            Id = mediaFile.Id,
-            SourceType = "system",
-            Title = mediaFile.Title,
-            Artist = mediaFile.Artist ?? string.Empty,
-            Album = mediaFile.Album,
-            Duration = mediaFile.DurationSeconds,
-            FileUrl = relativePath,
-            FileType = mediaFile.FileType,
-            FileSize = mediaFile.FileSizeBytes,
-            UploadedAt = mediaFile.UploadedAt
-        };
+        return (tagTitle, tagArtist, tagAlbum, artworkBytes, artworkExtension, durationSeconds);
     }
 }
 

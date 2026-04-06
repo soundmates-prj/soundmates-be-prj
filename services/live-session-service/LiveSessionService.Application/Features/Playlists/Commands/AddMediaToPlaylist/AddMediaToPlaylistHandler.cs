@@ -142,6 +142,10 @@ public sealed class AddMediaToPlaylistHandler
             Title           = playlistMedia.SongTitle,
             Artist          = playlistMedia.SongArtist,
             Album           = playlistMedia.SongAlbum,
+            ArtworkUrl      = mediaFile.ArtUrl,
+            FileUrl         = mediaFile.FilePath,
+            FileType        = mediaFile.FileType,
+            FileSize        = mediaFile.FileSizeBytes,
             DurationSeconds = playlistMedia.DurationSeconds,
             AddedAt         = playlistMedia.CreatedAt
         });

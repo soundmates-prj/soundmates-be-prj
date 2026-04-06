@@ -8,6 +8,10 @@ public sealed class PlaylistMediaResult
     public string Title { get; init; } = null!;
     public string? Artist { get; init; }
     public string? Album { get; init; }
+    public string? ArtworkUrl { get; init; }
+    public string? FileUrl { get; init; }
+    public string? FileType { get; init; }
+    public long? FileSize { get; init; }
     public int DurationSeconds { get; init; }
     public DateTime AddedAt { get; init; }
 }
