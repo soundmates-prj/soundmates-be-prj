@@ -5,7 +5,7 @@ namespace LiveSessionService.Application.Features.Podcasts.Commands.UpdatePodcas
 
 public sealed record UpdatePodcastCommand(
     Guid PodcastId,
-    string Title,
+    string? Title,
     string? Description,
     string? Author,
     string? Type,

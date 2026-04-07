@@ -25,22 +25,55 @@ public sealed class UpdatePodcastHandler : ICommandHandler<UpdatePodcastCommand,
         if (podcast == null)
             return Result<PodcastResult>.Failure("Podcast not found", ErrorCode.NotFound);
 
+        var hasChanges = false;
+
         if (!string.IsNullOrWhiteSpace(command.Status))
         {
             if (!Enum.TryParse<PodcastStatus>(command.Status, true, out var status))
                 return Result<PodcastResult>.Failure("Invalid podcast status", ErrorCode.BadRequest);
 
-            podcast.Status = status;
+            if (podcast.Status != status)
+            {
+                podcast.Status = status;
+                hasChanges = true;
+            }
         }
 
-        podcast.Title = command.Title;
-        podcast.Description = command.Description;
-        podcast.Author = command.Author;
-        podcast.Type = command.Type;
-        podcast.Banner = command.Banner;
-        podcast.UpdatedAt = _dateTimeProvider.UtcNow;
+        if (command.Title is not null && !string.Equals(podcast.Title, command.Title, StringComparison.Ordinal))
+        {
+            podcast.Title = command.Title;
+            hasChanges = true;
+        }
 
-        await _podcastRepository.UpdateAsync(podcast, cancellationToken);
+        if (command.Description is not null && !string.Equals(podcast.Description, command.Description, StringComparison.Ordinal))
+        {
+            podcast.Description = command.Description;
+            hasChanges = true;
+        }
+
+        if (command.Author is not null && !string.Equals(podcast.Author, command.Author, StringComparison.Ordinal))
+        {
+            podcast.Author = command.Author;
+            hasChanges = true;
+        }
+
+        if (command.Type is not null && !string.Equals(podcast.Type, command.Type, StringComparison.Ordinal))
+        {
+            podcast.Type = command.Type;
+            hasChanges = true;
+        }
+
+        if (command.Banner is not null && !string.Equals(podcast.Banner, command.Banner, StringComparison.Ordinal))
+        {
+            podcast.Banner = command.Banner;
+            hasChanges = true;
+        }
+
+        if (hasChanges)
+        {
+            podcast.UpdatedAt = _dateTimeProvider.UtcNow;
+            await _podcastRepository.UpdateAsync(podcast, cancellationToken);
+        }
 
         return Result<PodcastResult>.Success(new PodcastResult
         {

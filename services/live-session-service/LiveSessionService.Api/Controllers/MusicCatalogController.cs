@@ -290,7 +290,7 @@ public class MusicCatalogController : ControllerBase
     /// Max individual file size: 100MB
     /// Max total request size: 500MB
     /// Max files per request: 100
-    /// Files are stored in standalone system media storage (Auto-pushed to AzuraCast station)
+    /// Files are stored in standalone system media storage (not auto-pushed to AzuraCast station)
     /// </remarks>
     [HttpPost("bulk")]
     [Consumes("multipart/form-data")]

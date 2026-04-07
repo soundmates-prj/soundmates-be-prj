@@ -4,9 +4,6 @@ namespace LiveSessionService.Api.Models.Requests.Podcasts;
 
 public sealed class CreatePodcastRequest
 {
-    [Required(ErrorMessage = "CreatedBy is required")]
-    public Guid CreatedBy { get; set; }
-
     [Required(ErrorMessage = "Title is required")]
     [StringLength(300, MinimumLength = 1, ErrorMessage = "Title must be between 1 and 300 characters")]
     public string Title { get; set; } = null!;

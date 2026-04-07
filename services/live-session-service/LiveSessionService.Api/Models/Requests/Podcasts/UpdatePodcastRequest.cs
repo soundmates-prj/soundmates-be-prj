@@ -4,9 +4,8 @@ namespace LiveSessionService.Api.Models.Requests.Podcasts;
 
 public sealed class UpdatePodcastRequest
 {
-    [Required(ErrorMessage = "Title is required")]
     [StringLength(300, MinimumLength = 1, ErrorMessage = "Title must be between 1 and 300 characters")]
-    public string Title { get; set; } = null!;
+    public string? Title { get; set; }
 
     [StringLength(2000, ErrorMessage = "Description cannot exceed 2000 characters")]
     public string? Description { get; set; }
