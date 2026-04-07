@@ -1,4 +1,5 @@
-﻿using AccountContentService.Application.Interfaces.Repositories;
+﻿using AccountContentService.Application.Exceptions;
+using AccountContentService.Application.Interfaces.Repositories;
 using AccountContentService.Application.Interfaces.Services;
 using AccountContentService.Domain.Entities;
 using AccountContentService.Domain.Enums;
@@ -30,9 +31,11 @@ namespace AccountContentService.Application.Features.Payments.Commands.CreatePay
             var subscription = await _subscriptionRepo.GetPlanByIdAsync(request.TargetId, cancellationToken);
 
             if (existing != null)
-                throw new Exception("User already has active subscription");
+                throw new SubscriptionAlreadyExistsException(
+                    $"Bạn đã có gói \"{existing.Plan?.PlanName}\" đang hoạt động đến {existing.EndDate:dd/MM/yyyy}. Không thể mua thêm gói mới.");
             if (subscription == null)
-                throw new Exception("Subscription plan not found");
+                throw new SubscriptionPlanNotFoundException(
+                    $"Gói đăng ký (ID: {request.TargetId}) không tồn tại hoặc đã bị vô hiệu hóa.");
 
             request.TotalAmount = subscription.Price;
 
@@ -47,6 +50,26 @@ namespace AccountContentService.Application.Features.Payments.Commands.CreatePay
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
+
+            if (request.Method.Equals("payos", StringComparison.OrdinalIgnoreCase))
+            {
+                // Use payment.Id as the PayOS orderCode — it's a GUID which is unique and
+                // allows us to recover the Payment record directly from the webhook
+                // without needing to parse descriptions or rely on matching by timestamp.
+                request.OrderCode = Math.Abs(BitConverter.ToInt64(payment.Id.ToByteArray(), 0));
+
+                // Description format: "plantype_paymentguid" — used for reference/debugging.
+                request.Description = $"{subscription.PlanName.ToLower().Replace(" ", "-")}_{payment.Id:N}";
+            }
+            else
+            {
+                request.Description = subscription.PlanName;
+            }
+
+            if (request.OrderCode.HasValue)
+            {
+                payment.SetOrderCode(request.OrderCode.Value);
+            }
 
             await _paymentRepo.AddAsync(payment);
 

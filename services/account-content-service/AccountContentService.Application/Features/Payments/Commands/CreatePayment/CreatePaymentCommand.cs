@@ -18,6 +18,10 @@ namespace AccountContentService.Application.Features.Payments.Commands.CreatePay
 
         public decimal TotalAmount { get; set; }
 
+        public long? OrderCode { get; set; }
+
+        public string? Description { get; set; }
+
         public string IpAddress { get; set; } = string.Empty;
 
         /// <summary>

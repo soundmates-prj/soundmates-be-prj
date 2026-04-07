@@ -50,5 +50,12 @@ namespace AccountContentService.Infrastructure.Repositories
               .AsNoTracking()
               .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         }
+
+        public async Task<Payment?> GetByOrderCodeAsync(long orderCode, CancellationToken cancellationToken)
+        {
+            return await _context.Payments
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.OrderCode == orderCode, cancellationToken);
+        }
     }
 }

@@ -18,7 +18,7 @@ public class VNPayService : IPaymentProvider
 
     public Task<string> CreatePaymentUrlAsync(Guid orderId, CreatePaymentCommand request)
     {
-        var returnUrl = ResolveReturnUrl(request.ReturnUrl);
+        var returnUrl = _config.ReturnUrl;
 
         var vnpay = new VNPayLibrary();
 
@@ -42,22 +42,5 @@ public class VNPayService : IPaymentProvider
         var url = vnpay.CreateRequestUrl(baseUrl, _config.HashSecret);
 
         return Task.FromResult(url);
-    }
-
-    /// <summary>
-    /// Resolves the return URL: use frontend-provided URL if available,
-    /// otherwise fall back to the configured server-side ReturnUrl.
-    /// </summary>
-    private string ResolveReturnUrl(string? requestReturnUrl)
-    {
-        if (!string.IsNullOrWhiteSpace(requestReturnUrl))
-            return requestReturnUrl.TrimEnd('/');
-
-        if (!string.IsNullOrWhiteSpace(_config.ReturnUrl))
-            return _config.ReturnUrl.TrimEnd('/');
-
-        throw new InvalidOperationException(
-            "No ReturnUrl provided by frontend and VNPay:ReturnUrl is not configured. " +
-            "Set VNPay__ReturnUrl in .env or pass ReturnUrl in the payment request.");
     }
 }

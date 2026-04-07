@@ -28,19 +28,26 @@ public sealed class PayOSWebhookHandler : IRequestHandler<PayOSWebhookCommand, b
 
     public async Task<bool> Handle(PayOSWebhookCommand request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Processing PayOS webhook for order {OrderId}, status {Status}",
-            request.OrderId, request.Status);
+        _logger.LogInformation("Processing PayOS webhook for orderId {OrderId}, orderCode {OrderCode}, status {Status}",
+            request.OrderId, request.OrderCode, request.Status);
 
-        if (!Guid.TryParse(request.OrderId, out var paymentId))
+        Payment? payment = null;
+
+        if (request.OrderCode.HasValue)
         {
-            _logger.LogWarning("Invalid PayOS orderId format: {OrderId}", request.OrderId);
-            return false;
+            payment = await _paymentRepo.GetByOrderCodeAsync(request.OrderCode.Value, cancellationToken);
         }
 
-        var payment = await _paymentRepo.GetByIdAsync(paymentId, cancellationToken);
+        // Fallback: try to find by OrderId (which now carries the payment GUID from "reference" field)
+        if (payment == null && !string.IsNullOrWhiteSpace(request.OrderId)
+            && Guid.TryParse(request.OrderId, out var paymentId))
+        {
+            payment = await _paymentRepo.GetByIdAsync(paymentId, cancellationToken);
+        }
+
         if (payment == null)
         {
-            _logger.LogWarning("Payment not found for PayOS order {OrderId}", request.OrderId);
+            _logger.LogWarning("Payment not found for PayOS orderId {OrderId} / orderCode {OrderCode}", request.OrderId, request.OrderCode);
             return false;
         }
 

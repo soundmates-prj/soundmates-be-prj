@@ -40,12 +40,13 @@ public sealed class UploadMusicHandler
         UploadMusicCommand command,
         CancellationToken cancellationToken)
     {
-        if (!command.StationId.HasValue)
-            return Result<MusicResult>.Failure("StationId is required for upload", ErrorCode.BadRequest);
-
-        var station = await _stationRepo.GetByIdAsync(command.StationId.Value, cancellationToken);
-        if (station == null)
-            return Result<MusicResult>.Failure("Station not found", ErrorCode.NotFound);
+        AzuraCastStation? station = null;
+        if (command.StationId.HasValue)
+        {
+            station = await _stationRepo.GetByIdAsync(command.StationId.Value, cancellationToken);
+            if (station == null)
+                return Result<MusicResult>.Failure("Station not found", ErrorCode.NotFound);
+        }
 
         var extensionWithDot = Path.GetExtension(command.FileName).ToLowerInvariant();
         var extension = extensionWithDot.TrimStart('.');
@@ -70,59 +71,84 @@ public sealed class UploadMusicHandler
             if (command.FileStream.CanSeek)
                 command.FileStream.Position = 0;
 
-            var media = await _azuraCast.UploadMediaAsync(
-                station.ExternalStationId,
-                command.FileStream,
-                command.FileName,
-                command.ContentType,
-                command.Title,
-                command.Artist,
-                command.Album,
-                cancellationToken);
+            MediaFile mediaFile;
 
-            if (media == null)
-                return Result<MusicResult>.Failure("Failed to upload media to AzuraCast", ErrorCode.InternalServerError);
-
-            if (command.FileStream.CanSeek)
-                command.FileStream.Position = 0;
-
-            var cloudAudioFileName = $"audio-{Guid.NewGuid():N}{extensionWithDot}";
-            audioUpload = await _cloudinaryStorage.UploadAudioAsync(command.FileStream, cloudAudioFileName, cancellationToken);
-
-            var mediaFile = new MediaFile
+            if (station != null)
             {
-                Id = Guid.NewGuid(),
-                Title = command.Title,
-                Artist = command.Artist,
-                Album = command.Album,
-                ArtUrl = artworkUpload?.Url,
-                DurationSeconds = localDurationSeconds,
-                FilePath = audioUpload.Url,
-                AzuraCastMediaId = media.UniqueId,
-                FileType = extension,
-                FileSizeBytes = fileSizeBytes,
-                UploadedByUserId = command.UploadedByUserId,
-                UploadedAt = _dateTime.UtcNow
-            };
+                // Upload to AzuraCast only
+                var media = await _azuraCast.UploadMediaAsync(
+                    station.ExternalStationId,
+                    command.FileStream,
+                    command.FileName,
+                    command.ContentType,
+                    command.Title,
+                    command.Artist,
+                    command.Album,
+                    cancellationToken);
+
+                if (media == null)
+                    return Result<MusicResult>.Failure("Failed to upload media to AzuraCast", ErrorCode.InternalServerError);
+
+                mediaFile = new MediaFile
+                {
+                    Id = Guid.NewGuid(),
+                    Title = command.Title,
+                    Artist = command.Artist,
+                    Album = command.Album,
+                    ArtUrl = artworkUpload?.Url,
+                    Lyrics = command.Lyrics,
+                    DurationSeconds = localDurationSeconds,
+                    FilePath = media.UniqueId, // Same as UniqueId for station media
+                    AzuraCastMediaId = media.UniqueId,
+                    FileType = extension,
+                    FileSizeBytes = fileSizeBytes,
+                    UploadedByUserId = command.UploadedByUserId,
+                    UploadedAt = _dateTime.UtcNow
+                };
+            }
+            else
+            {
+                // Upload to System (Cloudinary) only
+                var cloudAudioFileName = $"audio-{Guid.NewGuid():N}{extensionWithDot}";
+                audioUpload = await _cloudinaryStorage.UploadAudioAsync(command.FileStream, cloudAudioFileName, cancellationToken);
+
+                mediaFile = new MediaFile
+                {
+                    Id = Guid.NewGuid(),
+                    Title = command.Title,
+                    Artist = command.Artist,
+                    Album = command.Album,
+                    ArtUrl = artworkUpload?.Url,
+                    Lyrics = command.Lyrics,
+                    DurationSeconds = localDurationSeconds,
+                    FilePath = audioUpload.Url,
+                    AzuraCastMediaId = null,
+                    FileType = extension,
+                    FileSizeBytes = fileSizeBytes,
+                    UploadedByUserId = command.UploadedByUserId,
+                    UploadedAt = _dateTime.UtcNow
+                };
+            }
 
             await _mediaFileRepo.AddAsync(mediaFile, cancellationToken);
 
             _logger.LogInformation(
-                "Uploaded media '{Title}' by '{Artist}' to station {StationId}. CloudinaryPath={CloudinaryPath}, AzuraCastId={AzuraCastId}",
+                "Uploaded media '{Title}' by '{Artist}' to {Target}. CloudinaryPath={CloudinaryPath}, AzuraCastId={AzuraCastId}",
                 mediaFile.Title,
                 mediaFile.Artist,
-                station.Id,
-                mediaFile.FilePath,
+                station != null ? $"station {station.Id}" : "system",
+                audioUpload?.Url,
                 mediaFile.AzuraCastMediaId);
 
             return Result<MusicResult>.Success(new MusicResult
             {
                 Id = mediaFile.Id,
-                SourceType = "system",
+                SourceType = station != null ? "station" : "system",
                 Title = mediaFile.Title,
                 Artist = mediaFile.Artist ?? string.Empty,
                 Album = mediaFile.Album,
                 ArtworkUrl = mediaFile.ArtUrl,
+                Lyrics = mediaFile.Lyrics,
                 Duration = mediaFile.DurationSeconds,
                 FileUrl = mediaFile.FilePath,
                 FileType = mediaFile.FileType,

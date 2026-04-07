@@ -6,6 +6,7 @@ using LiveSessionService.Application.Features.LiveSessions.Scheduling;
 using LiveSessionService.Application.Features.Results;
 using LiveSessionService.Application.Features.Results.LiveSessions;
 using LiveSessionService.Application.Features.Results.NowPlaying;
+using LiveSessionService.Domain.Entities;
 using LiveSessionService.Domain.Enums;
 using LiveSessionService.Domain.Interfaces;
 
@@ -17,17 +18,20 @@ public sealed class GetLiveSessionHandler : IQueryHandler<GetLiveSessionQuery, L
     private readonly ISessionScheduleRepository _scheduleRepository;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IAzuraCastClient _azuraCastClient;
+    private readonly IMediaFileRepository _mediaFileRepository;
 
     public GetLiveSessionHandler(
         ILiveSessionRepository sessionRepository,
         ISessionScheduleRepository scheduleRepository,
         IDateTimeProvider dateTimeProvider,
-        IAzuraCastClient azuraCastClient)
+        IAzuraCastClient azuraCastClient,
+        IMediaFileRepository mediaFileRepository)
     {
         _sessionRepository = sessionRepository;
         _scheduleRepository = scheduleRepository;
         _dateTimeProvider = dateTimeProvider;
         _azuraCastClient = azuraCastClient;
+        _mediaFileRepository = mediaFileRepository;
     }
 
     public async Task<Result<LiveSessionResult>> Handle(
@@ -60,8 +64,8 @@ public sealed class GetLiveSessionHandler : IQueryHandler<GetLiveSessionQuery, L
 
             if (nowPlayingData != null)
             {
-                currentTrack = nowPlayingData.NowPlaying != null ? MapTrack(nowPlayingData.NowPlaying) : null;
-                playingNext = nowPlayingData.PlayingNext != null ? MapTrack(nowPlayingData.PlayingNext) : null;
+                currentTrack = nowPlayingData.NowPlaying != null ? await MapTrackAsync(nowPlayingData.NowPlaying, cancellationToken) : null;
+                playingNext = nowPlayingData.PlayingNext != null ? await MapTrackAsync(nowPlayingData.PlayingNext, cancellationToken) : null;
                 songHistory = nowPlayingData.SongHistory?
                     .Select(MapHistoryTrack)
                     .ToList() ?? [];
@@ -118,8 +122,49 @@ public sealed class GetLiveSessionHandler : IQueryHandler<GetLiveSessionQuery, L
         return Result<LiveSessionResult>.Success(result);
     }
 
-    private static NowPlayingTrackResult MapTrack(AzuraCastCurrentSongData track)
-        => new()
+    private async Task<NowPlayingTrackResult> MapTrackAsync(AzuraCastCurrentSongData track, CancellationToken cancellationToken)
+    {
+        var lyrics = track.Song?.Lyrics;
+        var artUrl = track.Song?.Art;
+        
+        // If AzuraCast doesn't have lyrics, try to get them from our DB
+        // Also fallback for missing artwork
+        if ((string.IsNullOrWhiteSpace(lyrics) || string.IsNullOrWhiteSpace(artUrl) || artUrl.Contains("generic_song")))
+        {
+            MediaFile? mediaFile = null;
+
+            // 1. Try to match by SongId (which usually matches our UniqueId / AzuraCastMediaId)
+            if (!string.IsNullOrWhiteSpace(track.Song?.Id))
+            {
+                mediaFile = await _mediaFileRepository.GetByAzuraCastMediaIdAsync(track.Song.Id, cancellationToken);
+            }
+
+            // 2. Try to match by title and artist if SongId fails or is missing
+            if (mediaFile == null && !string.IsNullOrWhiteSpace(track.Song?.Title))
+            {
+                var files = await _mediaFileRepository.GetAllAsync(cancellationToken);
+                mediaFile = files.FirstOrDefault(f => 
+                    string.Equals(f.Title, track.Song.Title, StringComparison.OrdinalIgnoreCase) && 
+                    (string.IsNullOrWhiteSpace(track.Song.Artist) || string.Equals(f.Artist, track.Song.Artist, StringComparison.OrdinalIgnoreCase))
+                );
+            }
+
+            if (mediaFile != null)
+            {
+                if (string.IsNullOrWhiteSpace(lyrics) && !string.IsNullOrWhiteSpace(mediaFile.Lyrics))
+                {
+                    lyrics = mediaFile.Lyrics;
+                }
+                
+                if ((string.IsNullOrWhiteSpace(artUrl) || artUrl.Contains("generic_song")) 
+                    && !string.IsNullOrWhiteSpace(mediaFile.ArtUrl))
+                {
+                    artUrl = mediaFile.ArtUrl;
+                }
+            }
+        }
+
+        return new NowPlayingTrackResult
         {
             ShId = track.ShId,
             Text = track.Song?.Text,
@@ -127,14 +172,15 @@ public sealed class GetLiveSessionHandler : IQueryHandler<GetLiveSessionQuery, L
             Artist = track.Song?.Artist,
             Album = track.Song?.Album,
             Genre = track.Song?.Genre,
-            ArtUrl = track.Song?.Art,
-            Lyrics = track.Song?.Lyrics,
+            ArtUrl = artUrl,
+            Lyrics = lyrics,
             PlayedAt = track.PlayedAt,
             Duration = track.Duration,
             Elapsed = track.Elapsed,
             Remaining = track.Remaining,
             IsRequest = track.IsRequest
         };
+    }
 
     private static NowPlayingTrackResult MapHistoryTrack(AzuraCastSongHistoryData h)
         => new()
@@ -146,6 +192,7 @@ public sealed class GetLiveSessionHandler : IQueryHandler<GetLiveSessionQuery, L
             Album = h.Song?.Album,
             Genre = h.Song?.Genre,
             ArtUrl = h.Song?.Art,
+            Lyrics = h.Song?.Lyrics,
             PlayedAt = h.PlayedAt
         };
 }

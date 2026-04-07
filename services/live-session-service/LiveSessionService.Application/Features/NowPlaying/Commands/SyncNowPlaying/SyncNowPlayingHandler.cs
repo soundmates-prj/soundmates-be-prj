@@ -1,4 +1,4 @@
-﻿using LiveSessionService.Application.Abstractions;
+using LiveSessionService.Application.Abstractions;
 using LiveSessionService.Application.Abstractions.Messaging;
 using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Features.Results;
@@ -135,6 +135,7 @@ public sealed class SyncNowPlayingHandler : ICommandHandler<SyncNowPlayingComman
                     songArtist: currentSong.Artist,
                     songAlbum: currentSong.Album,
                     songArtUrl: currentSong.Art,
+                    lyrics: currentSong.Lyrics,
                     durationSeconds: (int)nowPlayingData.NowPlaying.Duration,
                     playedAt: playedAt,
                     listenerCount: nowPlayingData.Listeners?.Current ?? 0,

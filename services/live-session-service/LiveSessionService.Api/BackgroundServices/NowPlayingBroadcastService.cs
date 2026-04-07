@@ -14,7 +14,8 @@ namespace LiveSessionService.Api.BackgroundServices;
 /// </summary>
 public sealed class NowPlayingBroadcastService : BackgroundService
 {
-    private readonly IHubContext<NowPlayingHub> _hub;
+    private readonly IHubContext<NowPlayingHub> _nowPlayingHub;
+    private readonly IHubContext<LiveSessionHub> _liveSessionHub;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<NowPlayingBroadcastService> _logger;
     private readonly TimeSpan _pollInterval = TimeSpan.FromSeconds(15);
@@ -23,11 +24,13 @@ public sealed class NowPlayingBroadcastService : BackgroundService
     private readonly Dictionary<Guid, long> _lastShId = new();
 
     public NowPlayingBroadcastService(
-        IHubContext<NowPlayingHub> hub,
+        IHubContext<NowPlayingHub> nowPlayingHub,
+        IHubContext<LiveSessionHub> liveSessionHub,
         IServiceScopeFactory scopeFactory,
         ILogger<NowPlayingBroadcastService> logger)
     {
-        _hub = hub;
+        _nowPlayingHub = nowPlayingHub;
+        _liveSessionHub = liveSessionHub;
         _scopeFactory = scopeFactory;
         _logger = logger;
     }
@@ -75,15 +78,22 @@ public sealed class NowPlayingBroadcastService : BackgroundService
 
                     _lastShId[station.Id] = currentShId;
 
-                    await _hub.Clients
+                    await _nowPlayingHub.Clients
                         .Group($"station-{station.Id}")
                         .SendAsync("NowPlayingUpdated", nowPlaying, ct);
 
                     var relatedSessions = activeSessions.Where(s => s.AzuraCastStationId == station.Id).ToList();
                     foreach (var session in relatedSessions)
                     {
-                        await _hub.Clients
+                        // Send to NowPlayingHub (session-{id} group) — original behavior
+                        await _nowPlayingHub.Clients
                             .Group($"session-{session.Id}")
+                            .SendAsync("NowPlayingUpdated", nowPlaying, ct);
+
+                        // ALSO send to LiveSessionHub (live-session-{id} group)
+                        // Frontend connects to LiveSessionHub, so this ensures song-change events reach it
+                        await _liveSessionHub.Clients
+                            .Group($"live-session-{session.Id}")
                             .SendAsync("NowPlayingUpdated", nowPlaying, ct);
                     }
 

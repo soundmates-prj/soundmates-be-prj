@@ -355,9 +355,9 @@ public class LiveSessionController : ControllerBase
         var listenerStats = new ListenerStatsResult
         {
             SessionId = id,
-            CurrentListeners = 0,
+            CurrentListeners = sessionResult.Data!.ListenersCount,
             PeakListeners = sessionResult.Data!.PeakListeners,
-            TotalListeners = sessionResult.Data.TotalListeners
+            TotalListeners = sessionResult.Data!.TotalListeners
         };
 
         return Ok(ApiResponse<ListenerStatsResult>.SuccessResponse(

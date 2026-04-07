@@ -25,16 +25,20 @@ public sealed class LiveSessionHub : Hub
 
     public async Task JoinSession(Guid sessionId, Guid? userId = null, string? anonymousIdentifier = null)
     {
-        var session = await _sessionRepository.GetByIdAsync(sessionId, Context.ConnectionAborted);
-        if (session == null)
+        try
         {
-            throw new HubException("Session not found");
-        }
+            var session = await _sessionRepository.GetByIdAsync(sessionId, Context.ConnectionAborted);
+            if (session == null)
+            {
+                throw new HubException("Session not found");
+            }
 
-        if (session.Status != SessionStatus.Live && session.Status != SessionStatus.Paused)
-        {
-            throw new HubException("Session is not active");
-        }
+            Console.WriteLine($"[JoinSession] SessionId={sessionId}, Status={session.Status}, HostUserId={session.HostUserId}, AzuraCastStationId={session.AzuraCastStationId}");
+
+            if (session.Status != SessionStatus.Live && session.Status != SessionStatus.Paused)
+            {
+                throw new HubException($"Session is not active. Current status: {session.Status}");
+            }
 
         await Groups.AddToGroupAsync(Context.ConnectionId, GetSessionGroup(sessionId));
 
@@ -77,6 +81,13 @@ public sealed class LiveSessionHub : Hub
 
         await Clients.Group(GetSessionGroup(sessionId))
             .SendAsync("UserJoined", sessionId, userId, currentListeners, Context.ConnectionAborted);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[JoinSession] EXCEPTION: {ex.GetType().Name}: {ex.Message}");
+            Console.WriteLine(ex.StackTrace);
+            throw;
+        }
     }
 
     public async Task LeaveSession(Guid sessionId, Guid? userId = null, string? anonymousIdentifier = null)

@@ -18,6 +18,8 @@ public class MediaFile
 
     public string? ArtUrl { get; set; }
 
+    public string? Lyrics { get; set; }
+
     public int DurationSeconds { get; set; }
 
     /// <summary>

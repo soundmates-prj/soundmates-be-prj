@@ -34,7 +34,8 @@ public sealed class GetAllMediaFilesHandler
 
             var systemMedia = entities
                 .Where(m => !string.IsNullOrWhiteSpace(m.FilePath)
-                            && m.FilePath.StartsWith(SystemMediaPrefix, StringComparison.OrdinalIgnoreCase))
+                            && (m.FilePath.StartsWith(SystemMediaPrefix, StringComparison.OrdinalIgnoreCase)
+                                || m.FilePath.StartsWith("http", StringComparison.OrdinalIgnoreCase)))
                 .ToList();
 
             var results = systemMedia
@@ -46,8 +47,11 @@ public sealed class GetAllMediaFilesHandler
                     Artist     = m.Artist ?? string.Empty,
                     Album      = m.Album,
                     ArtworkUrl = m.ArtUrl,
+                    Lyrics     = m.Lyrics,
                     Duration   = m.DurationSeconds,
-                    FileUrl    = m.FilePath.Substring(SystemMediaPrefix.Length),
+                    FileUrl    = m.FilePath.StartsWith(SystemMediaPrefix, StringComparison.OrdinalIgnoreCase) 
+                                 ? m.FilePath.Substring(SystemMediaPrefix.Length) 
+                                 : m.FilePath,
                     FileType   = m.FileType,
                     FileSize   = m.FileSizeBytes,
                     UploadedAt = m.UploadedAt

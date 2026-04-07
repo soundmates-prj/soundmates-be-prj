@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+namespace AccountContentService.Application.Exceptions;
 
-namespace AccountContentService.Application.Exceptions
+public class ApplicationException : Exception
 {
-    internal class ApplicationException
-    {
-    }
+    public ApplicationException(string message) : base(message) { }
 }

@@ -38,7 +38,6 @@ builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 // FluentValidation
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
-
 // DbContext
 builder.Services.AddDbContext<AccountContentDbContext>(options =>
 {

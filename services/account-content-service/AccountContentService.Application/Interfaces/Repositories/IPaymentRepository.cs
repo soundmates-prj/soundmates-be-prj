@@ -16,5 +16,7 @@ namespace AccountContentService.Application.Interfaces.Repositories
         Task DeleteAsync(Payment payment);
 
         Task<Payment> GetByIdAsync(Guid id, CancellationToken cancellationToken);
+
+        Task<Payment?> GetByOrderCodeAsync(long orderCode, CancellationToken cancellationToken);
     }
 }

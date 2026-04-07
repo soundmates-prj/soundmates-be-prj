@@ -34,22 +34,9 @@ namespace AccountContentService.Infrastructure.Integrations.PaymentGateway
             var rawData = string.Join("&",
                 filtered.Select(kvp => $"{kvp.Key}={kvp.Value}"));
 
-            var hash = hashType == "SHA512"
-                ? HmacSHA512(secret, rawData)
-                : HmacSHA256(secret, rawData);
+            var hash = HmacSHA512(secret, rawData);
 
             return hash.Equals(vnpSecureHash, StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static string HmacSHA256(string key, string inputData)
-        {
-            var keyBytes = Encoding.UTF8.GetBytes(key);
-            var inputBytes = Encoding.UTF8.GetBytes(inputData);
-
-            using var hmac = new HMACSHA256(keyBytes);
-            var hashBytes = hmac.ComputeHash(inputBytes);
-
-            return BitConverter.ToString(hashBytes).Replace("-", "").ToLower();
         }
 
         private static string HmacSHA512(string key, string inputData)
