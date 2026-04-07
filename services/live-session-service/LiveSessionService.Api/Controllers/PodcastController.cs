@@ -14,14 +14,21 @@ using LiveSessionService.Application.Features.Podcasts.Queries.GetPodcastEpisode
 using LiveSessionService.Application.Features.Podcasts.Queries.GetPodcastEpisodes;
 using LiveSessionService.Application.Features.Podcasts.Queries.GetPodcasts;
 using LiveSessionService.Application.Features.Results.Podcasts;
+using LiveSessionService.Domain.Enums;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 using TagLib;
 
 namespace LiveSessionService.Api.Controllers;
 
+/// <summary>
+/// API endpoints for Podcast management
+/// </summary>
 [ApiController]
 [Route("api/v1/[controller]")]
 [Produces("application/json")]
+[Authorize]
 public class PodcastController : ControllerBase
 {
     private static readonly string[] AllowedAudioExtensions = [".mp3", ".flac", ".wav", ".ogg"];
@@ -36,6 +43,9 @@ public class PodcastController : ControllerBase
         _queries = queries;
     }
 
+    /// <summary>
+    /// Retrieves a list of podcasts with optional filtering by creator and status
+    /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<List<PodcastResult>>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 400)]
@@ -59,6 +69,9 @@ public class PodcastController : ControllerBase
         return Ok(ApiResponse<List<PodcastResult>>.SuccessResponse(result.Data!, $"Retrieved {result.Data!.Count} podcast(s)"));
     }
 
+    /// <summary>
+    /// Retrieves a specific podcast by its ID
+    /// </summary>
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(ApiResponse<PodcastResult>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
@@ -79,9 +92,13 @@ public class PodcastController : ControllerBase
         return Ok(result.ToApiResponse());
     }
 
+    /// <summary>
+    /// Creates a new podcast
+    /// </summary>
     [HttpPost]
     [ProducesResponseType(typeof(ApiResponse<PodcastResult>), 201)]
     [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
     public async Task<IActionResult> Create([FromBody] CreatePodcastRequest request, CancellationToken ct)
     {
         if (!ModelState.IsValid)
@@ -91,8 +108,15 @@ public class PodcastController : ControllerBase
                 (int)ErrorCode.BadRequest));
         }
 
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized(ApiResponse<object>.FailureResponse(
+                "Invalid or missing user token",
+                (int)ErrorCode.Unauthorized));
+        }
+
         var command = new CreatePodcastCommand(
-            request.CreatedBy,
+            userId,
             request.Title,
             request.Description,
             request.Author,
@@ -109,6 +133,9 @@ public class PodcastController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = result.Data!.Id }, result.ToApiResponse());
     }
 
+    /// <summary>
+    /// Updates an existing podcast by its ID
+    /// </summary>
     [HttpPut("{id:guid}")]
     [ProducesResponseType(typeof(ApiResponse<PodcastResult>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 400)]
@@ -146,6 +173,67 @@ public class PodcastController : ControllerBase
         return Ok(result.ToApiResponse());
     }
 
+    /// <summary>
+    /// Updates only the status of an existing podcast by its ID
+    /// </summary>
+    [HttpPatch("{id:guid}/status")]
+    [ProducesResponseType(typeof(ApiResponse<PodcastResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UpdatePodcastStatusRequest request, CancellationToken ct)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ApiResponse<object>.FailureResponse(
+                "Invalid input",
+                (int)ErrorCode.BadRequest));
+        }
+
+        if (!TryResolvePodcastStatus(request.Status, out var resolvedStatus))
+        {
+            return BadRequest(ApiResponse<object>.FailureResponse(
+                "Invalid podcast status",
+                (int)ErrorCode.BadRequest));
+        }
+
+        var existing = await _queries.Send<GetPodcastQuery, PodcastResult>(new GetPodcastQuery(id), ct);
+        if (!existing.IsSuccess)
+        {
+            return existing.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(existing.ToApiResponse()),
+                _ => StatusCode((int)(existing.ErrorCode ?? ErrorCode.InternalServerError), existing.ToApiResponse())
+            };
+        }
+
+        var podcast = existing.Data!;
+        var command = new UpdatePodcastCommand(
+            id,
+            podcast.Title,
+            podcast.Description,
+            podcast.Author,
+            podcast.Type,
+            podcast.Banner,
+            resolvedStatus.ToString());
+
+        var result = await _commands.Send<UpdatePodcastCommand, PodcastResult>(command, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(result.ToApiResponse());
+    }
+
+    /// <summary>
+    /// Deletes a podcast by its ID
+    /// </summary>
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(204)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
@@ -164,6 +252,9 @@ public class PodcastController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Retrieves a list of episodes for a specific podcast
+    /// </summary>
     [HttpGet("{podcastId:guid}/episodes")]
     [ProducesResponseType(typeof(ApiResponse<List<PodcastEpisodeResult>>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
@@ -185,6 +276,9 @@ public class PodcastController : ControllerBase
         return Ok(result.ToApiResponse());
     }
 
+    /// <summary>
+    /// Retrieves a specific episode by its ID for a given podcast
+    /// </summary>
     [HttpGet("{podcastId:guid}/episodes/{episodeId:guid}")]
     [ProducesResponseType(typeof(ApiResponse<PodcastEpisodeResult>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
@@ -206,6 +300,9 @@ public class PodcastController : ControllerBase
         return Ok(result.ToApiResponse());
     }
 
+    /// <summary>
+    /// Creates a new episode for a specific podcast
+    /// </summary>
     [HttpPost("{podcastId:guid}/episodes")]
     [Consumes("multipart/form-data")]
     [ProducesResponseType(typeof(ApiResponse<PodcastEpisodeResult>), 201)]
@@ -277,6 +374,9 @@ public class PodcastController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Updates an existing episode for a specific podcast
+    /// </summary>
     [HttpPut("{podcastId:guid}/episodes/{episodeId:guid}")]
     [Consumes("multipart/form-data")]
     [ProducesResponseType(typeof(ApiResponse<PodcastEpisodeResult>), 200)]
@@ -350,6 +450,9 @@ public class PodcastController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Deletes an episode by its ID for a given podcast
+    /// </summary>
     [HttpDelete("{podcastId:guid}/episodes/{episodeId:guid}")]
     [ProducesResponseType(204)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
@@ -433,6 +536,41 @@ public class PodcastController : ControllerBase
         {
             return 0;
         }
+    }
+
+    private static bool TryResolvePodcastStatus(string rawStatus, out PodcastStatus status)
+    {
+        var normalized = rawStatus.Trim();
+
+        if (normalized.Equals("public", StringComparison.OrdinalIgnoreCase))
+        {
+            status = PodcastStatus.Published;
+            return true;
+        }
+
+        if (normalized.Equals("private", StringComparison.OrdinalIgnoreCase))
+        {
+            status = PodcastStatus.Draft;
+            return true;
+        }
+
+        return Enum.TryParse(normalized, true, out status);
+    }
+
+    private bool TryGetCurrentUserId(out Guid userId)
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)
+            ?? User.FindFirst("sub")
+            ?? User.FindFirst("user_id");
+
+        if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var parsedUserId))
+        {
+            userId = parsedUserId;
+            return true;
+        }
+
+        userId = Guid.Empty;
+        return false;
     }
 }
 

@@ -10,7 +10,6 @@ namespace LiveSessionService.Application.Features.Music.Queries.GetAllMediaFiles
 public sealed class GetAllMediaFilesHandler
     : IQueryHandler<GetAllMediaFilesQuery, List<MusicResult>>
 {
-    private const string SystemMediaPrefix = "system://";
     private readonly IMediaFileRepository _mediaFiles;
     private readonly ILogger<GetAllMediaFilesHandler> _logger;
 
@@ -41,11 +40,11 @@ public sealed class GetAllMediaFilesHandler
             var results = systemMedia
                 .Select(m => new MusicResult
                 {
-                    Id         = m.Id,
+                    Id = m.Id,
                     SourceType = "system",
-                    Title      = m.Title,
-                    Artist     = m.Artist ?? string.Empty,
-                    Album      = m.Album,
+                    Title = m.Title,
+                    Artist = m.Artist ?? string.Empty,
+                    Album = m.Album,
                     ArtworkUrl = m.ArtUrl,
                     Lyrics     = m.Lyrics,
                     Duration   = m.DurationSeconds,
