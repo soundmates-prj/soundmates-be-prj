@@ -31,13 +31,7 @@ public sealed class GetAllMediaFilesHandler
 
             var entities = await _mediaFiles.GetAllAsync(cancellationToken);
 
-            var systemMedia = entities
-                .Where(m => !string.IsNullOrWhiteSpace(m.FilePath)
-                            && (m.FilePath.StartsWith(SystemMediaPrefix, StringComparison.OrdinalIgnoreCase)
-                                || m.FilePath.StartsWith("http", StringComparison.OrdinalIgnoreCase)))
-                .ToList();
-
-            var results = systemMedia
+            var results = entities
                 .Select(m => new MusicResult
                 {
                     Id = m.Id,
@@ -46,13 +40,10 @@ public sealed class GetAllMediaFilesHandler
                     Artist = m.Artist ?? string.Empty,
                     Album = m.Album,
                     ArtworkUrl = m.ArtUrl,
-                    Lyrics     = m.Lyrics,
-                    Duration   = m.DurationSeconds,
-                    FileUrl    = m.FilePath.StartsWith(SystemMediaPrefix, StringComparison.OrdinalIgnoreCase) 
-                                 ? m.FilePath.Substring(SystemMediaPrefix.Length) 
-                                 : m.FilePath,
-                    FileType   = m.FileType,
-                    FileSize   = m.FileSizeBytes,
+                    Duration = m.DurationSeconds,
+                    FileUrl = m.FilePath ?? string.Empty,
+                    FileType = m.FileType,
+                    FileSize = m.FileSizeBytes,
                     UploadedAt = m.UploadedAt
                 })
                 .ToList();
