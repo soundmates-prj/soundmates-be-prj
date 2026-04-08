@@ -17,6 +17,7 @@ public sealed class BulkUploadMusicHandler
     private readonly IAzuraCastStationRepository _stationRepo;
     private readonly IMediaFileRepository _mediaFileRepo;
     private readonly ICloudinaryMediaStorage _cloudinaryStorage;
+    private readonly IAzuraCastClient _azuraCast;
     private readonly IDateTimeProvider _dateTime;
     private readonly ILogger<BulkUploadMusicHandler> _logger;
 
@@ -28,12 +29,14 @@ public sealed class BulkUploadMusicHandler
         IAzuraCastStationRepository stationRepo,
         IMediaFileRepository mediaFileRepo,
         ICloudinaryMediaStorage cloudinaryStorage,
+        IAzuraCastClient azuraCast,
         IDateTimeProvider dateTime,
         ILogger<BulkUploadMusicHandler> logger)
     {
         _stationRepo = stationRepo;
         _mediaFileRepo = mediaFileRepo;
         _cloudinaryStorage = cloudinaryStorage;
+        _azuraCast = azuraCast;
         _dateTime = dateTime;
         _logger = logger;
     }
@@ -67,6 +70,16 @@ public sealed class BulkUploadMusicHandler
                 ErrorCode.BadRequest);
         }
 
+        AzuraCastStation? station = null;
+        if (command.StationId.HasValue)
+        {
+            station = await _stationRepo.GetByIdAsync(command.StationId.Value, cancellationToken);
+            if (station == null)
+            {
+                throw new AzuraCastException("Station not found", ErrorCode.NotFound);
+            }
+        }
+
         var uploadedFiles = new List<MusicResult>();
         var failedFiles = new List<BulkUploadFailedItem>();
 
@@ -78,6 +91,7 @@ public sealed class BulkUploadMusicHandler
             {
                 var result = await ProcessSingleFileAsync(
                     entry,
+                    station,
                     command.UploadedByUserId,
                     cancellationToken);
                 uploadedFiles.Add(result);
@@ -115,6 +129,7 @@ public sealed class BulkUploadMusicHandler
 
     private async Task<MusicResult> ProcessSingleFileAsync(
         BulkUploadFileEntry entry,
+        AzuraCastStation? station,
         Guid uploadedByUserId,
         CancellationToken cancellationToken)
     {
@@ -163,37 +178,76 @@ public sealed class BulkUploadMusicHandler
             if (entry.FileStream.CanSeek)
                 entry.FileStream.Position = 0;
 
-            var safeFileName = $"audio-{Guid.NewGuid():N}{extensionWithDot}";
-            audioUpload = await _cloudinaryStorage.UploadAudioAsync(entry.FileStream, safeFileName, cancellationToken);
+            MediaFile mediaFile;
 
-            var mediaFile = new MediaFile
+            if (station != null)
             {
-                Id = Guid.NewGuid(),
-                Title = title,
-                Artist = artist,
-                Album = album,
-                ArtUrl = artworkUpload?.Url,
-                DurationSeconds = durationSeconds,
-                FilePath = audioUpload.Url,
-                AzuraCastMediaId = null,
-                FileType = extension,
-                FileSizeBytes = fileSizeBytes,
-                UploadedByUserId = uploadedByUserId,
-                UploadedAt = _dateTime.UtcNow
-            };
+                // Upload to AzuraCast only
+                var media = await _azuraCast.UploadMediaAsync(
+                    station.ExternalStationId,
+                    entry.FileStream,
+                    entry.FileName,
+                    entry.ContentType,
+                    title,
+                    artist,
+                    album,
+                    cancellationToken);
+
+                if (media == null)
+                    throw new Exception("Failed to upload media to AzuraCast");
+
+                mediaFile = new MediaFile
+                {
+                    Id = Guid.NewGuid(),
+                    Title = title,
+                    Artist = artist,
+                    Album = album,
+                    ArtUrl = artworkUpload?.Url,
+                    DurationSeconds = durationSeconds,
+                    FilePath = media.UniqueId, // Same as UniqueId
+                    AzuraCastMediaId = media.UniqueId, // Store song_id if possible
+                    FileType = extension,
+                    FileSizeBytes = fileSizeBytes,
+                    UploadedByUserId = uploadedByUserId,
+                    UploadedAt = _dateTime.UtcNow
+                };
+            }
+            else
+            {
+                // Upload to System (Cloudinary) only
+                var safeFileName = $"audio-{Guid.NewGuid():N}{extensionWithDot}";
+                audioUpload = await _cloudinaryStorage.UploadAudioAsync(entry.FileStream, safeFileName, cancellationToken);
+
+                mediaFile = new MediaFile
+                {
+                    Id = Guid.NewGuid(),
+                    Title = title,
+                    Artist = artist,
+                    Album = album,
+                    ArtUrl = artworkUpload?.Url,
+                    DurationSeconds = durationSeconds,
+                    FilePath = audioUpload.Url,
+                    AzuraCastMediaId = null,
+                    FileType = extension,
+                    FileSizeBytes = fileSizeBytes,
+                    UploadedByUserId = uploadedByUserId,
+                    UploadedAt = _dateTime.UtcNow
+                };
+            }
 
             await _mediaFileRepo.AddAsync(mediaFile, cancellationToken);
 
             _logger.LogInformation(
-                "Bulk uploaded system media '{Title}' by '{Artist}' from '{FileName}'",
+                "Bulk uploaded media '{Title}' by '{Artist}' from '{FileName}' to {Target}",
                 mediaFile.Title,
                 mediaFile.Artist,
-                entry.FileName);
+                entry.FileName,
+                station != null ? $"station {station.Id}" : "system");
 
             return new MusicResult
             {
                 Id = mediaFile.Id,
-                SourceType = "system",
+                SourceType = station != null ? "station" : "system",
                 Title = mediaFile.Title,
                 Artist = mediaFile.Artist ?? string.Empty,
                 Album = mediaFile.Album,

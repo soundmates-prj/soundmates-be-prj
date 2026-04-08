@@ -90,7 +90,7 @@ public static class DataSeeder
                     "borderRadius": "24px",
                     "boxShadow": "0 8px 24px rgba(255, 77, 109, 0.2)",
                     "iconStyle": "heart",
-                    "backgroundImage": "https://www.transparenttextures.com/patterns/hearts.png"
+                    "backgroundImage": "https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&w=1920&q=80"
                 }
                 """).RootElement
             });
@@ -108,7 +108,7 @@ public static class DataSeeder
                     "borderRadius": "24px",
                     "boxShadow": "0 8px 24px rgba(255, 77, 109, 0.2)",
                     "iconStyle": "heart",
-                    "backgroundImage": "https://www.transparenttextures.com/patterns/hearts.png"
+                    "backgroundImage": "https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&w=1920&q=80"
                 }
                 """).RootElement;
         }
@@ -142,7 +142,87 @@ public static class DataSeeder
                 """).RootElement
             });
         }
+
+        if (!await context.Themes.AnyAsync(t => t.Name == "Vintage Vinyl Theme"))
+        {
+            context.Themes.Add(new Theme
+            {
+                Id = Guid.NewGuid(),
+                Name = "Vintage Vinyl Theme",
+                Mode = "dark",
+                IsActive = true,
+                PrimaryColor = "#FFD13B", 
+                SecondaryColor = "#1A1A1A", 
+                BackgroundColor = "#488EB5", 
+                TextColor = "#F5F5DC", 
+                Mood = "chill",
+                FontFamily = "'M PLUS Rounded 1c', 'Courier New', sans-serif", 
+                GradientBackground = "linear-gradient(135deg, #488EB5 0%, #2A6A8C 100%)",
+                PlayerColor = "#FFD13B",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                ConfigJson = System.Text.Json.JsonDocument.Parse("""
+                {
+                    "borderRadius": "20px",
+                    "boxShadow": "0 8px 24px rgba(179, 136, 255, 0.15)",
+                    "backgroundImage": "https://i.postimg.cc/jSrb6523/af911b8119ee0cc0d44c031be361a802.jpg",
+                    "backgroundSize": "cover"
+                }
+                """).RootElement
+            });
+        }
+        else 
+        {
+            // Update existing Vintage Vinyl Theme
+            var existing = await context.Themes.FirstAsync(t => t.Name == "Vintage Vinyl Theme");
+            existing.PrimaryColor = "#FFD13B";
+            existing.SecondaryColor = "#1A1A1A";
+            existing.BackgroundColor = "#488EB5";
+            existing.TextColor = "#F5F5DC";
+            existing.FontFamily = "'M PLUS Rounded 1c', 'Courier New', sans-serif";
+            existing.GradientBackground = "linear-gradient(135deg, #488EB5 0%, #2A6A8C 100%)";
+            existing.PlayerColor = "#FFD13B";
+            existing.ConfigJson = System.Text.Json.JsonDocument.Parse("""
+                {
+                    "borderRadius": "20px",
+                    "boxShadow": "0 8px 24px rgba(179, 136, 255, 0.15)",
+                    "backgroundImage": "https://i.postimg.cc/jSrb6523/af911b8119ee0cc0d44c031be361a802.jpg",
+                    "backgroundSize": "cover"
+                }
+                """).RootElement;
+        }
         
+        if (!await context.Themes.AnyAsync(t => t.Name == "Neon Cyberpunk"))
+        {
+            context.Themes.Add(new Theme
+            {
+                Id = Guid.NewGuid(),
+                Name = "Neon Cyberpunk",
+                Mode = "dark",
+                IsActive = true,
+                PrimaryColor = "#00E5FF", // Cyan
+                SecondaryColor = "#FF00FF", // Magenta
+                BackgroundColor = "#0B0C10", // Very dark futuristic grey
+                TextColor = "#E0E6ED",
+                Mood = "energetic",
+                FontFamily = "'Orbitron', 'Roboto', sans-serif",
+                GradientBackground = "linear-gradient(135deg, #0B0C10 0%, #1F2833 100%)",
+                PlayerColor = "#00E5FF",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                ConfigJson = System.Text.Json.JsonDocument.Parse("""
+                {
+                    "borderRadius": "8px",
+                    "boxShadow": "0 0 15px rgba(0, 229, 255, 0.4)",
+                    "iconStyle": "sharp",
+                    "backgroundImage": "https://images.unsplash.com/photo-1555680202-c86f0e12f086?auto=format&fit=crop&w=1920&q=80",
+                    "backgroundSize": "cover",
+                    "backgroundBlendMode": "overlay"
+                }
+                """).RootElement
+            });
+        }
+
         await context.SaveChangesAsync();
 
         if (await context.BlogPosts.AnyAsync()) return; // Data already seeded

@@ -28,6 +28,9 @@ public class MediaFileConfiguration : IEntityTypeConfiguration<MediaFile>
         builder.Property(x => x.ArtUrl)
             .HasMaxLength(500);
 
+        builder.Property(x => x.Lyrics)
+            .HasColumnType("text");
+
         builder.Property(x => x.FilePath)
             .IsRequired()
             .HasMaxLength(1000);

@@ -39,6 +39,6 @@ public class Result<T> : Result
     }
 
     public static Result<T> Success(T data) => new(true, data);
-    public static Result<T> Failure(string errorMessage, ErrorCode errorCode)
+    public new static Result<T> Failure(string errorMessage, ErrorCode errorCode)
         => new(false, default, errorMessage, errorCode);
 }

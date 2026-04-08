@@ -46,17 +46,33 @@ public sealed class ReviewSongRequestHandler : ICommandHandler<ReviewSongRequest
             if (string.IsNullOrWhiteSpace(songRequest.MediaFile.AzuraCastMediaId))
                 return Result<SongRequestResult>.Failure("Media file has not been synced to AzuraCast yet", ErrorCode.BadRequest);
 
-            await _azuraCastClient.QueueSongRequestAsync(
-                station.ExternalStationId,
-                songRequest.MediaFile.AzuraCastMediaId,
-                cancellationToken);
+            try 
+            {
+                await _azuraCastClient.QueueSongRequestAsync(
+                    station.ExternalStationId,
+                    songRequest.MediaFile.AzuraCastMediaId,
+                    cancellationToken);
 
-            songRequest.Status = SongRequestStatus.Approved;
+                songRequest.Status = SongRequestStatus.Approved;
 
-            _logger.LogInformation(
-                "Approved song request {SongRequestId} and synced to AzuraCast station {StationId}",
-                songRequest.Id,
-                station.Id);
+                _logger.LogInformation(
+                    "Approved song request {SongRequestId} and synced to AzuraCast station {StationId}",
+                    songRequest.Id,
+                    station.Id);
+            }
+            catch (Exception ex) when (ex.Message.Contains("recently") || ex.Message.Contains("Wait a while"))
+            {
+                _logger.LogWarning(ex, "AzuraCast rejected song request {SongRequestId}: {Message}", songRequest.Id, ex.Message);
+                
+                // Nếu AzuraCast báo bài hát đã được phát gần đây, tự động chuyển sang trạng thái Reject
+                songRequest.Status = SongRequestStatus.Rejected;
+                songRequest.RejectReason = "Bài hát này đã được phát gần đây. Vui lòng thử lại sau.";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to queue song request {SongRequestId} to AzuraCast", songRequest.Id);
+                return Result<SongRequestResult>.Failure(ex.Message, ErrorCode.InternalServerError);
+            }
         }
         else
         {

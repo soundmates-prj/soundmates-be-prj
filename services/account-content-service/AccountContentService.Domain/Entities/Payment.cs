@@ -23,4 +23,9 @@ public class Payment
     public string? ExternalReference { get; set; }
 
     public ICollection<PaymentTransaction> Transactions { get; set; } = new List<PaymentTransaction>();
+
+    public void SetOrderCode(long orderCode)
+    {
+        OrderCode = orderCode;
+    }
 }

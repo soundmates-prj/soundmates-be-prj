@@ -12,6 +12,7 @@ Guid UploadedByUserId,
 string Title,
 string Artist,
 string? Album,
+string? Lyrics,
 Stream FileStream,
 string FileName,
 string ContentType) : ICommand<MusicResult>;

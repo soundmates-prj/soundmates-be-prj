@@ -24,6 +24,9 @@ public sealed class UploadMusicRequest
     [StringLength(200)]
     public string? Album { get; set; }
 
+    /// <summary>Lyrics string (LRC format or plain text).</summary>
+    public string? Lyrics { get; set; }
+
     [Required(ErrorMessage = "File is required")]
     public IFormFile File { get; set; } = null!;
 }

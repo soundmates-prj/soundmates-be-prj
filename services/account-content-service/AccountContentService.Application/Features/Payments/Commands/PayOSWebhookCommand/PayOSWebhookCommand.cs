@@ -5,6 +5,7 @@ namespace AccountContentService.Application.Features.Payments.Commands.PayOSWebh
 public sealed record PayOSWebhookCommand : IRequest<bool>
 {
     public string OrderId { get; init; } = string.Empty;
+    public long? OrderCode { get; init; }
     public string PaymentLinkId { get; init; } = string.Empty;
     public int Amount { get; init; }
     public string Status { get; init; } = string.Empty;

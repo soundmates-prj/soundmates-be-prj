@@ -158,6 +158,30 @@ public static class ConfigurationExtensions
             ?? Environment.GetEnvironmentVariable("VNPAY_RETURN_URL")
             ?? configuration["VNPay:ReturnUrl"];
 
+        configuration["PayOS:ClientId"] = Environment.GetEnvironmentVariable("PayOS__ClientId")
+            ?? Environment.GetEnvironmentVariable("PAY_OS_CLIENT_ID")
+            ?? configuration["PayOS:ClientId"];
+
+        configuration["PayOS:ApiKey"] = Environment.GetEnvironmentVariable("PayOS__ApiKey")
+            ?? Environment.GetEnvironmentVariable("PAY_OS_API_KEY")
+            ?? configuration["PayOS:ApiKey"];
+
+        configuration["PayOS:ChecksumKey"] = Environment.GetEnvironmentVariable("PayOS__ChecksumKey")
+            ?? Environment.GetEnvironmentVariable("PAY_OS_CHECKSUM_KEY")
+            ?? configuration["PayOS:ChecksumKey"];
+
+        configuration["PayOS:BaseUrl"] = Environment.GetEnvironmentVariable("PayOS__BaseUrl")
+            ?? Environment.GetEnvironmentVariable("PAY_OS_BASE_URL")
+            ?? configuration["PayOS:BaseUrl"];
+
+        configuration["PayOS:SandboxBaseUrl"] = Environment.GetEnvironmentVariable("PayOS__SandboxBaseUrl")
+            ?? Environment.GetEnvironmentVariable("PAY_OS_BASE_URL_SANDBOX")
+            ?? configuration["PayOS:SandboxBaseUrl"];
+
+        configuration["PayOS:ReturnUrl"] = Environment.GetEnvironmentVariable("PayOS__ReturnUrl")
+            ?? Environment.GetEnvironmentVariable("PAY_OS_RETURN_URL")
+            ?? configuration["PayOS:ReturnUrl"];
+
         configuration["AESEncryption:Key"] = Environment.GetEnvironmentVariable("AESEncryption__Key")
             ?? Environment.GetEnvironmentVariable("AES_KEY")
             ?? configuration["AESEncryption:Key"];

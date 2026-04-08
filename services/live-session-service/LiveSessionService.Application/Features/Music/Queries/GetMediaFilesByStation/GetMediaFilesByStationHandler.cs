@@ -68,6 +68,7 @@ public sealed class GetMediaFilesByStationHandler
                     Artist = m.Artist ?? string.Empty,
                     Album = m.Album,
                     ArtworkUrl = m.ArtUrl,
+                    Lyrics = m.Lyrics,
                     Duration = m.DurationSeconds,
                     FileUrl = m.FilePath,
                     FileType = m.FileType,

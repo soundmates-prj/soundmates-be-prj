@@ -5,6 +5,7 @@ using LiveSessionService.Application.Exceptions;
 using LiveSessionService.Application.Features.Results;
 using LiveSessionService.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
+using System.Text.RegularExpressions;
 
 namespace LiveSessionService.Application.Features.Music.Commands.DeleteMedia;
 
@@ -15,6 +16,7 @@ public sealed class DeleteMediaHandler : ICommandHandler<DeleteMediaCommand>
     private readonly IPlaylistMediaRepository _playlistMediaRepository;
     private readonly IAzuraCastStationRepository _stationRepository;
     private readonly IAzuraCastClient _azuraCastClient;
+    private readonly ICloudinaryMediaStorage _cloudinaryStorage;
     private readonly ILogger<DeleteMediaHandler> _logger;
 
     public DeleteMediaHandler(
@@ -22,12 +24,14 @@ public sealed class DeleteMediaHandler : ICommandHandler<DeleteMediaCommand>
         IPlaylistMediaRepository playlistMediaRepository,
         IAzuraCastStationRepository stationRepository,
         IAzuraCastClient azuraCastClient,
+        ICloudinaryMediaStorage cloudinaryStorage,
         ILogger<DeleteMediaHandler> logger)
     {
         _mediaFileRepository = mediaFileRepository;
         _playlistMediaRepository = playlistMediaRepository;
         _stationRepository = stationRepository;
         _azuraCastClient = azuraCastClient;
+        _cloudinaryStorage = cloudinaryStorage;
         _logger = logger;
     }
 
@@ -40,30 +44,37 @@ public sealed class DeleteMediaHandler : ICommandHandler<DeleteMediaCommand>
         var localPath = mediaFile.FilePath;
         var azuraMediaId = mediaFile.AzuraCastMediaId;
 
-        var isSystemMedia = !string.IsNullOrWhiteSpace(localPath)
-            && localPath.StartsWith(SystemMediaPrefix, StringComparison.OrdinalIgnoreCase);
+        // If stored in Cloudinary (System Media)
+        var isCloudinaryMedia = !string.IsNullOrWhiteSpace(localPath)
+            && localPath.StartsWith("http", StringComparison.OrdinalIgnoreCase);
 
-        if (isSystemMedia)
+        if (isCloudinaryMedia)
         {
             try
             {
-                var relativePath = localPath.Substring(SystemMediaPrefix.Length)
-                    .Replace('/', Path.DirectorySeparatorChar)
-                    .Replace('\\', Path.DirectorySeparatorChar);
-                var absolutePath = Path.Combine(AppContext.BaseDirectory, "storage", relativePath);
-
-                if (File.Exists(absolutePath))
+                var publicIdMatch = Regex.Match(localPath, @"\/v\d+\/(.+?)\.[a-zA-Z0-9]+$");
+                if (publicIdMatch.Success)
                 {
-                    File.Delete(absolutePath);
-                    _logger.LogInformation("Deleted local system media file at {Path}", absolutePath);
+                    var publicId = publicIdMatch.Groups[1].Value;
+                    await _cloudinaryStorage.DeleteAudioAsync(publicId, cancellationToken);
+                    _logger.LogInformation("Deleted Cloudinary system media file with public_id {PublicId}", publicId);
+                }
+                
+                if (!string.IsNullOrWhiteSpace(mediaFile.ArtUrl))
+                {
+                    var artPublicIdMatch = Regex.Match(mediaFile.ArtUrl, @"\/v\d+\/(.+?)\.[a-zA-Z0-9]+$");
+                    if (artPublicIdMatch.Success)
+                    {
+                        var artPublicId = artPublicIdMatch.Groups[1].Value;
+                        await _cloudinaryStorage.DeleteImageAsync(artPublicId, cancellationToken);
+                        _logger.LogInformation("Deleted Cloudinary artwork with public_id {PublicId}", artPublicId);
+                    }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex,
-                    "Failed to delete local system media file {LocalPath}",
-                    localPath);
-                return Result.Failure("Failed to delete local system media file", ErrorCode.InternalServerError);
+                _logger.LogError(ex, "Failed to delete Cloudinary media file {LocalPath}", localPath);
+                // Continue to delete from DB even if Cloudinary fails to prevent orphaned DB records
             }
         }
 

@@ -11,6 +11,8 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Globalization;
+using System.Text.Json;
 
 namespace AccountContentService.Api.Controllers
 {
@@ -218,15 +220,34 @@ namespace AccountContentService.Api.Controllers
                 // var isValid = ValidatePayOSWebhook(webhookData);
                 // if (!isValid) return Unauthorized();
 
-                _ = _mediator.Send(new PayOSWebhookCommand
+                var source = webhookData.data ?? webhookData;
+                var status = !string.IsNullOrWhiteSpace(source.status)
+                    ? source.status
+                    : ((source.code ?? webhookData.code) == "00" ? "PAID" : "FAILED");
+
+                // PayOS sends orderCode inside data.data (not data.orderCode).
+                // Reference is the paymentId (GUID) that we sent as orderId in CreatePaymentCommand.
+                var orderCode = ExtractOrderCode(source);
+                var paymentId = !string.IsNullOrWhiteSpace(source.reference)
+                    ? source.reference
+                    : source.orderId ?? string.Empty;
+
+                var processed = await _mediator.Send(new PayOSWebhookCommand
                 {
-                    OrderId = webhookData.orderId,
-                    PaymentLinkId = webhookData.paymentLinkId,
-                    Amount = webhookData.amount,
-                    Status = webhookData.status,
-                    TransactionDateTime = webhookData.transactionDateTime,
-                    Signature = webhookData.signature ?? string.Empty
+                    OrderId = paymentId,
+                    OrderCode = orderCode,
+                    PaymentLinkId = source.paymentLinkId,
+                    Amount = source.amount,
+                    Status = status,
+                    TransactionDateTime = ParseTransactionDateTime(source.transactionDateTime),
+                    Signature = webhookData.signature ?? source.signature ?? string.Empty
                 }, cancellationToken);
+
+                if (!processed)
+                {
+                    return BadRequest(ApiResponse<string>.Fail(
+                        $"Webhook received but payment not matched/processed. orderCode={source.orderCode}, orderId={source.orderId}"));
+                }
 
                 return Ok(ApiResponse<string>.Ok("OK", "Webhook received"));
             }
@@ -234,6 +255,29 @@ namespace AccountContentService.Api.Controllers
             {
                 return BadRequest(ApiResponse<string>.Fail(ex.Message));
             }
+        }
+
+        private static long? ExtractOrderCode(PayOSWebhookRequest source)
+        {
+            // PayOS v2 sends orderCode as a top-level number field (e.g. 1775592558831).
+            // In the webhook payload: data.orderCode = 1775592558831
+            if (source.orderCode.HasValue && source.orderCode.Value != 0)
+                return source.orderCode.Value;
+
+            // Fallback: try to find a Unix-millisecond timestamp in the description.
+            // Description format: "plantype_paymentguid" (e.g. "premium-019d696e...")
+            // The timestamp part is set by DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+            // which is always > 1 trillion.
+            if (!string.IsNullOrWhiteSpace(source.desc))
+            {
+                foreach (var part in source.desc.Split('_', '-'))
+                {
+                    if (long.TryParse(part, out var parsed) && parsed > 1_000_000_000_000)
+                        return parsed;
+                }
+            }
+
+            return null;
         }
 
         private static string GetPayOSMessage(string code, string status)
@@ -276,16 +320,62 @@ namespace AccountContentService.Api.Controllers
 
             return $"{apiBaseUrl}/{path.TrimStart('/')}";
         }
+
+        private static long? ParseTransactionDateTime(JsonElement? raw)
+        {
+            if (!raw.HasValue)
+                return null;
+
+            var value = raw.Value;
+
+            if (value.ValueKind == JsonValueKind.Number && value.TryGetInt64(out var numeric))
+                return numeric;
+
+            if (value.ValueKind != JsonValueKind.String)
+                return null;
+
+            var text = value.GetString();
+            if (string.IsNullOrWhiteSpace(text))
+                return null;
+
+            if (long.TryParse(text, out var milliseconds))
+                return milliseconds;
+
+            if (DateTime.TryParseExact(
+                    text,
+                    "yyyy-MM-dd HH:mm:ss",
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.AssumeLocal,
+                    out var parsed))
+            {
+                return new DateTimeOffset(parsed).ToUnixTimeMilliseconds();
+            }
+
+            if (DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out parsed))
+            {
+                return new DateTimeOffset(parsed).ToUnixTimeMilliseconds();
+            }
+
+            return null;
+        }
     }
 
     public class PayOSWebhookRequest
     {
+        public string? code { get; set; }
+        public string? desc { get; set; }
+        public bool? success { get; set; }
+
         public string orderId { get; set; } = string.Empty;
+        public long? orderCode { get; set; }
+        public string? reference { get; set; }
         public string paymentLinkId { get; set; } = string.Empty;
         public int amount { get; set; }
         public string status { get; set; } = string.Empty;
-        public long? transactionDateTime { get; set; }
+        public JsonElement? transactionDateTime { get; set; }
         public string? signature { get; set; }
         public string? cancelReason { get; set; }
+
+        public PayOSWebhookRequest? data { get; set; }
     }
 }

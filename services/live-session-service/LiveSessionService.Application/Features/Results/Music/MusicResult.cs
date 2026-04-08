@@ -13,6 +13,7 @@ public sealed class MusicResult
     public string Artist { get; init; } = null!;
     public string? Album { get; init; }
     public string? ArtworkUrl { get; init; }
+    public string? Lyrics { get; init; }
     public int Duration { get; init; }
     public string FileUrl { get; init; } = null!;
     public string FileType { get; init; } = null!;

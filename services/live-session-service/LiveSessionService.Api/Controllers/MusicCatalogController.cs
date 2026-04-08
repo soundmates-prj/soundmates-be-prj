@@ -69,20 +69,39 @@ public class MusicCatalogController : ControllerBase
     }
 
     /// <summary>
-    /// Upload a music file to system media catalog
+    /// Upload a music file to AzuraCast station
     /// </summary>
-    /// <remarks>
-    /// Supported formats: MP3, FLAC, WAV, OGG
-    /// Max file size: 100MB
-    /// File is stored in standalone system media storage (Auto-pushed to AzuraCast station)
-    /// </remarks>
-    [HttpPost("upload")]
+    [HttpPost("station/{stationId:guid}/upload")]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(100_000_000)] // 100MB
     [ProducesResponseType(typeof(ApiResponse<MusicResult>), 201)]
     [ProducesResponseType(typeof(ApiResponse<object>), 400)]
-    public async Task<IActionResult> UploadMusic(
+    public async Task<IActionResult> UploadStationMusic(
+        Guid stationId,
         [FromForm] UploadMusicRequest request,
+        CancellationToken ct)
+    {
+        return await ProcessUpload(stationId, request, ct);
+    }
+
+    /// <summary>
+    /// Upload a music file to system media catalog (Cloudinary)
+    /// </summary>
+    [HttpPost("system/upload")]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(100_000_000)] // 100MB
+    [ProducesResponseType(typeof(ApiResponse<MusicResult>), 201)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    public async Task<IActionResult> UploadSystemMusic(
+        [FromForm] UploadMusicRequest request,
+        CancellationToken ct)
+    {
+        return await ProcessUpload(null, request, ct);
+    }
+
+    private async Task<IActionResult> ProcessUpload(
+        Guid? stationId,
+        UploadMusicRequest request,
         CancellationToken ct)
     {
         if (request.File == null || request.File.Length == 0)
@@ -103,12 +122,11 @@ public class MusicCatalogController : ControllerBase
                 (int)ErrorCode.BadRequest));
         }
 
-        // Copy to MemoryStream � IFormFile stream is not guaranteed to be seekable
+        // Copy to MemoryStream
         var ms = new MemoryStream();
         await request.File.CopyToAsync(ms, ct);
         ms.Position = 0;
 
-        // Auto-extract ID3/Vorbis tags from file so users don't have to fill them manually
         string? tagTitle = null, tagArtist = null, tagAlbum = null;
         try
         {
@@ -122,13 +140,11 @@ public class MusicCatalogController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Could not read tags from {FileName} � using request values or fallbacks",
-                request.File.FileName);
+            _logger.LogWarning(ex, "Could not read tags from {FileName}", request.File.FileName);
         }
 
         ms.Position = 0;
 
-        // Priority: request field > file tag > fallback
         var title  = (!string.IsNullOrWhiteSpace(request.Title)  ? request.Title  : tagTitle)
                      ?? Path.GetFileNameWithoutExtension(request.File.FileName);
         var artist = (!string.IsNullOrWhiteSpace(request.Artist) ? request.Artist : tagArtist)
@@ -139,7 +155,7 @@ public class MusicCatalogController : ControllerBase
             ?? throw new InvalidOperationException("User ID claim missing from token"));
 
         var result = await _commands.Send<UploadMusicCommand, MusicResult>(
-            new UploadMusicCommand(request.StationId, userId, title, artist, album,
+            new UploadMusicCommand(stationId, userId, title, artist, album, request.Lyrics,
                 ms, request.File.FileName, request.File.ContentType), ct);
 
         await ms.DisposeAsync();
@@ -283,22 +299,39 @@ public class MusicCatalogController : ControllerBase
     }
 
     /// <summary>
-    /// Bulk upload multiple music files at once
+    /// Bulk upload multiple music files at once to AzuraCast station
     /// </summary>
-    /// <remarks>
-    /// Supported formats: MP3, FLAC, WAV, OGG
-    /// Max individual file size: 100MB
-    /// Max total request size: 500MB
-    /// Max files per request: 100
-    /// Files are stored in standalone system media storage (not auto-pushed to AzuraCast station)
-    /// </remarks>
-    [HttpPost("bulk")]
+    [HttpPost("station/{stationId:guid}/bulk")]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(524_288_000)] // 500MB
     [ProducesResponseType(typeof(ApiResponse<BulkUploadMusicResult>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 400)]
-    public async Task<IActionResult> BulkUploadMusic(
+    public async Task<IActionResult> BulkUploadStationMusic(
+        Guid stationId,
         [FromForm] BulkUploadMusicRequest request,
+        CancellationToken ct)
+    {
+        return await ProcessBulkUpload(stationId, request, ct);
+    }
+
+    /// <summary>
+    /// Bulk upload multiple music files at once to System Media (Cloudinary)
+    /// </summary>
+    [HttpPost("system/bulk")]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(524_288_000)] // 500MB
+    [ProducesResponseType(typeof(ApiResponse<BulkUploadMusicResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    public async Task<IActionResult> BulkUploadSystemMusic(
+        [FromForm] BulkUploadMusicRequest request,
+        CancellationToken ct)
+    {
+        return await ProcessBulkUpload(null, request, ct);
+    }
+
+    private async Task<IActionResult> ProcessBulkUpload(
+        Guid? stationId,
+        BulkUploadMusicRequest request,
         CancellationToken ct)
     {
         var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
@@ -353,7 +386,7 @@ public class MusicCatalogController : ControllerBase
         }
 
         var result = await _commands.Send<BulkUploadMusicCommand, BulkUploadMusicResult>(
-            new BulkUploadMusicCommand(request.StationId, userId, fileEntries), ct);
+            new BulkUploadMusicCommand(stationId, userId, fileEntries), ct);
 
         // Dispose all streams
         foreach (var entry in fileEntries)
