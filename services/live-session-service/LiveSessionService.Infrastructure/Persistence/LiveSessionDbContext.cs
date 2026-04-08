@@ -79,6 +79,7 @@ public class LiveSessionDbContext : DbContext
     public DbSet<UserPlaylistMedia> UserPlaylistMedias => Set<UserPlaylistMedia>();
     public DbSet<Podcast> Podcasts => Set<Podcast>();
     public DbSet<PodcastEpisode> PodcastEpisodes => Set<PodcastEpisode>();
+    public DbSet<UserSavedPodcast> UserSavedPodcasts => Set<UserSavedPodcast>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -50,10 +50,13 @@ using LiveSessionService.Application.Features.Podcasts.Commands.DeletePodcast;
 using LiveSessionService.Application.Features.Podcasts.Commands.DeletePodcastEpisode;
 using LiveSessionService.Application.Features.Podcasts.Commands.UpdatePodcast;
 using LiveSessionService.Application.Features.Podcasts.Commands.UpdatePodcastEpisode;
+using LiveSessionService.Application.Features.Podcasts.Commands.FollowPodcast;
+using LiveSessionService.Application.Features.Podcasts.Commands.UnfollowPodcast;
 using LiveSessionService.Application.Features.Podcasts.Queries.GetPodcast;
 using LiveSessionService.Application.Features.Podcasts.Queries.GetPodcastEpisodeById;
 using LiveSessionService.Application.Features.Podcasts.Queries.GetPodcastEpisodes;
 using LiveSessionService.Application.Features.Podcasts.Queries.GetPodcasts;
+using LiveSessionService.Application.Features.Podcasts.Queries.GetFollowedPodcasts;
 using LiveSessionService.Application.Features.Results;
 using LiveSessionService.Application.Features.Results.LiveSessions;
 using LiveSessionService.Application.Features.Results.Music;
@@ -150,6 +153,8 @@ public static class DependencyInjection
 
         // Register Podcast Command Handlers
         services.AddScoped<ICommandHandler<CreatePodcastCommand, PodcastResult>, CreatePodcastHandler>();
+        services.AddScoped<ICommandHandler<FollowPodcastCommand, PodcastResult>, FollowPodcastHandler>();
+        services.AddScoped<ICommandHandler<UnfollowPodcastCommand>, UnfollowPodcastHandler>();
         services.AddScoped<ICommandHandler<UpdatePodcastCommand, PodcastResult>, UpdatePodcastHandler>();
         services.AddScoped<ICommandHandler<DeletePodcastCommand>, DeletePodcastHandler>();
         services.AddScoped<ICommandHandler<CreatePodcastEpisodeCommand, PodcastEpisodeResult>, CreatePodcastEpisodeHandler>();
@@ -158,6 +163,7 @@ public static class DependencyInjection
 
         // Register Podcast Query Handlers
         services.AddScoped<IQueryHandler<GetPodcastQuery, PodcastResult>, GetPodcastHandler>();
+        services.AddScoped<IQueryHandler<GetFollowedPodcastsQuery, List<PodcastResult>>, GetFollowedPodcastsHandler>();
         services.AddScoped<IQueryHandler<GetPodcastsQuery, List<PodcastResult>>, GetPodcastsHandler>();
         services.AddScoped<IQueryHandler<GetPodcastEpisodesQuery, List<PodcastEpisodeResult>>, GetPodcastEpisodesHandler>();
         services.AddScoped<IQueryHandler<GetPodcastEpisodeByIdQuery, PodcastEpisodeResult>, GetPodcastEpisodeByIdHandler>();

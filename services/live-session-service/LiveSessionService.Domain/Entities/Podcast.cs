@@ -25,5 +25,7 @@ namespace LiveSessionService.Domain.Entities
         public Guid CreatedBy { get; set; }
 
         public virtual ICollection<PodcastEpisode> Episodes { get; set; } = new List<PodcastEpisode>();
+
+        public virtual ICollection<UserSavedPodcast> UserSavedPodcasts { get; set; } = new List<UserSavedPodcast>();
     }
 }
