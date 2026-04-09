@@ -16,7 +16,7 @@ namespace LiveSessionService.Api.Controllers;
 /// API endpoints for managing User's saved podcasts
 /// </summary>
 [ApiController]
-[Route("api/v1/users/me/saved-podcasts")]
+[Route("api/v1/me/saved-podcasts")]
 [Produces("application/json")]
 [Authorize]
 public sealed class UserSavedPodcastController : ControllerBase

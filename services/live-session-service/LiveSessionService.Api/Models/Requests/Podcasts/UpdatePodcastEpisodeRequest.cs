@@ -26,4 +26,7 @@ public sealed class UpdatePodcastEpisodeRequest
     public int EpisodeNumber { get; set; }
 
     public DateTime PublishDate { get; set; }
+
+    [Range(0, int.MaxValue, ErrorMessage = "Duration cannot be negative")]
+    public int? Duration { get; set; }
 }

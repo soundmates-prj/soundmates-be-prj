@@ -319,7 +319,7 @@ public class PodcastController : ControllerBase
         }
 
         var resolvedAudioUrl = request.AudioUrl?.Trim();
-        int? resolvedDuration = null;
+        int? resolvedDuration = request.Duration;
 
         try
         {
@@ -393,7 +393,7 @@ public class PodcastController : ControllerBase
         }
 
         string? resolvedAudioUrl = null;
-        int? resolvedDuration = null;
+        int? resolvedDuration = request.Duration;
 
         try
         {
