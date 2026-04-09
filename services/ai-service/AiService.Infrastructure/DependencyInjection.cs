@@ -10,6 +10,7 @@ using AiService.Application.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Polly;
 using Polly.Extensions.Http;
@@ -55,6 +56,7 @@ public static class DependencyInjection
         services.AddHttpClient<VieNeuTtsClient>((sp, http) =>
         {
             var options = sp.GetRequiredService<IOptions<TtsOptions>>().Value;
+            var logger = sp.GetRequiredService<ILogger<VieNeuTtsClient>>();
 
             if (!string.IsNullOrWhiteSpace(options.BaseUrl)
                 && !options.BaseUrl.StartsWith("${")
@@ -63,10 +65,14 @@ public static class DependencyInjection
                 http.BaseAddress = baseUri;
             }
 
-            if (options.TimeoutSeconds > 0)
-            {
-                http.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
-            }
+            var timeoutSeconds = options.TimeoutSeconds > 0 ? options.TimeoutSeconds : 100;
+            http.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+
+            logger.LogInformation(
+                "Configured VieNeu HttpClient with BaseUrl={BaseUrl}, SynthesizePath={SynthesizePath}, TimeoutSeconds={TimeoutSeconds}",
+                options.BaseUrl,
+                options.SynthesizePath,
+                timeoutSeconds);
         })
         .AddPolicyHandler(CreateCircuitBreakerPolicy());
         services.AddScoped<ITtsClient, VieNeuTtsClient>();

@@ -144,9 +144,11 @@ public static class ConfigurationExtensions
             ?? Environment.GetEnvironmentVariable("TTS_PROMPT_TEMPLATE")
             ?? configuration["Tts:PromptTemplate"];
 
-        configuration["Tts:TimeoutSeconds"] = Environment.GetEnvironmentVariable("Tts__TimeoutSeconds")
-            ?? Environment.GetEnvironmentVariable("TTS_TIMEOUT_SECONDS")
-            ?? configuration["Tts:TimeoutSeconds"];
+        configuration["Tts:TimeoutSeconds"] = FirstPositiveIntString(
+            Environment.GetEnvironmentVariable("Tts__TimeoutSeconds"),
+            Environment.GetEnvironmentVariable("TTS_TIMEOUT_SECONDS"),
+            configuration["Tts:TimeoutSeconds"])
+            ?? "100";
 
         configuration["Tts:DemoMode"] = Environment.GetEnvironmentVariable("Tts__DemoMode")
             ?? Environment.GetEnvironmentVariable("TTS_DEMO_MODE")
@@ -159,6 +161,24 @@ public static class ConfigurationExtensions
         configuration["Storage:PublicBaseUrl"] = Environment.GetEnvironmentVariable("Storage__PublicBaseUrl")
             ?? Environment.GetEnvironmentVariable("PUBLIC_BASE_URL")
             ?? configuration["Storage:PublicBaseUrl"];
+    }
+
+    private static string? FirstPositiveIntString(params string?[] candidates)
+    {
+        foreach (var raw in candidates)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+                continue;
+
+            var trimmed = raw.Trim();
+            if (trimmed.StartsWith("${", StringComparison.Ordinal) && trimmed.EndsWith("}", StringComparison.Ordinal))
+                continue;
+
+            if (int.TryParse(trimmed, out var value) && value > 0)
+                return value.ToString();
+        }
+
+        return null;
     }
 }
 
