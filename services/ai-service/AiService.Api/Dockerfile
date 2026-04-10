@@ -24,6 +24,9 @@ RUN dotnet publish "./AiService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publ
 
 FROM base AS final
 WORKDIR /app
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends libgssapi-krb5-2 \
+	&& rm -rf /var/lib/apt/lists/*
 COPY --from=publish /app/publish .
 # Copy .env file if it exists (optional, environment variables will be set by docker-compose)
 COPY --from=build /src/.env* ./
