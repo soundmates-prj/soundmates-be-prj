@@ -51,13 +51,16 @@ public sealed class GetLiveSessionNowPlayingHandler
             return Result<StationNowPlayingResult>.Failure(
                 "No now playing data returned from AzuraCast", ErrorCode.NotFound);
 
+        var listenUrl = ResolvePublicUrl(data.Station?.ListenUrl, session.AzuraCastStation.StreamUrl);
+        var publicPlayerUrl = ResolvePublicUrl(data.Station?.PublicPlayerUrl, session.AzuraCastStation.PublicPlayerUrl);
+
         var result = new StationNowPlayingResult
         {
             ExternalStationId = session.AzuraCastStation.ExternalStationId,
             StationName       = data.Station?.Name ?? session.AzuraCastStation.StationName,
             StationShortcode  = data.Station?.ShortCode ?? session.AzuraCastStation.StationShortcode,
-            ListenUrl         = data.Station?.ListenUrl ?? session.AzuraCastStation.StreamUrl,
-            PublicPlayerUrl   = data.Station?.PublicPlayerUrl ?? session.AzuraCastStation.PublicPlayerUrl,
+            ListenUrl         = listenUrl,
+            PublicPlayerUrl   = publicPlayerUrl,
             IsOnline          = data.IsOnline,
             IsLive            = data.IsLive,
             StreamerName      = data.StreamerName,
@@ -148,4 +151,25 @@ public sealed class GetLiveSessionNowPlayingHandler
             Duration  = track.Duration,
             IsRequest = track.IsRequest
         };
+
+    private static string? ResolvePublicUrl(string? candidateUrl, string? fallbackUrl)
+    {
+        if (LooksLikeInternalUrl(candidateUrl) && !string.IsNullOrWhiteSpace(fallbackUrl))
+            return fallbackUrl;
+
+        return string.IsNullOrWhiteSpace(candidateUrl) ? fallbackUrl : candidateUrl;
+    }
+
+    private static bool LooksLikeInternalUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return false;
+
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            return false;
+
+        return uri.IsLoopback
+            || uri.Host.Equals("host.docker.internal", StringComparison.OrdinalIgnoreCase)
+            || uri.Host.Equals("0.0.0.0", StringComparison.OrdinalIgnoreCase);
+    }
 }
