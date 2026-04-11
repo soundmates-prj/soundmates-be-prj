@@ -164,6 +164,8 @@ public sealed class GetLiveSessionHandler : IQueryHandler<GetLiveSessionQuery, L
             }
         }
 
+        artUrl = NormalizeArtworkUrl(artUrl);
+
         return new NowPlayingTrackResult
         {
             ShId = track.ShId,
@@ -191,8 +193,59 @@ public sealed class GetLiveSessionHandler : IQueryHandler<GetLiveSessionQuery, L
             Artist = h.Song?.Artist,
             Album = h.Song?.Album,
             Genre = h.Song?.Genre,
-            ArtUrl = h.Song?.Art,
+            ArtUrl = NormalizeArtworkUrl(h.Song?.Art),
             Lyrics = h.Song?.Lyrics,
             PlayedAt = h.PlayedAt
         };
+
+    private static string? NormalizeArtworkUrl(string? artUrl)
+    {
+        if (string.IsNullOrWhiteSpace(artUrl))
+            return artUrl;
+
+        if (!Uri.TryCreate(artUrl, UriKind.Absolute, out var uri))
+            return artUrl;
+
+        if (string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+            return artUrl;
+
+        // Domain public should always be served via HTTPS.
+        if (uri.Host.EndsWith("soundmates.xyz", StringComparison.OrdinalIgnoreCase))
+            return BuildHttpsUrl(uri);
+
+        // AzuraCast art endpoint often comes from internal HTTP base; prefer radio domain when available.
+        if (LooksLikeInternalUrl(uri) || uri.Port == 5000)
+        {
+            var publicRadioBase = Environment.GetEnvironmentVariable("AZURACAST_PUBLIC_BASE_URL");
+
+            if (Uri.TryCreate(publicRadioBase, UriKind.Absolute, out var publicBaseUri))
+            {
+                var rebuilt = new UriBuilder(publicBaseUri)
+                {
+                    Path = uri.AbsolutePath,
+                    Query = uri.Query.TrimStart('?')
+                };
+
+                return rebuilt.Uri.ToString();
+            }
+        }
+
+        return artUrl;
+    }
+
+    private static bool LooksLikeInternalUrl(Uri uri)
+        => uri.IsLoopback
+            || uri.Host.Equals("host.docker.internal", StringComparison.OrdinalIgnoreCase)
+            || uri.Host.Equals("0.0.0.0", StringComparison.OrdinalIgnoreCase);
+
+    private static string BuildHttpsUrl(Uri uri)
+    {
+        var builder = new UriBuilder(uri)
+        {
+            Scheme = Uri.UriSchemeHttps,
+            Port = uri.IsDefaultPort ? -1 : uri.Port
+        };
+
+        return builder.Uri.ToString();
+    }
 }
