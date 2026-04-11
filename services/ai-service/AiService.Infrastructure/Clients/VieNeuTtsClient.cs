@@ -71,7 +71,7 @@ public class VieNeuTtsClient : ITtsClient
         var payload = new Dictionary<string, object?>
         {
             ["text"] = request.Text,
-            ["voice"] = request.VoiceCode,
+            ["voice_id"] = request.VoiceCode,
             ["speed"] = request.Speed,
             ["pitch"] = request.Pitch,
             ["model"] = string.IsNullOrWhiteSpace(request.Model) || request.Model.StartsWith("${")
@@ -117,7 +117,7 @@ public class VieNeuTtsClient : ITtsClient
         var mediaType = response.Content.Headers.ContentType?.MediaType;
         if (!string.IsNullOrWhiteSpace(mediaType) && mediaType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase))
         {
-            var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+            var bytes = await ReadAudioBytesAsync(response.Content, cancellationToken);
             var normalized = NormalizeWavHeaderIfNeeded(bytes, mediaType);
             var audioDuration = EstimateDurationFromAudio(normalized, mediaType, request.Text);
             return new TtsSynthesizeResponse(normalized, mediaType, DurationSeconds: audioDuration);
@@ -555,7 +555,7 @@ public class VieNeuTtsClient : ITtsClient
         if (string.IsNullOrWhiteSpace(mediaType) || !mediaType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase))
             return null;
 
-        var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+        var bytes = await ReadAudioBytesAsync(response.Content, cancellationToken);
         if (bytes.Length == 0)
             return null;
 
@@ -583,7 +583,7 @@ public class VieNeuTtsClient : ITtsClient
         if (string.IsNullOrWhiteSpace(mediaType) || !mediaType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase))
             return null;
 
-        var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+        var bytes = await ReadAudioBytesAsync(response.Content, cancellationToken);
         if (bytes.Length == 0)
             return null;
 
@@ -681,6 +681,21 @@ public class VieNeuTtsClient : ITtsClient
         return compact.Length <= maxLen ? compact : compact[..maxLen];
     }
 
+    private static async Task<byte[]> ReadAudioBytesAsync(HttpContent content, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await content.ReadAsByteArrayAsync(cancellationToken);
+        }
+        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+        {
+            throw new TimeoutException(
+                "Reading audio stream from VieNeu was canceled by the upstream request token. " +
+                "This usually indicates API Gateway/client timeout or client disconnect before TTS completed.",
+                ex);
+        }
+    }
+
     private string? BuildPrompt(TtsSynthesizeRequest request)
     {
         if (string.IsNullOrWhiteSpace(_options.PromptTemplate))
@@ -754,6 +769,18 @@ public class VieNeuTtsClient : ITtsClient
                                 var duration = (double)dataSize / (sampleRate * bytesPerSample);
                                 var result = (int)Math.Ceiling(duration);
                                 if (result > 0) return result;
+                            }
+                            else
+                            {
+                                // Chunk size is 0 (placeholder), use actual remaining bytes
+                                var actualDataSize = audioBytes.Length - (pos + 8);
+                                if (actualDataSize > 0)
+                                {
+                                    var bytesPerSample = (channels * bitsPerSample) / 8;
+                                    var duration = (double)actualDataSize / (sampleRate * bytesPerSample);
+                                    var result = (int)Math.Ceiling(duration);
+                                    if (result > 0) return result;
+                                }
                             }
                             break;
                         }

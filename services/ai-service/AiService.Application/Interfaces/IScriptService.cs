@@ -26,5 +26,7 @@ public interface IScriptService
     Task<Result<IReadOnlyList<Script>>> SplitToAudioPartsAsync(SplitScriptPartsRequest request, CancellationToken cancellationToken);
     Task<Result<Script>> GetByIdAsync(Guid scriptId, CancellationToken cancellationToken);
     Task<Result<IReadOnlyList<Script>>> GetMyScriptsAsync(Guid userId, string? contextType, string? status, CancellationToken cancellationToken);
+    Task<Result<bool>> DeleteAsync(Guid userId, Guid scriptId, CancellationToken cancellationToken);
+    Task<Result<bool>> UpdateAsync(Guid userId, Guid scriptId, string? title, string? contentText, CancellationToken cancellationToken);
 }
 

@@ -12,7 +12,8 @@ namespace AccountContentService.Application.Features.Subscriptions.Queries.GetSu
     public class GetSubscriptionsHandler
         : IRequestHandler<GetSubscriptionsQuery, PaginationResult<SubscriptionDto>>,
           IRequestHandler<GetSubscriptionsHistoryQuery, PaginationResult<SubscriptionDto>>,
-          IRequestHandler<GetUserSubscriptionQuery, SubscriptionDto>
+          IRequestHandler<GetUserSubscriptionQuery, SubscriptionDto>,
+          IRequestHandler<GetUserSubscriptionFullQuery, SubscriptionDto>
     {
         private readonly ISubscriptionRepository _subscriptionRepository;
         private readonly IMapper _mapper;
@@ -55,6 +56,14 @@ namespace AccountContentService.Application.Features.Subscriptions.Queries.GetSu
             var result = await _subscriptionRepository.GetActiveByUserIdAsync(request.UserId, cancellationToken);
             var subscriptionDto = _mapper.Map<SubscriptionDto>(result);
             return subscriptionDto;
+        }
+
+        public async Task<SubscriptionDto> Handle(GetUserSubscriptionFullQuery request, CancellationToken cancellationToken)
+        {
+            var result = await _subscriptionRepository.GetActiveByUserIdAsync(request.UserId, cancellationToken);
+            if (result == null) return null!;
+            var dto = _mapper.Map<SubscriptionDto>(result);
+            return dto;
         }
     }
 }

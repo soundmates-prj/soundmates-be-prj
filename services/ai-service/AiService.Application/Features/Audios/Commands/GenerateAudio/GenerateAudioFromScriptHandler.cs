@@ -19,7 +19,7 @@ public class GenerateAudioFromScriptHandler : ICommandHandler<GenerateAudioFromS
             new GenerateAudioFromScriptRequest(
                 UserId: command.UserId,
                 ScriptId: command.ScriptId,
-                VoiceId: command.VoiceId,
+                VoiceCode: command.VoiceCode,
                 Speed: command.Speed,
                 Pitch: command.Pitch),
             cancellationToken);

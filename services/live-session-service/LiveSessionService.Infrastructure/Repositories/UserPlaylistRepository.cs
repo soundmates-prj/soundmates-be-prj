@@ -28,6 +28,13 @@ public sealed class UserPlaylistRepository : IUserPlaylistRepository
             .ThenByDescending(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
 
+    public Task<List<UserPlaylist>> GetAllPublicAsync(CancellationToken cancellationToken = default)
+        => _db.UserPlaylists
+            .Include(x => x.UserPlaylistMedias)
+            .Where(x => x.Visibility == LiveSessionService.Domain.Enums.PlaylistVisibility.Public && x.IsEnabled)
+            .OrderByDescending(x => x.CreatedAt)
+            .ToListAsync(cancellationToken);
+
     public async Task AddAsync(UserPlaylist playlist, CancellationToken cancellationToken = default)
     {
         await _db.UserPlaylists.AddAsync(playlist, cancellationToken);

@@ -45,13 +45,27 @@ public class VoiceService : IVoiceService
         if (voice is null)
             return Result<bool>.Failure("voice not found", (int)ApiStatusCode.HB40401);
 
-        // Standard voices (built-in) usually don't have a UserId or belong to System.
-        // If there's no UserId field in Domain, we check role.
-        // For simplicity, let's assume if it's not custom, we can't delete unless Admin.
-        
+        if (voice.UserId != userId)
+            return Result<bool>.Failure("forbidden", (int)ApiStatusCode.HB40301);
+
         await _voices.DeleteAsync(voiceId, cancellationToken);
         await _uow.SaveChangesAsync(cancellationToken);
-        
+
+        return Result<bool>.Success(true);
+    }
+
+    public async Task<Result<bool>> DeleteByCodeAsync(Guid userId, string provider, string voiceCode, CancellationToken cancellationToken)
+    {
+        var voice = await _voices.GetByCodeAsync(provider, voiceCode, cancellationToken);
+        if (voice is null)
+            return Result<bool>.Failure("voice not found", (int)ApiStatusCode.HB40401);
+
+        if (voice.UserId != userId)
+            return Result<bool>.Failure("forbidden", (int)ApiStatusCode.HB40301);
+
+        await _voices.DeleteByCodeAsync(provider, voiceCode, cancellationToken);
+        await _uow.SaveChangesAsync(cancellationToken);
+
         return Result<bool>.Success(true);
     }
 }

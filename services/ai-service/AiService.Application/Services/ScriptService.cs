@@ -1,3 +1,4 @@
+using AiService.Application.Enums;
 using AiService.Application.Interfaces;
 using AiService.Application.Results;
 using AiService.Domain.Entities;
@@ -160,6 +161,39 @@ public class ScriptService : IScriptService
     {
         var scripts = await _scripts.GetByAuthorAsync(userId, contextType, status, cancellationToken);
         return Result<IReadOnlyList<Script>>.Success(scripts);
+    }
+
+    public async Task<Result<bool>> DeleteAsync(Guid userId, Guid scriptId, CancellationToken cancellationToken)
+    {
+        var script = await _scripts.GetByIdAsync(scriptId, cancellationToken);
+        if (script is null)
+            return Result<bool>.Failure("script not found", (int)ApiStatusCode.HB40401);
+
+        if (script.AuthorId != userId)
+            return Result<bool>.Failure("forbidden", (int)ApiStatusCode.HB40301);
+
+        await _scripts.DeleteAsync(scriptId, cancellationToken);
+        await _uow.SaveChangesAsync(cancellationToken);
+        return Result<bool>.Success(true);
+    }
+
+    public async Task<Result<bool>> UpdateAsync(Guid userId, Guid scriptId, string? title, string? contentText, CancellationToken cancellationToken)
+    {
+        var script = await _scripts.GetByIdAsync(scriptId, cancellationToken);
+        if (script is null)
+            return Result<bool>.Failure("script not found", (int)ApiStatusCode.HB40401);
+
+        if (script.AuthorId != userId)
+            return Result<bool>.Failure("forbidden", (int)ApiStatusCode.HB40301);
+
+        if (!string.IsNullOrWhiteSpace(title))
+            script.Title = title.Trim();
+        if (!string.IsNullOrWhiteSpace(contentText))
+            script.ContentText = contentText.Trim();
+
+        await _scripts.UpdateAsync(script, cancellationToken);
+        await _uow.SaveChangesAsync(cancellationToken);
+        return Result<bool>.Success(true);
     }
 
     private static List<string> SplitByMaxChars(string text, int maxChars)

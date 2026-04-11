@@ -225,6 +225,27 @@ public static class DataSeeder
 
         await context.SaveChangesAsync();
 
+        // ── ALWAYS patch existing plan limits in case they were created before the VoiceClone migration ──
+        // This handles the case where VoiceModelLimit/TtsMinuteLimit/PodcastRequestLimit defaulted to 0
+        // because the columns were added after the plan rows were already inserted.
+        var premiumDb = await context.SubscriptionPlans.FirstOrDefaultAsync(p => p.PlanName == "Premium");
+        if (premiumDb != null && premiumDb.VoiceModelLimit == 0 && premiumDb.TtsMinuteLimit == 0)
+        {
+            premiumDb.VoiceModelLimit = 1;
+            premiumDb.TtsMinuteLimit = 30;
+            premiumDb.PodcastRequestLimit = 2;
+        }
+
+        var eliteDb = await context.SubscriptionPlans.FirstOrDefaultAsync(p => p.PlanName == "Elite");
+        if (eliteDb != null && eliteDb.VoiceModelLimit == 0 && eliteDb.TtsMinuteLimit == 0)
+        {
+            eliteDb.VoiceModelLimit = 3;
+            eliteDb.TtsMinuteLimit = 120;
+            eliteDb.PodcastRequestLimit = 5;
+        }
+
+        await context.SaveChangesAsync();
+
         if (await context.BlogPosts.AnyAsync()) return; // Data already seeded
 
         // SUBSCRIPTION PLANS

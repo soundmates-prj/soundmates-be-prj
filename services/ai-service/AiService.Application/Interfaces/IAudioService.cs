@@ -7,7 +7,7 @@ namespace AiService.Application.Interfaces;
 public record GenerateAudioFromScriptRequest(
     Guid UserId,
     Guid ScriptId,
-    Guid VoiceId,
+    string VoiceCode,
     decimal? Speed,
     decimal? Pitch);
 

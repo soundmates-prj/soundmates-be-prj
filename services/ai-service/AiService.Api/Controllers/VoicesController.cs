@@ -122,18 +122,29 @@ public class VoicesController : ControllerBase
         return Ok(ApiResponse<object>.SuccessResponse(new { voice = voiceResult.Data }));
     }
 
-    [HttpDelete("{voiceId:guid}")]
-    public async Task<IActionResult> Delete([FromRoute] Guid voiceId, CancellationToken ct)
+    [HttpDelete("code/{voiceCode}")]
+    public async Task<IActionResult> DeleteByCode([FromRoute] string voiceCode, CancellationToken ct)
     {
         if (!User.TryGetCurrentUserId(out var userId))
             return Unauthorized(ApiResponse<string>.Error(ApiStatusCode.HB40101, "Invalid token"));
 
+        if (string.IsNullOrWhiteSpace(voiceCode))
+            return BadRequest(ApiResponse<string>.Error(ApiStatusCode.HB40001, "voiceCode is required"));
+
         var voiceService = HttpContext.RequestServices.GetRequiredService<IVoiceService>();
-        var result = await voiceService.DeleteAsync(userId, voiceId, ct);
-        
-        return result.IsSuccess 
-            ? Ok(ApiResponse<string>.SuccessResponse("Deleted"))
-            : BadRequest(ApiResponse<string>.Error(ApiStatusCode.HB40001, result.ErrorMessage ?? "Failed"));
+        var result = await voiceService.DeleteByCodeAsync(userId, AiProviderConstants.VieNeuTts, voiceCode, ct);
+
+        if (result.IsSuccess)
+            return Ok(ApiResponse<string>.SuccessResponse("Deleted"));
+
+        var statusCode = result.ErrorCode ?? (int)ApiStatusCode.HB40001;
+        if (statusCode == (int)ApiStatusCode.HB40301)
+            return StatusCode(403, ApiResponse<string>.Error((ApiStatusCode)statusCode, result.ErrorMessage ?? "Forbidden"));
+            
+        if (statusCode == (int)ApiStatusCode.HB40401)
+            return NotFound(ApiResponse<string>.Error((ApiStatusCode)statusCode, result.ErrorMessage ?? "Not Found"));
+
+        return BadRequest(ApiResponse<string>.Error((ApiStatusCode)statusCode, result.ErrorMessage ?? "Failed"));
     }
 }
 

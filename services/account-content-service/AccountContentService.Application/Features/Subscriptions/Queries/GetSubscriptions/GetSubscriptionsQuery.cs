@@ -30,4 +30,16 @@ namespace AccountContentService.Application.Features.Subscriptions.Queries.GetSu
             UserId = userId;
         }
     }
+
+    /// <summary>
+    /// Returns full subscription with plan limits (VoiceModelLimit, TtsMinuteLimit, etc.)
+    /// </summary>
+    public class GetUserSubscriptionFullQuery : IRequest<SubscriptionDto>
+    {
+        public Guid UserId { get; set; }
+        public GetUserSubscriptionFullQuery(Guid userId)
+        {
+            UserId = userId;
+        }
+    }
 }

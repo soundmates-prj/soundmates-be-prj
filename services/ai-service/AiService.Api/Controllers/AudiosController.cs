@@ -38,7 +38,7 @@ public class AudiosController : ControllerBase
             return Unauthorized(ApiResponse<string>.Error(ApiStatusCode.HB40101, "Invalid token"));
 
         var result = await _commands.Send<GenerateAudioFromScriptCommand, Domain.Entities.ScriptAudio>(
-            new GenerateAudioFromScriptCommand(userId, scriptId, request.VoiceId, request.Speed, request.Pitch),
+            new GenerateAudioFromScriptCommand(userId, scriptId, request.VoiceCode, request.Speed, request.Pitch),
             cancellationToken);
 
         return result.IsSuccess
@@ -68,6 +68,39 @@ public class AudiosController : ControllerBase
         }
 
         return File(openResult.Data.Stream, openResult.Data.ContentType, enableRangeProcessing: true);
+    }
+
+    /// <summary>
+    /// Serves podcast audio files by filename (e.g. /api/audios/podcast-file/37f79ec16f384b2aa1d1cbe9367e9223.mp3).
+    /// Used by the generate-full endpoint for direct browser playback.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("podcast-file/{fileName}")]
+    public async Task<IActionResult> GetPodcastFile([FromRoute] string fileName, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(fileName) || fileName.Contains(".."))
+            return BadRequest("Invalid filename");
+
+        var root = ResolveAudioRoot();
+        var fullPath = Path.Combine(root, fileName);
+
+        if (!System.IO.File.Exists(fullPath))
+        {
+            return NotFound(ApiResponse<string>.Error(
+                ApiStatusCode.HB40401,
+                "Audio file not found"));
+        }
+
+        var ext = Path.GetExtension(fileName).ToLowerInvariant();
+        var contentType = ext switch
+        {
+            ".wav" => "audio/wav",
+            ".mp3" => "audio/mpeg",
+            _ => "application/octet-stream"
+        };
+
+        var stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 81920, useAsync: true);
+        return File(stream, contentType, enableRangeProcessing: true);
     }
 
     [HttpGet("{audioId:guid}/download")]

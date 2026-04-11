@@ -128,6 +128,7 @@ public class LiveSessionController : ControllerBase
     /// Get a specific live session by ID
     /// </summary>
     [HttpGet("{id:guid}")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResponse<LiveSessionResult>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
@@ -151,6 +152,7 @@ public class LiveSessionController : ControllerBase
     /// Get live now-playing data from AzuraCast for a live session
     /// </summary>
     [HttpGet("{id:guid}/now-playing")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResponse<StationNowPlayingResult>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
     public async Task<IActionResult> GetNowPlaying(Guid id, CancellationToken ct)
@@ -174,6 +176,7 @@ public class LiveSessionController : ControllerBase
     /// Create a new live stream session
     /// </summary>
     [HttpPost]
+    [Authorize(Roles = "STAFF,ADMIN")]
     [ProducesResponseType(typeof(ApiResponse<LiveSessionResult>), 201)]
     [ProducesResponseType(typeof(ApiResponse<object>), 400)]
     [ProducesResponseType(typeof(ApiResponse<object>), 401)]

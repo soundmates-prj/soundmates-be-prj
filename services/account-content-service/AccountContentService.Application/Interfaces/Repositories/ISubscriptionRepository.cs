@@ -1,4 +1,4 @@
-﻿using AccountContentService.Application.Common.Pagination;
+using AccountContentService.Application.Common.Pagination;
 using AccountContentService.Domain.Entities;
 using System;
 using System.Collections.Generic;
@@ -12,6 +12,7 @@ namespace AccountContentService.Application.Interfaces.Repositories
         /// CRUD operations for subcription 
         ///</summary>
         Task AddAsync(Subscription comment);
+        Task UpdateAsync(Subscription subscription);
 
         /// <summary>
         /// CRUD operations for subcription plans

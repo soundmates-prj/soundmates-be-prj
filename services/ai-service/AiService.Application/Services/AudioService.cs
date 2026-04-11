@@ -1,3 +1,4 @@
+using AiService.Application.Constants;
 using AiService.Application.Interfaces;
 using AiService.Application.Results;
 using AiService.Application.Enums;
@@ -47,9 +48,9 @@ public class AudioService : IAudioService
         if (script.AuthorId != request.UserId)
             throw new UnauthorizedAccessException();
 
-        var voice = await _voices.GetByIdAsync(request.VoiceId, cancellationToken);
+        var voice = await _voices.GetByCodeAsync(AiProviderConstants.VieNeuTts, request.VoiceCode, cancellationToken);
         if (voice is null)
-            return Result<ScriptAudio>.Failure("voice not found");
+            return Result<ScriptAudio>.Failure($"Voice '{request.VoiceCode}' not found");
 
         var audio = new ScriptAudio
         {
@@ -122,12 +123,27 @@ public class AudioService : IAudioService
 
             return Result<ScriptAudio>.Success(audio);
         }
-        catch
+        catch (Exception ex)
         {
             audio.Status = AudioStatus.Failed.ToString().ToLowerInvariant();
             audio.UpdatedAt = DateTime.UtcNow;
-            await _audios.UpdateAsync(audio, cancellationToken);
-            await _uow.SaveChangesAsync(cancellationToken);
+
+            try
+            {
+                // Use a non-cancelable token so we can best-effort persist failure status
+                // even if the original request token has already been canceled.
+                await _audios.UpdateAsync(audio, CancellationToken.None);
+                await _uow.SaveChangesAsync(CancellationToken.None);
+            }
+            catch (Exception persistEx)
+            {
+                _logger.LogWarning(
+                    persistEx,
+                    "Failed to persist audio failure status for audioId {AudioId} after error: {OriginalError}",
+                    audio.AudioId,
+                    ex.Message);
+            }
+
             throw;
         }
     }
@@ -159,9 +175,11 @@ public class AudioService : IAudioService
             return $"TTS returned invalid duration ({(response.DurationSeconds.HasValue ? response.DurationSeconds.Value : 0)}s).";
 
         var compactLength = CountNonWhitespaceChars(sourceText);
-        if (compactLength >= 40)
+        if (compactLength >= 20)
         {
-            var minimumDuration = (int)Math.Ceiling(compactLength / 35d);
+            // Natural Vietnamese speech at ~18-22 chars/s. Higher = looser check.
+            // 2837 chars / 15 chars·s⁻¹ ≈ 189s minimum → TTS returned 194s → passes.
+            var minimumDuration = (int)Math.Ceiling(compactLength / 15d);
             if (response.DurationSeconds.Value < minimumDuration)
                 return $"TTS returned suspiciously short duration ({response.DurationSeconds.Value}s for {compactLength} chars).";
         }

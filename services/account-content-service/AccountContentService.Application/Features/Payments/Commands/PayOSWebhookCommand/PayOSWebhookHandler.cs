@@ -88,24 +88,29 @@ public sealed class PayOSWebhookHandler : IRequestHandler<PayOSWebhookCommand, b
         // Create subscription if success
         if (isSuccess)
         {
+            // Expire any existing active subscription first (handles plan upgrade / renewal)
             var existingSub = await _subscriptionRepo.GetActiveByUserIdAsync(payment.UserId, cancellationToken);
-            if (existingSub == null)
+            if (existingSub != null)
             {
-                var plan = await _subscriptionRepo.GetPlanByIdAsync(payment.TargetId, cancellationToken);
-                if (plan != null)
+                existingSub.Status = SubscriptionStatus.Expired.ToString();
+                existingSub.EndDate = DateTime.UtcNow;
+                await _subscriptionRepo.UpdateAsync(existingSub);
+            }
+
+            var plan = await _subscriptionRepo.GetPlanByIdAsync(payment.TargetId, cancellationToken);
+            if (plan != null)
+            {
+                var subscription = new Subscription
                 {
-                    var subscription = new Subscription
-                    {
-                        Id = Guid.NewGuid(),
-                        UserId = payment.UserId,
-                        PlanId = payment.TargetId,
-                        StartDate = DateTime.UtcNow,
-                        EndDate = DateTime.UtcNow.AddMonths(1),
-                        SubscribeAt = DateTime.UtcNow,
-                        Status = SubscriptionStatus.Active.ToString(),
-                    };
-                    await _subscriptionRepo.AddAsync(subscription);
-                }
+                    Id = Guid.NewGuid(),
+                    UserId = payment.UserId,
+                    PlanId = payment.TargetId,
+                    StartDate = DateTime.UtcNow,
+                    EndDate = DateTime.UtcNow.AddMonths(1),
+                    SubscribeAt = DateTime.UtcNow,
+                    Status = SubscriptionStatus.Active.ToString(),
+                };
+                await _subscriptionRepo.AddAsync(subscription);
             }
         }
 

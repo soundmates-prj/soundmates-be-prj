@@ -32,7 +32,7 @@ namespace AccountContentService.Application.DTOs
         public int PodcastRequestLimit { get; set; }
     }
 
-    public class SubscriptionDto    
+    public class SubscriptionDto
     {
         public Guid Id { get; set; }
 
@@ -51,5 +51,19 @@ namespace AccountContentService.Application.DTOs
         public string Status { get; set; } = "active";
         public UserProfileDto userProfile { get; set; } = null!;
 
+        /// <summary>
+        /// So luong gioc noi AI nguoi dung co the tao (clone)
+        /// </summary>
+        public int VoiceModelLimit { get; set; }
+
+        /// <summary>
+        /// So phut TTS moi thang
+        /// </summary>
+        public int TtsMinuteLimit { get; set; }
+
+        /// <summary>
+        /// So request podcast moi ngay
+        /// </summary>
+        public int PodcastRequestLimit { get; set; }
     }
 }

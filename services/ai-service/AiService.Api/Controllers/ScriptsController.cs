@@ -5,6 +5,8 @@ using AiService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
 using AiService.Application.Enums;
 using AiService.Application.Features.Scripts.Commands.GeneratePodcastScript;
 using AiService.Application.Features.Scripts.Commands.SplitScript;
+using AiService.Application.Features.Scripts.Commands.DeleteScript;
+using AiService.Application.Features.Scripts.Commands.UpdateScript;
 using AiService.Application.Features.Scripts.Queries.GetMyScripts;
 using AiService.Application.Features.Scripts.Queries.GetScriptById;
 using Microsoft.AspNetCore.Authorization;
@@ -103,6 +105,46 @@ public class ScriptsController : ControllerBase
             cancellationToken);
 
         return Ok(ApiResponse<object>.SuccessResponse(new { scripts = result.Data }));
+    }
+
+    /// <summary>
+    /// Delete a script by ID. Only the script owner can delete it.
+    /// </summary>
+    [HttpDelete("{scriptId:guid}")]
+    public async Task<IActionResult> Delete([FromRoute] Guid scriptId, CancellationToken cancellationToken)
+    {
+        if (!User.TryGetCurrentUserId(out var userId))
+            return Unauthorized(ApiResponse<string>.Error(ApiStatusCode.HB40101, "Invalid token"));
+
+        var result = await _commands.Send<DeleteScriptCommand, bool>(
+            new DeleteScriptCommand(userId, scriptId),
+            cancellationToken);
+
+        return result.IsSuccess
+            ? Ok(ApiResponse<string>.SuccessResponse("Deleted"))
+            : result.ErrorCode == (int)ApiStatusCode.HB40301
+                ? Forbid()
+                : NotFound(ApiResponse<string>.Error(ApiStatusCode.HB40401, result.ErrorMessage ?? "Not found"));
+    }
+
+    /// <summary>
+    /// Update a script's title and/or content. Only the script owner can update it.
+    /// </summary>
+    [HttpPut("{scriptId:guid}")]
+    public async Task<IActionResult> Update([FromRoute] Guid scriptId, [FromBody] UpdateScriptRequest request, CancellationToken cancellationToken)
+    {
+        if (!User.TryGetCurrentUserId(out var userId))
+            return Unauthorized(ApiResponse<string>.Error(ApiStatusCode.HB40101, "Invalid token"));
+
+        var result = await _commands.Send<UpdateScriptCommand, bool>(
+            new UpdateScriptCommand(userId, scriptId, request.Title, request.ContentText),
+            cancellationToken);
+
+        return result.IsSuccess
+            ? Ok(ApiResponse<string>.SuccessResponse("Updated"))
+            : result.ErrorCode == (int)ApiStatusCode.HB40301
+                ? Forbid()
+                : NotFound(ApiResponse<string>.Error(ApiStatusCode.HB40401, result.ErrorMessage ?? "Not found"));
     }
 }
 

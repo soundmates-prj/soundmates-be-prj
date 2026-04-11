@@ -1,4 +1,4 @@
-﻿using AccountContentService.Api.Common;
+using AccountContentService.Api.Common;
 using AccountContentService.Api.Constants;
 using AccountContentService.Api.Contracts.Requests;
 using AccountContentService.Api.Contracts.Responses;
@@ -175,7 +175,7 @@ namespace AccountContentService.Api.Controllers
         {
             var userId = UserContext.GetUserId(HttpContext);
             var query = new GetUserSubscriptionQuery(userId);
-          
+
             var result = await _mediator.Send(query);
 
             if (result == null)
@@ -184,6 +184,29 @@ namespace AccountContentService.Api.Controllers
             }
             var response = _mapper.Map<SubscriptionResponse>(result);
 
+            return Ok(ApiResponse<SubscriptionResponse>.Ok(response, "Subscription retrieved successfully"));
+        }
+
+        /// <summary>
+        /// Get current user's subscription detail WITH plan limits (VoiceModelLimit, TtsMinuteLimit, PodcastRequestLimit).
+        /// Used by the Voice Clone frontend to check if user can create cloned voices.
+        /// </summary>
+        /// <response code="200">Subscription retrieved successfully</response>
+        /// <response code="404">Subscription not found</response>
+        [HttpGet(ApiRoutes.Me.MySubscription + "/full")]
+        public async Task<IActionResult> GetCurrentUserSubscriptionFull()
+        {
+            var userId = UserContext.GetUserId(HttpContext);
+            var query = new GetUserSubscriptionFullQuery(userId);
+
+            var result = await _mediator.Send(query);
+
+            if (result == null)
+            {
+                return NotFound(ApiResponse<string>.Fail("No active subscription found"));
+            }
+
+            var response = _mapper.Map<SubscriptionResponse>(result);
             return Ok(ApiResponse<SubscriptionResponse>.Ok(response, "Subscription retrieved successfully"));
         }
     }

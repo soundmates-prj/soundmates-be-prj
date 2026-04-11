@@ -41,5 +41,12 @@ public class ScriptRepository : IScriptRepository
         _db.Scripts.Update(script);
         return Task.CompletedTask;
     }
+
+    public async Task DeleteAsync(Guid scriptId, CancellationToken cancellationToken)
+    {
+        var script = await _db.Scripts.FindAsync(new object[] { scriptId }, cancellationToken);
+        if (script is not null)
+            _db.Scripts.Remove(script);
+    }
 }
 

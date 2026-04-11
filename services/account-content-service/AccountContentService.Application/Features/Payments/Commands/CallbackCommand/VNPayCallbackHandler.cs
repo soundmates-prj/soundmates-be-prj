@@ -93,9 +93,18 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
 
             await _paymentRepo.UpdateAsync(payment);
 
-            // 🔥 7. Create Subscription
+            // 🔥 7. Create / renew Subscription
             if (isSuccess)
             {
+                // Expire any existing active subscription first (handles plan upgrade / renewal)
+                var existingSub = await _subscriptionRepo.GetActiveByUserIdAsync(payment.UserId, cancellationToken);
+                if (existingSub != null)
+                {
+                    existingSub.Status = SubscriptionStatus.Expired.ToString();
+                    existingSub.EndDate = DateTime.UtcNow;
+                    await _subscriptionRepo.UpdateAsync(existingSub);
+                }
+
                 var subscription = new Subscription
                 {
                     Id = Guid.NewGuid(),

@@ -1,5 +1,6 @@
 using LiveSessionService.Application.Abstractions;
 using LiveSessionService.Application.Features.Results.LiveSessions;
+using LiveSessionService.Application.Features.Results.PodcastRequests;
 using Microsoft.AspNetCore.SignalR;
 
 namespace LiveSessionService.Api.Hubs;
@@ -25,5 +26,19 @@ public sealed class LiveSessionNotifier : ILiveSessionNotifier
     public async Task NotifySessionEnded(LiveSessionResult session, CancellationToken cancellationToken = default)
     {
         await _hubContext.Clients.All.SendAsync("SessionEnded", session, cancellationToken);
+    }
+
+    public async Task NotifyPodcastRequestCreated(PodcastRequestResult request, CancellationToken cancellationToken = default)
+    {
+        await _hubContext.Clients
+            .Group($"live-session-{request.LiveSessionId}")
+            .SendAsync("PodcastRequestCreated", request, cancellationToken);
+    }
+
+    public async Task NotifyPodcastRequestReviewed(PodcastRequestResult request, CancellationToken cancellationToken = default)
+    {
+        await _hubContext.Clients
+            .Group($"live-session-{request.LiveSessionId}")
+            .SendAsync("PodcastRequestReviewed", request, cancellationToken);
     }
 }
