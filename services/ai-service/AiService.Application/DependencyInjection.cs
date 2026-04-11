@@ -4,6 +4,8 @@ using AiService.Application.Features.Audios.Commands.GenerateAudio;
 using AiService.Application.Features.Audios.Queries.GetAudioById;
 using AiService.Application.Features.Scripts.Commands.GeneratePodcastScript;
 using AiService.Application.Features.Scripts.Commands.SplitScript;
+using AiService.Application.Features.Scripts.Commands.DeleteScript;
+using AiService.Application.Features.Scripts.Commands.UpdateScript;
 using AiService.Application.Features.Scripts.Queries.GetMyScripts;
 using AiService.Application.Features.Scripts.Queries.GetScriptById;
 using AiService.Application.Features.Voices.Commands.CreateVoice;
@@ -34,6 +36,8 @@ public static class DependencyInjection
         // Handlers
         services.AddScoped<Abstractions.Messaging.ICommandHandler<GeneratePodcastScriptCommand, Domain.Entities.Script>, GeneratePodcastScriptHandler>();
         services.AddScoped<Abstractions.Messaging.ICommandHandler<SplitScriptPartsCommand, IReadOnlyList<Domain.Entities.Script>>, SplitScriptPartsHandler>();
+        services.AddScoped<Abstractions.Messaging.ICommandHandler<DeleteScriptCommand, bool>, DeleteScriptHandler>();
+        services.AddScoped<Abstractions.Messaging.ICommandHandler<UpdateScriptCommand, bool>, UpdateScriptHandler>();
         services.AddScoped<Abstractions.Messaging.ICommandHandler<GenerateAudioFromScriptCommand, Domain.Entities.ScriptAudio>, GenerateAudioFromScriptHandler>();
         services.AddScoped<Abstractions.Messaging.ICommandHandler<CreateVoiceCommand, Domain.Entities.TtsVoice>, CreateVoiceHandler>();
 

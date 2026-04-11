@@ -7,6 +7,7 @@ using AiService.Infrastructure.Messaging;
 using AiService.Infrastructure.Services;
 using AiService.Infrastructure.Storage;
 using AiService.Application.Services;
+using CloudinaryDotNet;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -38,6 +39,37 @@ public static class DependencyInjection
         services.AddSingleton<IGeminiRuntimeConfigProvider, GeminiRuntimeConfigProvider>();
 
         services.AddSingleton<IAudioStorage, LocalAudioStorage>();
+
+        // Cloudinary audio storage
+        // Read from env vars first (Docker/host), then from config (appsettings/.env)
+        var cloudName = Environment.GetEnvironmentVariable("CLOUDINARY_CLOUD_NAME")
+            ?? configuration["Cloudinary:CloudName"];
+        var cloudApiKey = Environment.GetEnvironmentVariable("CLOUDINARY_API_KEY")
+            ?? configuration["Cloudinary:ApiKey"];
+        var cloudApiSecret = Environment.GetEnvironmentVariable("CLOUDINARY_API_SECRET")
+            ?? configuration["Cloudinary:ApiSecret"];
+
+        // Guard against literal "${VAR}" from appsettings.json expansion failure
+        bool IsResolved(string? val) =>
+            !string.IsNullOrWhiteSpace(val) && !val!.StartsWith("${");
+
+        if (IsResolved(cloudName) && IsResolved(cloudApiKey) && IsResolved(cloudApiSecret))
+        {
+            var account = new Account(cloudName!, cloudApiKey!, cloudApiSecret!);
+            services.AddSingleton(new Cloudinary(account));
+            services.AddScoped<ICloudinaryAudioStorage, CloudinaryAudioStorage>();
+            Console.WriteLine($"[DEBUG] Cloudinary configured: cloud={cloudName}");
+        }
+        else
+        {
+            Console.WriteLine("[WARNING] Cloudinary not configured or env vars not resolved. " +
+                "Audio will be stored locally. " +
+                "Set CLOUDINARY_CLOUD_NAME/CLOUDINARY_API_KEY/CLOUDINARY_API_SECRET in .env or Docker environment.");
+            services.AddScoped<ICloudinaryAudioStorage, LocalFallbackCloudinaryStorage>();
+        }
+
+        // Audio conversion (WAV → MP3)
+        services.AddSingleton<IAudioConversionService, AudioConversionService>();
 
         IAsyncPolicy<HttpResponseMessage> CreateCircuitBreakerPolicy() =>
             HttpPolicyExtensions

@@ -60,6 +60,23 @@ public sealed class UserPlaylistController : ControllerBase
     }
 
     /// <summary>
+    /// Get all public user playlists
+    /// </summary>
+    /// <param name="ct"></param>
+    /// <returns></returns>
+    [HttpGet("public")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResponse<List<UserPlaylistResult>>), 200)]
+    public async Task<IActionResult> GetAllPublic(CancellationToken ct)
+    {
+        var result = await _queries.Send<LiveSessionService.Application.Features.Playlists.Queries.GetAllPublicUserPlaylists.GetAllPublicUserPlaylistsQuery, List<UserPlaylistResult>>(
+            new LiveSessionService.Application.Features.Playlists.Queries.GetAllPublicUserPlaylists.GetAllPublicUserPlaylistsQuery(),
+            ct);
+
+        return Ok(result.ToApiResponse());
+    }
+
+    /// <summary>
     /// Get a specific playlist by ID for the current user
     /// </summary>
     /// <param name="id"></param>

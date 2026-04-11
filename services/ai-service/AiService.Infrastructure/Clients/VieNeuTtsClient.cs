@@ -71,7 +71,7 @@ public class VieNeuTtsClient : ITtsClient
         var payload = new Dictionary<string, object?>
         {
             ["text"] = request.Text,
-            ["voice"] = request.VoiceCode,
+            ["voice_id"] = request.VoiceCode,
             ["speed"] = request.Speed,
             ["pitch"] = request.Pitch,
             ["model"] = string.IsNullOrWhiteSpace(request.Model) || request.Model.StartsWith("${")
@@ -754,6 +754,18 @@ public class VieNeuTtsClient : ITtsClient
                                 var duration = (double)dataSize / (sampleRate * bytesPerSample);
                                 var result = (int)Math.Ceiling(duration);
                                 if (result > 0) return result;
+                            }
+                            else
+                            {
+                                // Chunk size is 0 (placeholder), use actual remaining bytes
+                                var actualDataSize = audioBytes.Length - (pos + 8);
+                                if (actualDataSize > 0)
+                                {
+                                    var bytesPerSample = (channels * bitsPerSample) / 8;
+                                    var duration = (double)actualDataSize / (sampleRate * bytesPerSample);
+                                    var result = (int)Math.Ceiling(duration);
+                                    if (result > 0) return result;
+                                }
                             }
                             break;
                         }

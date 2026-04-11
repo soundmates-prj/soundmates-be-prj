@@ -93,6 +93,7 @@ public static class DependencyInjection
         services.AddScoped<ISongRequestRepository, SongRequestRepository>();
         services.AddScoped<IPodcastRepository, PodcastRepository>();
         services.AddScoped<IUserSavedPodcastRepository, UserSavedPodcastRepository>();
+        services.AddScoped<IPodcastRequestRepository, PodcastRequestRepository>();
         services.AddScoped<IOutboxRepository, OutboxRepository>();
 
         // Cloudinary media storage
@@ -131,6 +132,11 @@ public static class DependencyInjection
             if (!string.IsNullOrWhiteSpace(azuraCastApiKey))
                 client.DefaultRequestHeaders.Add("X-API-Key", azuraCastApiKey);
         });
+        services.AddHttpClient<AzuraCastPodcastService>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(300); // Long timeout for download + conversion
+        });
+        services.AddScoped<IAzuraCastPodcastService, AzuraCastPodcastService>();
 
         // Messaging - RabbitMQ
         services.AddSingleton<IMessageBusPublisher, RabbitMqPublisher>();

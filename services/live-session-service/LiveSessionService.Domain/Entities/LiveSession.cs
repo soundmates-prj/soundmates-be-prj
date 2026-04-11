@@ -51,4 +51,5 @@ public partial class LiveSession
     = new List<SessionSchedule>();
 
     public virtual ICollection<LiveSessionChat> Chats { get; set; } = new List<LiveSessionChat>();
+    public virtual ICollection<PodcastRequest> PodcastRequests { get; set; } = new List<PodcastRequest>();
 }

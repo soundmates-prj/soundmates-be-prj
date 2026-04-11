@@ -24,7 +24,7 @@ public class VoiceRepository : IVoiceRepository
     {
         return await _db.TtsVoices
             .AsNoTracking()
-            .Where(v => v.IsActive)
+            .Where(v => v.IsActive && v.UserId == null)
             .OrderBy(v => v.Provider)
             .ThenBy(v => v.DisplayName)
             .ToListAsync(cancellationToken);
@@ -39,10 +39,29 @@ public class VoiceRepository : IVoiceRepository
         }
     }
 
+    public async Task DeleteByCodeAsync(string provider, string voiceCode, CancellationToken cancellationToken)
+    {
+        var voice = await _db.TtsVoices
+            .FirstOrDefaultAsync(v =>
+                v.Provider.ToLower() == provider.ToLower() &&
+                v.VoiceCode.ToLower() == voiceCode.ToLower(),
+                cancellationToken);
+        if (voice is not null)
+        {
+            _db.TtsVoices.Remove(voice);
+        }
+    }
+
     public Task<TtsVoice?> GetByCodeAsync(string provider, string voiceCode, CancellationToken cancellationToken)
     {
+        // Case-insensitive comparison for both provider and voiceCode
+        var p = provider.ToLowerInvariant();
+        var vc = voiceCode.ToLowerInvariant();
         return _db.TtsVoices
-            .FirstOrDefaultAsync(v => v.Provider == provider && v.VoiceCode == voiceCode, cancellationToken);
+            .FirstOrDefaultAsync(v =>
+                v.Provider.ToLower() == p &&
+                v.VoiceCode.ToLower() == vc,
+                cancellationToken);
     }
 
     public async Task<IReadOnlyList<TtsVoice>> GetByUserAsync(Guid userId, CancellationToken cancellationToken)

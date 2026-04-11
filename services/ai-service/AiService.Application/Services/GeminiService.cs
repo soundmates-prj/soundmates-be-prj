@@ -42,10 +42,11 @@ public class GeminiService : IGeminiService
 
         var systemPrompt = BuildSystemPrompt(template, request);
 
-        // --- DEFENSIVE LOGIC: Allow any model starting with 'gemini', fallback to flash if invalid ---
-        var modelToUse = !string.IsNullOrWhiteSpace(request.ModelName) && request.ModelName.ToLower().Contains("gemini")
-            ? request.ModelName.ToLower().Trim()
-            : "gemini-1.5-flash";
+        // Pass null if no model specified — GeminiLlmClient will use LLM_MODEL from .env (gemini-2.5-flash).
+        // Only override if the request explicitly provides a model name.
+        var modelToUse = !string.IsNullOrWhiteSpace(request.ModelName) && request.ModelName.Contains("gemini", StringComparison.OrdinalIgnoreCase)
+            ? request.ModelName.Trim()
+            : null;
 
         var llmResponse = await _llmClient.GenerateAsync(
             new LlmGenerateRequest(

@@ -6,7 +6,7 @@ namespace AiService.Application.Features.Audios.Commands.GenerateAudio;
 public record GenerateAudioFromScriptCommand(
     Guid UserId,
     Guid ScriptId,
-    Guid VoiceId,
+    string VoiceCode,
     decimal? Speed,
     decimal? Pitch) : ICommand<ScriptAudio>;
 

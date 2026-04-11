@@ -1,4 +1,4 @@
-﻿using AccountContentService.Application.Common.Pagination;
+using AccountContentService.Application.Common.Pagination;
 using AccountContentService.Application.Interfaces.Repositories;
 using AccountContentService.Domain.Entities;
 using AccountContentService.Domain.Enums;
@@ -21,6 +21,12 @@ namespace AccountContentService.Infrastructure.Repositories
         {
             await _context.Subscriptions.AddAsync(comment);
             await _context.SaveChangesAsync();
+        }
+
+        public Task UpdateAsync(Subscription subscription)
+        {
+            _context.Subscriptions.Update(subscription);
+            return _context.SaveChangesAsync();
         }
 
         public async Task AddPlanAsync(SubscriptionPlan comment)

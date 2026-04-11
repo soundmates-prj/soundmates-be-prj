@@ -169,10 +169,15 @@ services:
       - Tts__DemoMode=${TTS_DEMO_MODE}
       - Storage__AudioRoot=/app/data/audios
       - Storage__PublicBaseUrl=${AI_PUBLIC_BASE_URL}
+      # Tell TTS client inside the container where the cloned voices file lives
+      - VIENEUTTS_CLONED_VOICES_FILE=/app/data/cloned_voices.json
     ports:
       - "8067:8080"
     volumes:
       - ai-audios-data:/app/data/audios
+      - type: bind
+        source: ../soundmates-vieneu-tts/data
+        target: /app/data
     depends_on:
       postgres:
         condition: service_healthy

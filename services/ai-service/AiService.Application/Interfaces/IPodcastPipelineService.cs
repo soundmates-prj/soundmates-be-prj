@@ -8,7 +8,7 @@ public record GeneratePodcastRequest(
     string Topic,
     string? Title,
     string ContextType,
-    Guid VoiceId,
+    string VoiceCode,
     decimal? Speed = 1.0m,
     decimal? Pitch = 1.0m,
     string? ModelName = null);

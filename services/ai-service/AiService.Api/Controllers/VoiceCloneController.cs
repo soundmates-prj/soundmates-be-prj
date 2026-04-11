@@ -1,6 +1,7 @@
 using System.Linq;
 using AiService.Api.Extensions;
 using AiService.Api.Models.Responses;
+using AiService.Application.Constants;
 using AiService.Application.Enums;
 using AiService.Application.Interfaces;
 using AiService.Domain.Entities;
@@ -72,8 +73,10 @@ public class VoiceCloneController : ControllerBase
         await file.CopyToAsync(ms, ct);
         var audioBytes = ms.ToArray();
 
-        // Generate unique voice ID
-        var voiceId = $"user_{userId:N}_{Guid.NewGuid():N}";
+        // Generate unique voice ID — do NOT embed userId in the code.
+        // The TTS server stores this as a key in its _preset_voices dict.
+        // It must be stable across user sessions (new login = same voiceCode).
+        var voiceId = Guid.NewGuid().ToString("N");
 
         _logger.LogInformation("Starting voice clone for user {UserId}, voiceId: {VoiceId}", userId, voiceId);
 
@@ -110,7 +113,7 @@ public class VoiceCloneController : ControllerBase
         {
             VoiceId = Guid.NewGuid(),
             UserId = userId,
-            Provider = "ViNeuTTS",
+            Provider = AiProviderConstants.VieNeuTts,
             VoiceCode = voiceId,
             DisplayName = displayName,
             Region = "VN",

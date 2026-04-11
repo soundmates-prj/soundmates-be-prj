@@ -14,5 +14,6 @@ public interface IVoiceService
 
     Task<Result<TtsVoice>> CreateAsync(TtsVoice voice, CancellationToken cancellationToken);
     Task<Result<bool>> DeleteAsync(Guid userId, Guid voiceId, CancellationToken cancellationToken);
+    Task<Result<bool>> DeleteByCodeAsync(Guid userId, string provider, string voiceCode, CancellationToken cancellationToken);
 }
 

@@ -8,5 +8,6 @@ public interface IScriptRepository
     Task<Script?> GetByIdAsync(Guid scriptId, CancellationToken cancellationToken);
     Task<IReadOnlyList<Script>> GetByAuthorAsync(Guid authorId, string? contextType, string? status, CancellationToken cancellationToken);
     Task UpdateAsync(Script script, CancellationToken cancellationToken);
+    Task DeleteAsync(Guid scriptId, CancellationToken cancellationToken);
 }
 

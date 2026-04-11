@@ -534,6 +534,99 @@ namespace LiveSessionService.Infrastructure.Migrations
                     b.ToTable("PlaylistMedias");
                 });
 
+            modelBuilder.Entity("LiveSessionService.Domain.Entities.PodcastRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AzuraCastMediaId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("azuracast_media_id");
+
+                    b.Property<string>("AudioUrl")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("audio_url");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("description");
+
+                    b.Property<int>("DurationSeconds")
+                        .HasColumnType("integer")
+                        .HasColumnName("duration_seconds");
+
+                    b.Property<Guid>("LiveSessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("live_session_id");
+
+                    b.Property<string>("RejectReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("reject_reason");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("requested_at");
+
+                    b.Property<Guid>("RequestedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("requested_by_user_id");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reviewed_at");
+
+                    b.Property<Guid?>("ReviewedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reviewed_by_user_id");
+
+                    b.Property<string>("ScriptText")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("script_text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("title");
+
+                    b.Property<string>("VoiceCode")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("voice_code");
+
+                    b.Property<string>("VoiceDisplayName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("voice_display_name");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LiveSessionId");
+
+                    b.HasIndex("RequestedAt");
+
+                    b.HasIndex("RequestedByUserId");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("podcast_requests", (string)null);
+                });
+
             modelBuilder.Entity("LiveSessionService.Domain.Entities.Podcast", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1167,6 +1260,17 @@ namespace LiveSessionService.Infrastructure.Migrations
                     b.Navigation("LiveSession");
                 });
 
+            modelBuilder.Entity("LiveSessionService.Domain.Entities.PodcastRequest", b =>
+                {
+                    b.HasOne("LiveSessionService.Domain.Entities.LiveSession", "LiveSession")
+                        .WithMany("PodcastRequests")
+                        .HasForeignKey("LiveSessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("LiveSession");
+                });
+
             modelBuilder.Entity("LiveSessionService.Domain.Entities.NowPlayingHistory", b =>
                 {
                     b.HasOne("LiveSessionService.Domain.Entities.LiveSession", "LiveSession")
@@ -1345,6 +1449,8 @@ namespace LiveSessionService.Infrastructure.Migrations
                     b.Navigation("SessionSchedules");
 
                     b.Navigation("SongRequests");
+
+                    b.Navigation("PodcastRequests");
                 });
 
             modelBuilder.Entity("LiveSessionService.Domain.Entities.MediaFile", b =>

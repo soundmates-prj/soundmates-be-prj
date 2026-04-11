@@ -54,7 +54,7 @@ public class PodcastPipelineService : IPodcastPipelineService
             new GenerateAudioFromScriptRequest(
                 UserId: request.UserId,
                 ScriptId: script.ScriptId,
-                VoiceId: request.VoiceId,
+                VoiceCode: request.VoiceCode,
                 Speed: request.Speed,
                 Pitch: request.Pitch
             ), ct);
