@@ -60,13 +60,16 @@ public sealed class GetStationNowPlayingHandler
             return Result<StationNowPlayingResult>.Failure(
                 "No now playing data returned from AzuraCast", ErrorCode.NotFound);
 
+        var listenUrl = ResolvePublicUrl(data.Station?.ListenUrl, station.StreamUrl);
+        var publicPlayerUrl = ResolvePublicUrl(data.Station?.PublicPlayerUrl, station.PublicPlayerUrl);
+
         var result = new StationNowPlayingResult
         {
             ExternalStationId = station.ExternalStationId,
             StationName       = data.Station?.Name ?? station.StationName,
             StationShortcode  = data.Station?.ShortCode ?? station.StationShortcode,
-            ListenUrl         = data.Station?.ListenUrl ?? station.StreamUrl,
-            PublicPlayerUrl   = data.Station?.PublicPlayerUrl ?? station.PublicPlayerUrl,
+            ListenUrl         = listenUrl,
+            PublicPlayerUrl   = publicPlayerUrl,
             IsOnline          = data.IsOnline,
             IsLive            = data.IsLive,
             StreamerName      = data.StreamerName,
@@ -155,4 +158,25 @@ public sealed class GetStationNowPlayingHandler
             Lyrics   = h.Song?.Lyrics,
             PlayedAt = h.PlayedAt
         };
+
+    private static string? ResolvePublicUrl(string? candidateUrl, string? fallbackUrl)
+    {
+        if (LooksLikeInternalUrl(candidateUrl) && !string.IsNullOrWhiteSpace(fallbackUrl))
+            return fallbackUrl;
+
+        return string.IsNullOrWhiteSpace(candidateUrl) ? fallbackUrl : candidateUrl;
+    }
+
+    private static bool LooksLikeInternalUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return false;
+
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            return false;
+
+        return uri.IsLoopback
+            || uri.Host.Equals("host.docker.internal", StringComparison.OrdinalIgnoreCase)
+            || uri.Host.Equals("0.0.0.0", StringComparison.OrdinalIgnoreCase);
+    }
 }

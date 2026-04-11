@@ -11,6 +11,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init-multiple-dbs.sql:/docker-entrypoint-initdb.d/init-multiple-dbs.sql:ro
     networks:
       - soundmates-network
     healthcheck:
@@ -165,7 +166,8 @@ services:
       - Tts__ApiKey=${TTS_API_KEY}
       - Tts__SynthesizePath=${TTS_SYNTHESIZE_PATH}
       - Tts__AudioFormat=${TTS_AUDIO_FORMAT}
-      - Tts__TimeoutSeconds=${TTS_TIMEOUT_SECONDS}
+      - Tts__TimeoutSeconds=${TTS_TIMEOUT_SECONDS:-600}
+      - TTS_TIMEOUT_SECONDS=${TTS_TIMEOUT_SECONDS:-600}
       - Tts__DemoMode=${TTS_DEMO_MODE}
       - Storage__AudioRoot=/app/data/audios
       - Storage__PublicBaseUrl=${AI_PUBLIC_BASE_URL}
@@ -277,6 +279,8 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
+      - FRONTEND_URL=${FRONTEND_URL}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
     ports:
       - "8080:8080"
     volumes:

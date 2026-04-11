@@ -2,6 +2,7 @@ using AiService.Application.Interfaces;
 using AiService.Application.Constants;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -9,6 +10,7 @@ namespace AiService.Infrastructure.Clients;
 
 public class GeminiLlmClient : ILlmClient
 {
+    private const int MaxRetryAttempts = 3;
     private readonly HttpClient _http;
     private readonly LlmOptions _options;
     private readonly IGeminiRuntimeConfigProvider _runtimeConfigProvider;
@@ -76,22 +78,56 @@ public class GeminiLlmClient : ILlmClient
 
         _logger.LogInformation("Calling Gemini API model {Model}", model);
 
-        using var response = await _http.PostAsJsonAsync(url, payload, JsonOptions, cancellationToken);
-        
-        if (!response.IsSuccessStatusCode)
+        for (var attempt = 1; attempt <= MaxRetryAttempts; attempt++)
         {
+            using var response = await _http.PostAsJsonAsync(url, payload, JsonOptions, cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<GeminiResponse>(JsonOptions, cancellationToken);
+
+                var parts = result?.Candidates?.FirstOrDefault()?.Content?.Parts;
+                var generatedText = parts != null ? string.Join("", parts.Select(p => p.Text)) : null;
+
+                if (string.IsNullOrWhiteSpace(generatedText))
+                {
+                    _logger.LogError("Gemini API returned empty content. Full response: {Raw}", JsonSerializer.Serialize(result));
+                    throw new InvalidOperationException("Gemini API returned empty content.");
+                }
+
+                return new LlmGenerateResponse(
+                    ContentText: generatedText,
+                    TokensUsed: null, // Gemini REST doesn't always return this easily without extra parsing
+                    RawProviderResponse: JsonSerializer.Serialize(result)
+                );
+            }
+
             var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
             _logger.LogError("Gemini API error {StatusCode}: {Body}", (int)response.StatusCode, errorBody);
 
+            if (ShouldRetry(response.StatusCode) && attempt < MaxRetryAttempts)
+            {
+                var delay = TimeSpan.FromSeconds(Math.Pow(2, attempt));
+                _logger.LogWarning(
+                    "Transient Gemini error {StatusCode}. Retrying attempt {NextAttempt}/{MaxAttempts} after {DelaySeconds}s",
+                    (int)response.StatusCode,
+                    attempt + 1,
+                    MaxRetryAttempts,
+                    delay.TotalSeconds);
+
+                await Task.Delay(delay, cancellationToken);
+                continue;
+            }
+
             // Return client error (400) for invalid/unsupported model instead of generic 500.
-            if (response.StatusCode == System.Net.HttpStatusCode.NotFound &&
+            if (response.StatusCode == HttpStatusCode.NotFound &&
                 errorBody.Contains("is not found", StringComparison.OrdinalIgnoreCase))
             {
                 throw new ArgumentException($"Gemini model '{model}' is invalid or unsupported for generateContent.");
             }
 
             // Return client error (400) when Gemini rejects API key.
-            if (response.StatusCode == System.Net.HttpStatusCode.BadRequest &&
+            if (response.StatusCode == HttpStatusCode.BadRequest &&
                 (errorBody.Contains("API key not valid", StringComparison.OrdinalIgnoreCase) ||
                  errorBody.Contains("API_KEY_INVALID", StringComparison.OrdinalIgnoreCase)))
             {
@@ -101,22 +137,15 @@ public class GeminiLlmClient : ILlmClient
             throw new InvalidOperationException($"Gemini API error: {response.StatusCode}. {errorBody}");
         }
 
-        var result = await response.Content.ReadFromJsonAsync<GeminiResponse>(JsonOptions, cancellationToken);
-        
-        var parts = result?.Candidates?.FirstOrDefault()?.Content?.Parts;
-        var generatedText = parts != null ? string.Join("", parts.Select(p => p.Text)) : null;
-        
-        if (string.IsNullOrWhiteSpace(generatedText))
-        {
-            _logger.LogError("Gemini API returned empty content. Full response: {Raw}", JsonSerializer.Serialize(result));
-            throw new InvalidOperationException("Gemini API returned empty content.");
-        }
+        throw new InvalidOperationException("Gemini API request failed after all retry attempts.");
+    }
 
-        return new LlmGenerateResponse(
-            ContentText: generatedText,
-            TokensUsed: null, // Gemini REST doesn't always return this easily without extra parsing
-            RawProviderResponse: JsonSerializer.Serialize(result)
-        );
+    private static bool ShouldRetry(HttpStatusCode statusCode)
+    {
+        return statusCode == HttpStatusCode.ServiceUnavailable
+            || statusCode == HttpStatusCode.TooManyRequests
+            || statusCode == HttpStatusCode.GatewayTimeout
+            || statusCode == HttpStatusCode.RequestTimeout;
     }
 
     private class GeminiResponse

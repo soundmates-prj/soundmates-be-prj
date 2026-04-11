@@ -123,12 +123,27 @@ public class AudioService : IAudioService
 
             return Result<ScriptAudio>.Success(audio);
         }
-        catch
+        catch (Exception ex)
         {
             audio.Status = AudioStatus.Failed.ToString().ToLowerInvariant();
             audio.UpdatedAt = DateTime.UtcNow;
-            await _audios.UpdateAsync(audio, cancellationToken);
-            await _uow.SaveChangesAsync(cancellationToken);
+
+            try
+            {
+                // Use a non-cancelable token so we can best-effort persist failure status
+                // even if the original request token has already been canceled.
+                await _audios.UpdateAsync(audio, CancellationToken.None);
+                await _uow.SaveChangesAsync(CancellationToken.None);
+            }
+            catch (Exception persistEx)
+            {
+                _logger.LogWarning(
+                    persistEx,
+                    "Failed to persist audio failure status for audioId {AudioId} after error: {OriginalError}",
+                    audio.AudioId,
+                    ex.Message);
+            }
+
             throw;
         }
     }

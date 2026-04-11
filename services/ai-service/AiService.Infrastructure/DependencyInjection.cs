@@ -85,7 +85,7 @@ public static class DependencyInjection
         })
         .AddPolicyHandler(CreateCircuitBreakerPolicy());
 
-        services.AddHttpClient<VieNeuTtsClient>((sp, http) =>
+        services.AddHttpClient<ITtsClient, VieNeuTtsClient>((sp, http) =>
         {
             var options = sp.GetRequiredService<IOptions<TtsOptions>>().Value;
             var logger = sp.GetRequiredService<ILogger<VieNeuTtsClient>>();
@@ -107,7 +107,6 @@ public static class DependencyInjection
                 timeoutSeconds);
         })
         .AddPolicyHandler(CreateCircuitBreakerPolicy());
-        services.AddScoped<ITtsClient, VieNeuTtsClient>();
         services.AddScoped<ITextToSpeechService, VieneuTextToSpeechService>();
 
         services.AddHttpClient<IPodcastSyncClient, PodcastSyncClient>(client =>

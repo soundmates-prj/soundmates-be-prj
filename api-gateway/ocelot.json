@@ -1061,7 +1061,7 @@
       "QoSOptions": {
         "ExceptionsAllowedBeforeBreaking": 5,
         "DurationOfBreak": 30000,
-        "TimeoutValue": 300000
+        "TimeoutValue": 700000
       }
     },
     {
@@ -1085,7 +1085,7 @@
       "QoSOptions": {
         "ExceptionsAllowedBeforeBreaking": 5,
         "DurationOfBreak": 30000,
-        "TimeoutValue": 300000
+        "TimeoutValue": 700000
       }
     },
     {
@@ -1163,7 +1163,7 @@
       "QoSOptions": {
         "ExceptionsAllowedBeforeBreaking": 5,
         "DurationOfBreak": 30000,
-        "TimeoutValue": 300000
+        "TimeoutValue": 700000
       }
     },
     {
@@ -1187,7 +1187,7 @@
       "QoSOptions": {
         "ExceptionsAllowedBeforeBreaking": 5,
         "DurationOfBreak": 30000,
-        "TimeoutValue": 300000
+        "TimeoutValue": 700000
       }
     },
     {
@@ -1214,7 +1214,7 @@
       "QoSOptions": {
         "ExceptionsAllowedBeforeBreaking": 5,
         "DurationOfBreak": 30000,
-        "TimeoutValue": 300000
+        "TimeoutValue": 700000
       }
     },
     {
@@ -1241,7 +1241,7 @@
       "QoSOptions": {
         "ExceptionsAllowedBeforeBreaking": 5,
         "DurationOfBreak": 30000,
-        "TimeoutValue": 300000
+        "TimeoutValue": 700000
       }
     },
     {
@@ -1268,7 +1268,7 @@
       "QoSOptions": {
         "ExceptionsAllowedBeforeBreaking": 5,
         "DurationOfBreak": 30000,
-        "TimeoutValue": 300000
+        "TimeoutValue": 700000
       }
     },
     {
@@ -1295,7 +1295,7 @@
       "QoSOptions": {
         "ExceptionsAllowedBeforeBreaking": 5,
         "DurationOfBreak": 30000,
-        "TimeoutValue": 300000
+        "TimeoutValue": 700000
       }
     },
     {
@@ -1322,7 +1322,7 @@
       "QoSOptions": {
         "ExceptionsAllowedBeforeBreaking": 5,
         "DurationOfBreak": 30000,
-        "TimeoutValue": 300000
+        "TimeoutValue": 700000
       }
     },
     {
@@ -1349,7 +1349,7 @@
       "QoSOptions": {
         "ExceptionsAllowedBeforeBreaking": 5,
         "DurationOfBreak": 30000,
-        "TimeoutValue": 300000
+        "TimeoutValue": 700000
       }
     },
     {
@@ -1374,7 +1374,7 @@
       "QoSOptions": {
         "ExceptionsAllowedBeforeBreaking": 5,
         "DurationOfBreak": 60000,
-        "TimeoutValue": 300000
+        "TimeoutValue": 700000
       }
     },
     {
@@ -1398,7 +1398,7 @@
       "QoSOptions": {
         "ExceptionsAllowedBeforeBreaking": 5,
         "DurationOfBreak": 30000,
-        "TimeoutValue": 300000
+        "TimeoutValue": 700000
       }
     },
     {

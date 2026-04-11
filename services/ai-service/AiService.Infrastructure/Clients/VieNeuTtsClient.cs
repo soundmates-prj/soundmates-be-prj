@@ -117,7 +117,7 @@ public class VieNeuTtsClient : ITtsClient
         var mediaType = response.Content.Headers.ContentType?.MediaType;
         if (!string.IsNullOrWhiteSpace(mediaType) && mediaType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase))
         {
-            var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+            var bytes = await ReadAudioBytesAsync(response.Content, cancellationToken);
             var normalized = NormalizeWavHeaderIfNeeded(bytes, mediaType);
             var audioDuration = EstimateDurationFromAudio(normalized, mediaType, request.Text);
             return new TtsSynthesizeResponse(normalized, mediaType, DurationSeconds: audioDuration);
@@ -555,7 +555,7 @@ public class VieNeuTtsClient : ITtsClient
         if (string.IsNullOrWhiteSpace(mediaType) || !mediaType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase))
             return null;
 
-        var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+        var bytes = await ReadAudioBytesAsync(response.Content, cancellationToken);
         if (bytes.Length == 0)
             return null;
 
@@ -583,7 +583,7 @@ public class VieNeuTtsClient : ITtsClient
         if (string.IsNullOrWhiteSpace(mediaType) || !mediaType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase))
             return null;
 
-        var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+        var bytes = await ReadAudioBytesAsync(response.Content, cancellationToken);
         if (bytes.Length == 0)
             return null;
 
@@ -679,6 +679,21 @@ public class VieNeuTtsClient : ITtsClient
         const int maxLen = 400;
         var compact = raw.Replace("\r", " ").Replace("\n", " ").Trim();
         return compact.Length <= maxLen ? compact : compact[..maxLen];
+    }
+
+    private static async Task<byte[]> ReadAudioBytesAsync(HttpContent content, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await content.ReadAsByteArrayAsync(cancellationToken);
+        }
+        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+        {
+            throw new TimeoutException(
+                "Reading audio stream from VieNeu was canceled by the upstream request token. " +
+                "This usually indicates API Gateway/client timeout or client disconnect before TTS completed.",
+                ex);
+        }
     }
 
     private string? BuildPrompt(TtsSynthesizeRequest request)
