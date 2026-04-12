@@ -6,7 +6,7 @@
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-/opt/soundmates-be/soundmates-be-prj}"
-BRANCH="${BRANCH:-dev}"
+BRANCH="${BRANCH:-duc}"
 
 echo "=== [1/6] Pull code từ nhánh $BRANCH ==="
 cd "$APP_DIR"
