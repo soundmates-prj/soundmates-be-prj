@@ -245,8 +245,9 @@ namespace AccountContentService.Api.Controllers
 
                 if (!processed)
                 {
-                    return BadRequest(ApiResponse<string>.Fail(
-                        $"Webhook received but payment not matched/processed. orderCode={source.orderCode}, orderId={source.orderId}"));
+                    // To satisfy PayOS verification test which sends dummy data, return Ok even if not matched.
+                    return Ok(ApiResponse<string>.Ok("OK", 
+                        $"Webhook received but payment not matched (likely a test). orderCode={source.orderCode}, orderId={source.orderId}"));
                 }
 
                 return Ok(ApiResponse<string>.Ok("OK", "Webhook received"));
