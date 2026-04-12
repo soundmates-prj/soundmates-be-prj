@@ -1,3 +1,5 @@
+name: soundmates
+
 services:
   # PostgreSQL Database
   postgres:
@@ -14,6 +16,7 @@ services:
       - ./docker/postgres/init-multiple-dbs.sql:/docker-entrypoint-initdb.d/init-multiple-dbs.sql:ro
     networks:
       - soundmates-network
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -32,6 +35,7 @@ services:
       - mongodb-data:/data/db
     networks:
       - soundmates-network
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
@@ -52,6 +56,7 @@ services:
       - rabbitmq-data:/var/lib/rabbitmq
     networks:
       - soundmates-network
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
       interval: 10s
@@ -90,6 +95,8 @@ services:
       - Spotify__ClientId=${SPOTIFY_CLIENT_ID}
       - Spotify__ClientSecret=${SPOTIFY_CLIENT_SECRET}
       - Spotify__RedirectUri=${SPOTIFY_REDIRECT_URI}
+    volumes:
+      - auth-service-dp-keys:/home/app/.aspnet/DataProtection-Keys
     ports:
       - "8001:8080"
     depends_on:
@@ -126,6 +133,8 @@ services:
       - Jwt__ExpiresInHours=${JWT_EXPIRES_IN_HOURS}
       - Spotify__ClientId=${SPOTIFY_CLIENT_ID}
       - Spotify__ClientSecret=${SPOTIFY_CLIENT_SECRET}
+    volumes:
+      - auth-query-service-dp-keys:/home/app/.aspnet/DataProtection-Keys
     ports:
       - "8002:8080"
     depends_on:
@@ -299,7 +308,18 @@ networks:
     driver: bridge
 
 volumes:
+  # DB volumes - đặt external: false và name cố định để Docker KHÔNG tạo volume mới
+  # khi project name thay đổi hoặc docker compose up --build được chạy lại
   postgres-data:
+    name: soundmates_postgres_data
   mongodb-data:
+    name: soundmates_mongodb_data
   rabbitmq-data:
+    name: soundmates_rabbitmq_data
   ai-audios-data:
+    name: soundmates_ai_audios_data
+  # DataProtection Keys - persist JWT signing keys across restarts
+  auth-service-dp-keys:
+    name: soundmates_auth_service_dp_keys
+  auth-query-service-dp-keys:
+    name: soundmates_auth_query_service_dp_keys
