@@ -1,3 +1,5 @@
+name: soundmates
+
 services:
   # PostgreSQL Database
   postgres:
@@ -5,15 +7,17 @@ services:
     container_name: soundmates-postgres
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
       POSTGRES_DB: auth_db
-    ports:
-      - "5432:5432"
+    # ⚠️ KHÔNG expose port 5432 ra internet - chỉ dùng nội bộ Docker network
+    # ports:
+    #   - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./docker/postgres/init-multiple-dbs.sql:/docker-entrypoint-initdb.d/init-multiple-dbs.sql:ro
     networks:
       - soundmates-network
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -26,12 +30,14 @@ services:
     container_name: soundmates-mongodb
     environment:
       MONGO_INITDB_DATABASE: auth_query
-    ports:
-      - "27017:27017"
+    # ⚠️ KHÔNG expose port 27017 ra internet - chỉ dùng nội bộ Docker network
+    # ports:
+    #   - "27017:27017"
     volumes:
       - mongodb-data:/data/db
     networks:
       - soundmates-network
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
@@ -43,15 +49,18 @@ services:
     image: rabbitmq:3-management-alpine
     container_name: soundmates-rabbitmq
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
-    ports:
-      - "5672:5672"   # AMQP port
-      - "15672:15672" # Management UI
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    # ⚠️ KHÔNG expose AMQP port 5672 ra internet
+    # Management UI 15672 chỉ nên truy cập qua SSH tunnel nếu cần
+    # ports:
+    #   - "5672:5672"
+    #   - "15672:15672"
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
     networks:
       - soundmates-network
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
       interval: 10s
@@ -90,6 +99,8 @@ services:
       - Spotify__ClientId=${SPOTIFY_CLIENT_ID}
       - Spotify__ClientSecret=${SPOTIFY_CLIENT_SECRET}
       - Spotify__RedirectUri=${SPOTIFY_REDIRECT_URI}
+    volumes:
+      - auth-service-dp-keys:/home/app/.aspnet/DataProtection-Keys
     ports:
       - "8001:8080"
     depends_on:
@@ -126,6 +137,8 @@ services:
       - Jwt__ExpiresInHours=${JWT_EXPIRES_IN_HOURS}
       - Spotify__ClientId=${SPOTIFY_CLIENT_ID}
       - Spotify__ClientSecret=${SPOTIFY_CLIENT_SECRET}
+    volumes:
+      - auth-query-service-dp-keys:/home/app/.aspnet/DataProtection-Keys
     ports:
       - "8002:8080"
     depends_on:
@@ -299,7 +312,22 @@ networks:
     driver: bridge
 
 volumes:
+  # external: true = Docker Compose dùng volume đã có sẵn, KHÔNG tạo mới
+  # name cố định = không bị đổi khi project name thay đổi
   postgres-data:
+    name: soundmates_postgres_data
+    external: true
   mongodb-data:
+    name: soundmates_mongodb_data
+    external: true
   rabbitmq-data:
+    name: soundmates_rabbitmq_data
+    external: true
   ai-audios-data:
+    name: soundmates_ai_audios_data
+    external: true
+  # DataProtection Keys - persist JWT signing keys across restarts
+  auth-service-dp-keys:
+    name: soundmates_auth_service_dp_keys
+  auth-query-service-dp-keys:
+    name: soundmates_auth_query_service_dp_keys
