@@ -308,16 +308,20 @@ networks:
     driver: bridge
 
 volumes:
-  # DB volumes - đặt external: false và name cố định để Docker KHÔNG tạo volume mới
-  # khi project name thay đổi hoặc docker compose up --build được chạy lại
+  # external: true = Docker Compose dùng volume đã có sẵn, KHÔNG tạo mới
+  # name cố định = không bị đổi khi project name thay đổi
   postgres-data:
     name: soundmates_postgres_data
+    external: true
   mongodb-data:
     name: soundmates_mongodb_data
+    external: true
   rabbitmq-data:
     name: soundmates_rabbitmq_data
+    external: true
   ai-audios-data:
     name: soundmates_ai_audios_data
+    external: true
   # DataProtection Keys - persist JWT signing keys across restarts
   auth-service-dp-keys:
     name: soundmates_auth_service_dp_keys

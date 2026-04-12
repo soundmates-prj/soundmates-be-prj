@@ -49,10 +49,45 @@ for OLD_PREFIX in "soundmates-be-prj" "soundmates"; do
 done
 
 echo ""
-echo "=== [3/6] Đảm bảo DB containers đang chạy (không recreate) ==="
-docker compose up -d --no-recreate postgres mongodb rabbitmq
+echo "=== [2b/6] Đảm bảo external volumes tồn tại (tạo nếu chưa có) ==="
+for vol in soundmates_postgres_data soundmates_mongodb_data soundmates_rabbitmq_data soundmates_ai_audios_data; do
+  if ! docker volume ls -q | grep -q "^${vol}$"; then
+    echo "  Tạo volume: $vol"
+    docker volume create "$vol"
+  else
+    echo "  ✓ Volume $vol đã tồn tại"
+  fi
+done
+
+echo ""
+echo "=== [3/6] Chuyển containers sang project 'soundmates' (xử lý một lần) ==="
+# Nếu container đang chạy nhưng KHÔNG thuộc project 'soundmates' hiện tại,
+# cần stop + remove container (KHÔNG xóa volume) để project mới tiếp quản
+ALL_CONTAINERS=(
+  soundmates-postgres soundmates-mongodb soundmates-rabbitmq
+  soundmates-auth-service soundmates-auth-query-service
+  soundmates-live-session-service soundmates-account-content-service
+  soundmates-ai-service soundmates-api-gateway
+)
+
+for c in "${ALL_CONTAINERS[@]}"; do
+  if docker ps -a --format '{{.Names}}' | grep -q "^${c}$"; then
+    # Kiểm tra xem container có thuộc project 'soundmates' không
+    PROJECT=$(docker inspect "$c" --format '{{index .Config.Labels "com.docker.compose.project"}}' 2>/dev/null || echo "")
+    if [ "$PROJECT" != "soundmates" ]; then
+      echo "  Dọn container cũ (project='$PROJECT'): $c"
+      docker stop "$c" 2>/dev/null || true
+      docker rm "$c" 2>/dev/null || true
+    else
+      echo "  ✓ Container $c đã thuộc project soundmates"
+    fi
+  fi
+done
+
+echo "  Khởi động DB containers (không recreate nếu đã chạy đúng project)..."
+docker compose up -d postgres mongodb rabbitmq
 echo "  Đợi postgres healthy..."
-timeout 60 sh -c 'until docker exec soundmates-postgres pg_isready -U postgres -q; do sleep 2; done'
+timeout 90 sh -c 'until docker exec soundmates-postgres pg_isready -U postgres -q; do sleep 3; done'
 echo "  ✓ Postgres healthy"
 
 echo ""
