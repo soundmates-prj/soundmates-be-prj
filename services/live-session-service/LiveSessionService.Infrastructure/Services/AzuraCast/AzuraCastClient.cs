@@ -395,6 +395,72 @@ public sealed class AzuraCastClient : IAzuraCastClient
         };
     }
 
+    public async Task UpdateMediaMetadataAsync(
+        int stationId,
+        string fileUniqueId,
+        string title,
+        string? artist,
+        string? album,
+        string? lyrics,
+        CancellationToken cancellationToken = default)
+    {
+        var body = new
+        {
+            title,
+            artist,
+            album,
+            lyrics
+        };
+
+        var encodedUniqueId = Uri.EscapeDataString(fileUniqueId);
+        using var byUniqueIdResponse = await _httpClient.PutAsJsonAsync(
+            $"api/station/{stationId}/file/{encodedUniqueId}",
+            body,
+            cancellationToken);
+
+        if (byUniqueIdResponse.StatusCode != HttpStatusCode.NotFound)
+        {
+            await EnsureAzuraCastSuccessAsync(
+                byUniqueIdResponse,
+                $"update media metadata for file {fileUniqueId} on station {stationId}",
+                cancellationToken);
+
+            _logger.LogInformation(
+                "Updated AzuraCast metadata for file {UniqueId} on station {StationId}",
+                fileUniqueId,
+                stationId);
+            return;
+        }
+
+        // Fallback for AzuraCast setups that only accept numeric file id in the route.
+        var stationFiles = await GetStationFilesAsync(stationId, cancellationToken);
+        var matched = stationFiles.FirstOrDefault(f =>
+            string.Equals(f.UniqueId, fileUniqueId, StringComparison.OrdinalIgnoreCase));
+
+        if (matched == null)
+        {
+            throw new AzuraCastException(
+                $"Media file '{fileUniqueId}' was not found on AzuraCast station {stationId} for metadata update.",
+                ErrorCode.NotFound);
+        }
+
+        using var byNumericIdResponse = await _httpClient.PutAsJsonAsync(
+            $"api/station/{stationId}/file/{matched.Id}",
+            body,
+            cancellationToken);
+
+        await EnsureAzuraCastSuccessAsync(
+            byNumericIdResponse,
+            $"update media metadata for file {matched.Id} on station {stationId}",
+            cancellationToken);
+
+        _logger.LogInformation(
+            "Updated AzuraCast metadata for file {UniqueId} (id: {FileId}) on station {StationId}",
+            fileUniqueId,
+            matched.Id,
+            stationId);
+    }
+
     public async Task AssignMediaToPlaylistAsync(
         int stationId,
         string fileUniqueId,
@@ -529,6 +595,30 @@ public sealed class AzuraCastClient : IAzuraCastClient
             "Deleted file {UniqueId} on station {StationId}",
             fileUniqueId,
             stationId);
+    }
+
+    public async Task<(byte[] Content, string? ContentType, string? FileName)?> DownloadMediaAsync(
+        int stationId,
+        string fileUniqueId,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await _httpClient.GetAsync(
+            $"api/station/{stationId}/file/{fileUniqueId}/download",
+            cancellationToken);
+
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        await EnsureAzuraCastSuccessAsync(response, $"download media on station {stationId}", cancellationToken);
+
+        var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+        var contentType = response.Content.Headers.ContentType?.MediaType;
+        var fileName = response.Content.Headers.ContentDisposition?.FileNameStar
+                       ?? response.Content.Headers.ContentDisposition?.FileName;
+
+        return (bytes, contentType, fileName);
     }
 
     // ---------------------------------------------------------------------------

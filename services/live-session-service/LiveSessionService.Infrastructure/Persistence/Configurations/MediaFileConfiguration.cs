@@ -35,12 +35,26 @@ public class MediaFileConfiguration : IEntityTypeConfiguration<MediaFile>
             .IsRequired()
             .HasMaxLength(1000);
 
+        builder.Property(x => x.FileUrl)
+            .HasMaxLength(2000);
+
         builder.Property(x => x.AzuraCastMediaId)
             .HasMaxLength(200);
+
+        builder.Property(x => x.OriginalSourceType)
+            .IsRequired()
+            .HasMaxLength(20)
+            .HasDefaultValue("system");
 
         builder.Property(x => x.FileType)
             .IsRequired()
             .HasMaxLength(20);
+
+        builder.Property(x => x.DurationSeconds)
+            .IsRequired();
+
+        builder.Property(x => x.FileSizeBytes)
+            .IsRequired();
 
         builder.Property(x => x.UploadedAt)
             .IsRequired();
@@ -54,6 +68,11 @@ public class MediaFileConfiguration : IEntityTypeConfiguration<MediaFile>
             .WithOne(x => x.MediaFile)
             .HasForeignKey(x => x.MediaFileId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasMany(x => x.StationMediaFiles)
+            .WithOne(x => x.MediaFile)
+            .HasForeignKey(x => x.MediaFileId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasIndex(x => x.AzuraCastMediaId);
     }

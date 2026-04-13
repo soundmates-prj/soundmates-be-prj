@@ -23,14 +23,25 @@ public class MediaFile
     public int DurationSeconds { get; set; }
 
     /// <summary>
-    /// Local storage path token (e.g. system://system-media/xxx.mp3).
+    /// Local storage path token (e.g. system://cloudinary/abc123).
     /// </summary>
     public string FilePath { get; set; } = null!;
 
     /// <summary>
-    /// AzuraCast unique_id for synchronized media.
+    /// Actual playable URL — Cloudinary URL for system media, AzuraCast URL for station media.
+    /// </summary>
+    public string? FileUrl { get; set; }
+
+    /// <summary>
+    /// AzuraCast unique_id for synchronized/imported media.
     /// </summary>
     public string? AzuraCastMediaId { get; set; }
+
+    /// <summary>
+    /// Original source type: "system" (uploaded to Cloudinary) or "station" (uploaded directly to AzuraCast).
+    /// This field preserves the original source even after system media is imported to AzuraCast.
+    /// </summary>
+    public string OriginalSourceType { get; set; } = "system";
 
     public string FileType { get; set; } = null!;
 
@@ -44,4 +55,5 @@ public class MediaFile
 
     public virtual ICollection<PlaylistMedia> PlaylistMedias { get; set; } = new List<PlaylistMedia>();
     public virtual ICollection<UserPlaylistMedia> UserPlaylistMedias { get; set; } = new List<UserPlaylistMedia>();
+    public virtual ICollection<StationMediaFile> StationMediaFiles { get; set; } = new List<StationMediaFile>();
 }

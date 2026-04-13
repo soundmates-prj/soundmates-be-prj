@@ -47,6 +47,7 @@ public class PodcastController : ControllerBase
     /// Retrieves a list of podcasts with optional filtering by creator and status
     /// </summary>
     [HttpGet]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResponse<List<PodcastResult>>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 400)]
     public async Task<IActionResult> GetAll(
@@ -73,6 +74,7 @@ public class PodcastController : ControllerBase
     /// Retrieves a specific podcast by its ID
     /// </summary>
     [HttpGet("{id:guid}")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResponse<PodcastResult>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
@@ -256,6 +258,7 @@ public class PodcastController : ControllerBase
     /// Retrieves a list of episodes for a specific podcast
     /// </summary>
     [HttpGet("{podcastId:guid}/episodes")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResponse<List<PodcastEpisodeResult>>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
     public async Task<IActionResult> GetEpisodes(Guid podcastId, CancellationToken ct)
@@ -280,6 +283,7 @@ public class PodcastController : ControllerBase
     /// Retrieves a specific episode by its ID for a given podcast
     /// </summary>
     [HttpGet("{podcastId:guid}/episodes/{episodeId:guid}")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResponse<PodcastEpisodeResult>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
     public async Task<IActionResult> GetEpisodeById(Guid podcastId, Guid episodeId, CancellationToken ct)

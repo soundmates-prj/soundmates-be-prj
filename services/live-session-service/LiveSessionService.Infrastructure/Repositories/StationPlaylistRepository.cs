@@ -14,13 +14,18 @@ public sealed class StationPlaylistRepository : IStationPlaylistRepository
     public Task<StationPlaylist?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         => _db.StationPlaylists
               .Include(p => p.AzuraCastStation)
-              .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
+              .FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted, cancellationToken);
 
     public Task<List<StationPlaylist>> GetByStationIdAsync(Guid stationId, CancellationToken cancellationToken = default)
         => _db.StationPlaylists
               .Include(p => p.Media)
-              .Where(p => p.AzuraCastStationId == stationId && p.IsEnabled)
+              .Where(p => p.AzuraCastStationId == stationId && p.IsEnabled && !p.IsDeleted)
               .OrderBy(p => p.PlaylistOrder)
+              .ToListAsync(cancellationToken);
+
+    public Task<List<StationPlaylist>> GetAllByStationIdIncludingDeletedAsync(Guid stationId, CancellationToken cancellationToken = default)
+        => _db.StationPlaylists
+              .Where(p => p.AzuraCastStationId == stationId)
               .ToListAsync(cancellationToken);
 
     public async Task AddAsync(StationPlaylist playlist, CancellationToken cancellationToken = default)

@@ -1,7 +1,10 @@
 using AccountContentService.Api.Extensions;
+using AccountContentService.Api.Hubs;
 using AccountContentService.Api.Middleware;
+using AccountContentService.Api.Services;
 using AccountContentService.Api.Swagger;
 using AccountContentService.Application.DependencyInjection;
+using AccountContentService.Application.Interfaces;
 using AccountContentService.Infrastructure.Extensions;
 
 using FluentValidation;
@@ -56,6 +59,10 @@ builder.Services.AddDbContext<AccountContentDbContext>(options =>
 // Authentication
 builder.Services.AddJwtAuthentication(builder.Configuration);
 
+// SignalR for real-time notifications
+builder.Services.AddSignalR();
+builder.Services.AddScoped<INotificationPusher, NotificationPusher>();
+
 // PayOS HttpClient (ApiGateway HttpClient removed — user profiles now via local RabbitMQ projection)
 IAsyncPolicy<HttpResponseMessage> CreateCircuitBreakerPolicy() =>
     HttpPolicyExtensions
@@ -102,6 +109,9 @@ app.UseAuthorization();
 
 
 app.MapControllers();
+
+// Map SignalR hub for real-time notifications
+app.MapHub<NotificationHub>("/hubs/notifications");
 
 //app.MapHealthChecks("/health");
 

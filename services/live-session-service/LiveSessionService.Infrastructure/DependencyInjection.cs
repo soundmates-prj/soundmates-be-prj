@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using LiveSessionService.Application.Abstractions;
 using LiveSessionService.Application.Features.Common.AzuraCast;
+using LiveSessionService.Application.Services;
 using LiveSessionService.Domain.Interfaces;
 using LiveSessionService.Infrastructure.Persistence;
 using LiveSessionService.Infrastructure.Services;
@@ -81,6 +82,11 @@ public static class DependencyInjection
         // DateTime Provider
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
 
+        // Application Services
+        services.AddScoped<InputValidationService>();
+        services.AddScoped<SyncConfigurationService>();
+        services.AddScoped<AzuraCastErrorHandler>();
+
         // Repositories
         services.AddScoped<ILiveSessionRepository, LiveSessionRepository>();
         services.AddScoped<ISessionScheduleRepository, SessionScheduleRepository>();
@@ -89,6 +95,7 @@ public static class DependencyInjection
         services.AddScoped<IAzuraCastStationRepository, AzuraCastStationRepository>();
         services.AddScoped<IStationPlaylistRepository, StationPlaylistRepository>();
         services.AddScoped<IMediaFileRepository, MediaFileRepository>();
+        services.AddScoped<IStationMediaFileRepository, StationMediaFileRepository>();
         services.AddScoped<IPlaylistMediaRepository, PlaylistMediaRepository>();
         services.AddScoped<ISongRequestRepository, SongRequestRepository>();
         services.AddScoped<IPodcastRepository, PodcastRepository>();
@@ -97,6 +104,7 @@ public static class DependencyInjection
         services.AddScoped<IOutboxRepository, OutboxRepository>();
 
         // Cloudinary media storage
+        services.AddHttpClient("CloudinaryDownload");
         services.AddSingleton<ICloudinaryMediaStorage, CloudinaryMediaStorage>();
 
         // External Services - AzuraCast

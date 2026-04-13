@@ -35,16 +35,21 @@ public sealed class GetAllMediaFilesHandler
                 .Select(m => new MusicResult
                 {
                     Id = m.Id,
-                    SourceType = "system",
+                    // Use OriginalSourceType to preserve the original source classification.
+                    // System media remains "system" even after being imported to AzuraCast.
+                    SourceType = m.OriginalSourceType,
                     Title = m.Title,
                     Artist = m.Artist ?? string.Empty,
                     Album = m.Album,
                     ArtworkUrl = m.ArtUrl,
                     Duration = m.DurationSeconds,
-                    FileUrl = m.FilePath ?? string.Empty,
+                    FileUrl = !string.IsNullOrWhiteSpace(m.FileUrl)
+                        ? m.FileUrl
+                        : m.FilePath ?? string.Empty,
                     FileType = m.FileType,
                     FileSize = m.FileSizeBytes,
-                    UploadedAt = m.UploadedAt
+                    UploadedAt = m.UploadedAt,
+                    AzuraCastMediaId = m.AzuraCastMediaId,
                 })
                 .ToList();
 

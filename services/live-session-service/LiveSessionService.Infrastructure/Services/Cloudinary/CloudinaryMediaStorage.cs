@@ -1,3 +1,4 @@
+using System.Net.Http;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 using LiveSessionService.Application.Abstractions;
@@ -9,10 +10,16 @@ namespace LiveSessionService.Infrastructure.Services.Cloudinary;
 public sealed class CloudinaryMediaStorage : ICloudinaryMediaStorage
 {
     private readonly CloudinaryDotNet.Cloudinary _cloudinary;
+    private readonly string _cloudName;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<CloudinaryMediaStorage> _logger;
 
-    public CloudinaryMediaStorage(IConfiguration configuration, ILogger<CloudinaryMediaStorage> logger)
+    public CloudinaryMediaStorage(
+        IConfiguration configuration,
+        IHttpClientFactory httpClientFactory,
+        ILogger<CloudinaryMediaStorage> logger)
     {
+        _httpClientFactory = httpClientFactory;
         _logger = logger;
 
         var cloudName = Environment.GetEnvironmentVariable("CLOUDINARY_CLOUD_NAME")
@@ -29,6 +36,7 @@ public sealed class CloudinaryMediaStorage : ICloudinaryMediaStorage
             throw new InvalidOperationException("Cloudinary is not configured. Set CLOUDINARY_CLOUD_NAME/CLOUDINARY_API_KEY/CLOUDINARY_API_SECRET.");
         }
 
+        _cloudName = cloudName;
         var account = new Account(cloudName, apiKey, apiSecret);
         _cloudinary = new CloudinaryDotNet.Cloudinary(account);
     }
@@ -81,6 +89,60 @@ public sealed class CloudinaryMediaStorage : ICloudinaryMediaStorage
         }
 
         return new CloudinaryUploadResult(result.SecureUrl?.ToString() ?? string.Empty, result.PublicId);
+    }
+
+    public async Task<Stream> DownloadAudioAsync(string publicId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(publicId))
+            throw new ArgumentException("PublicId cannot be null or empty", nameof(publicId));
+
+        try
+        {
+            // Use Cloudinary SDK to build the download URL (supports signed URLs if needed)
+            var downloadUrl = new Url(_cloudName)
+                .ResourceType("raw")
+                .Source(publicId)
+                .BuildUrl();
+
+            _logger.LogInformation(
+                "Downloading audio from Cloudinary. PublicId={PublicId}, Url={Url}",
+                publicId, downloadUrl);
+
+            var client = _httpClientFactory.CreateClient("CloudinaryDownload");
+            var response = await client.GetAsync(downloadUrl, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogError(
+                    "Cloudinary audio download failed. PublicId={PublicId}, Status={Status}, Body={Body}",
+                    publicId, response.StatusCode, body);
+                throw new InvalidOperationException(
+                    $"Failed to download audio from Cloudinary. Status: {response.StatusCode}");
+            }
+
+            var memoryStream = new MemoryStream();
+            await response.Content.CopyToAsync(memoryStream);
+            memoryStream.Position = 0;
+
+            _logger.LogInformation(
+                "Successfully downloaded audio from Cloudinary. PublicId={PublicId}, Size={Size}",
+                publicId, memoryStream.Length);
+
+            return memoryStream;
+        }
+        catch (InvalidOperationException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Unexpected error downloading audio from Cloudinary. PublicId={PublicId}",
+                publicId);
+            throw new InvalidOperationException(
+                $"Failed to download audio from Cloudinary. PublicId: {publicId}", ex);
+        }
     }
 
     public async Task DeleteAudioAsync(string publicId, CancellationToken cancellationToken = default)

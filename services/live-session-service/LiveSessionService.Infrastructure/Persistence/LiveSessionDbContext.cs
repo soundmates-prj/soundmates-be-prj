@@ -38,6 +38,10 @@ public class LiveSessionDbContext : DbContext
             var connectionString = ResolveConnectionString(config);
             optionsBuilder.UseNpgsql(connectionString);
         }
+        
+        // Suppress pending model changes warning to allow migrations to be applied
+        optionsBuilder.ConfigureWarnings(warnings => 
+            warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
     }
 
     private static string ResolveConnectionString(IConfiguration config)
@@ -81,6 +85,8 @@ public class LiveSessionDbContext : DbContext
     public DbSet<PodcastEpisode> PodcastEpisodes => Set<PodcastEpisode>();
     public DbSet<UserSavedPodcast> UserSavedPodcasts => Set<UserSavedPodcast>();
     public DbSet<PodcastRequest> PodcastRequests => Set<PodcastRequest>();
+    public DbSet<StationMediaFile> StationMediaFiles => Set<StationMediaFile>();
+    public DbSet<SyncAuditLog> SyncAuditLogs => Set<SyncAuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -79,7 +79,13 @@ public sealed class GetAllLiveSessionsHandler : IQueryHandler<GetAllLiveSessions
                     .Distinct()
                     .Count(),
                 PeakListeners = s.Listeners.Count(l => l.IsConnected),
-                ListenersCount = s.Listeners.Count(l => l.IsConnected),
+                ListenersCount = s.Listeners
+                    .Where(l => l.IsConnected)
+                    .Select(l => l.UserId.HasValue
+                        ? $"u:{l.UserId.Value}"
+                        : $"a:{l.AnonymousIdentifier ?? l.Id.ToString()}")
+                    .Distinct()
+                    .Count(),
                 StreamUrl = s.AzuraCastStation?.StreamUrl,
                 StationShortcode = s.AzuraCastStation?.StationShortcode,
                 PublicPlayerUrl = s.AzuraCastStation?.PublicPlayerUrl,

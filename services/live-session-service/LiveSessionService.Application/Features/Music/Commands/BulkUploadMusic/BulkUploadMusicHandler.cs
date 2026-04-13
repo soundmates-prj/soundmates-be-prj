@@ -206,6 +206,7 @@ public sealed class BulkUploadMusicHandler
                     DurationSeconds = durationSeconds,
                     FilePath = media.UniqueId, // Same as UniqueId
                     AzuraCastMediaId = media.UniqueId, // Store song_id if possible
+                    OriginalSourceType = "station",
                     FileType = extension,
                     FileSizeBytes = fileSizeBytes,
                     UploadedByUserId = uploadedByUserId,
@@ -218,6 +219,10 @@ public sealed class BulkUploadMusicHandler
                 var safeFileName = $"audio-{Guid.NewGuid():N}{extensionWithDot}";
                 audioUpload = await _cloudinaryStorage.UploadAudioAsync(entry.FileStream, safeFileName, cancellationToken);
 
+                // Store FilePath with system:// prefix so ImportSystemMediaBatchHandler can detect it.
+                // Actual playback URL is read from audioUpload.Url separately.
+                var systemFilePath = $"system://cloudinary/{audioUpload.PublicId}";
+
                 mediaFile = new MediaFile
                 {
                     Id = Guid.NewGuid(),
@@ -226,8 +231,10 @@ public sealed class BulkUploadMusicHandler
                     Album = album,
                     ArtUrl = artworkUpload?.Url,
                     DurationSeconds = durationSeconds,
-                    FilePath = audioUpload.Url,
+                    FilePath = systemFilePath,
+                    FileUrl = audioUpload.Url,
                     AzuraCastMediaId = null,
+                    OriginalSourceType = "system",
                     FileType = extension,
                     FileSizeBytes = fileSizeBytes,
                     UploadedByUserId = uploadedByUserId,
@@ -253,10 +260,11 @@ public sealed class BulkUploadMusicHandler
                 Album = mediaFile.Album,
                 ArtworkUrl = mediaFile.ArtUrl,
                 Duration = mediaFile.DurationSeconds,
-                FileUrl = mediaFile.FilePath,
+                FileUrl = audioUpload?.Url ?? mediaFile.FilePath,
                 FileType = mediaFile.FileType,
                 FileSize = mediaFile.FileSizeBytes,
-                UploadedAt = mediaFile.UploadedAt
+                UploadedAt = mediaFile.UploadedAt,
+                AzuraCastMediaId = mediaFile.AzuraCastMediaId,
             };
         }
         catch

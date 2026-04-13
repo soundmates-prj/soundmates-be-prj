@@ -126,7 +126,8 @@ public sealed class SyncNowPlayingHandler : ICommandHandler<SyncNowPlayingComman
                 }
 
                 // Create new now playing entry
-                var playedAtTimestamp = nowPlayingData.NowPlaying.PlayedAt;
+                // Note: PlayedAt is double (fractional seconds) — truncate to long for Unix timestamp conversion
+                var playedAtTimestamp = (long)nowPlayingData.NowPlaying.PlayedAt;
                 var playedAt = DateTimeOffset.FromUnixTimeSeconds(playedAtTimestamp).UtcDateTime;
 
                 nowPlayingHistory = NowPlayingHistory.Create(

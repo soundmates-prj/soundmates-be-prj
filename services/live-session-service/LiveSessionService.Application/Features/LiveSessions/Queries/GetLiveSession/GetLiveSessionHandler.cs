@@ -86,6 +86,7 @@ public sealed class GetLiveSessionHandler : IQueryHandler<GetLiveSessionQuery, L
 
         var result = new LiveSessionResult
         {
+            
             Id = session.Id,
             UserId = session.HostUserId,
             StationId = session.AzuraCastStationId!.Value,
@@ -109,7 +110,13 @@ public sealed class GetLiveSessionHandler : IQueryHandler<GetLiveSessionQuery, L
                 .Distinct()
                 .Count(),
             PeakListeners = session.Listeners.Count(l => l.IsConnected),
-            ListenersCount = session.Listeners.Count(l => l.IsConnected),
+            ListenersCount = session.Listeners
+                .Where(l => l.IsConnected)
+                .Select(l => l.UserId.HasValue
+                    ? $"u:{l.UserId.Value}"
+                    : $"a:{l.AnonymousIdentifier ?? l.Id.ToString()}")
+                .Distinct()
+                .Count(),
             StreamUrl = session.AzuraCastStation?.StreamUrl,
             StationShortcode = session.AzuraCastStation?.StationShortcode,
             PublicPlayerUrl = session.AzuraCastStation?.PublicPlayerUrl,

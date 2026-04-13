@@ -34,6 +34,13 @@ public class StationPlaylist
     
     public DateTime? LastSyncedAt { get; set; }
     
+    // Soft delete fields
+    public bool IsDeleted { get; set; }
+    
+    public DateTime? DeletedAt { get; set; }
+    
+    public Guid? DeletedBy { get; set; }
+    
     public virtual AzuraCastStation AzuraCastStation { get; set; } = null!;
     
     public virtual ICollection<PlaylistMedia> Media { get; set; } = new List<PlaylistMedia>();

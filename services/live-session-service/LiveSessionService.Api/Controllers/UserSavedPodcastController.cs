@@ -34,15 +34,17 @@ public sealed class UserSavedPodcastController : ControllerBase
     /// Retrieves the list of podcasts followed by the current user
     /// </summary>
     [HttpGet]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResponse<List<PodcastResult>>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 401)]
     public async Task<IActionResult> GetMine(CancellationToken ct)
     {
         if (!TryGetCurrentUserId(out var userId))
         {
-            return Unauthorized(ApiResponse<object>.FailureResponse(
-                "Invalid or missing user token",
-                (int)ErrorCode.Unauthorized));
+            // Anonymous users can browse without saved podcasts.
+            return Ok(ApiResponse<List<PodcastResult>>.SuccessResponse(
+                new List<PodcastResult>(),
+                "Anonymous user has no saved podcasts"));
         }
 
         var result = await _queries.Send<GetFollowedPodcastsQuery, List<PodcastResult>>(

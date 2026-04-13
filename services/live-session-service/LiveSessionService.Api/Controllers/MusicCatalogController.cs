@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using LiveSessionService.Application.Abstractions;
 using LiveSessionService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
 using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Features.Results.Music;
@@ -8,12 +9,14 @@ using LiveSessionService.Application.Features.Music.Commands.UploadMusic;
 using LiveSessionService.Application.Features.Music.Commands.BulkUploadMusic;
 using LiveSessionService.Application.Features.Music.Commands.ImportSystemMediaBatch;
 using LiveSessionService.Application.Features.Music.Commands.DeleteMedia;
+using LiveSessionService.Application.Features.Music.Commands.UpdateMusicMetadata;
 using LiveSessionService.Application.Features.Music.Queries.GetAllMediaFiles;
 using LiveSessionService.Application.Features.Music.Queries.GetMediaFilesByStation;
 using LiveSessionService.Api.Models.Responses;
 using LiveSessionService.Api.Models.Requests.Music;
 using LiveSessionService.Api.Extensions;
 using LiveSessionService.Api.Helpers;
+using LiveSessionService.Domain.Interfaces;
 using System.Security.Claims;
 
 namespace LiveSessionService.Api.Controllers;
@@ -31,15 +34,80 @@ public class MusicCatalogController : ControllerBase
     private readonly ICommandDispatcher _commands;
     private readonly IQueryDispatcher _queries;
     private readonly ILogger<MusicCatalogController> _logger;
+    private readonly IMediaFileRepository _mediaFileRepository;
+    private readonly IAzuraCastClient _azuraCastClient;
 
     public MusicCatalogController(
         ICommandDispatcher commands,
         IQueryDispatcher queries,
-        ILogger<MusicCatalogController> _logger)
+        ILogger<MusicCatalogController> _logger,
+        IMediaFileRepository mediaFileRepository,
+        IAzuraCastClient azuraCastClient)
     {
         _commands = commands;
         _queries = queries;
         this._logger = _logger;
+        _mediaFileRepository = mediaFileRepository;
+        _azuraCastClient = azuraCastClient;
+    }
+
+    /// <summary>
+    /// Stream a media file by internal media GUID.
+    /// Supports direct HTTP file URLs and AzuraCast unique_id-based media.
+    /// </summary>
+    [HttpGet("{id:guid}/stream")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> StreamById(Guid id, CancellationToken ct)
+    {
+        var mediaFile = await _mediaFileRepository.GetByIdAsync(id, ct);
+        if (mediaFile == null)
+        {
+            return NotFound(ApiResponse<object>.FailureResponse(
+                "Resource not found",
+                (int)ErrorCode.NotFound));
+        }
+
+        if (Uri.TryCreate(mediaFile.FilePath, UriKind.Absolute, out var absoluteUrl)
+            && (absoluteUrl.Scheme == Uri.UriSchemeHttp || absoluteUrl.Scheme == Uri.UriSchemeHttps))
+        {
+            return Redirect(absoluteUrl.ToString());
+        }
+
+        var uniqueId = string.IsNullOrWhiteSpace(mediaFile.AzuraCastMediaId)
+            ? mediaFile.FilePath
+            : mediaFile.AzuraCastMediaId;
+
+        if (string.IsNullOrWhiteSpace(uniqueId))
+        {
+            return NotFound(ApiResponse<object>.FailureResponse(
+                "Resource not found",
+                (int)ErrorCode.NotFound));
+        }
+
+        var stations = await _azuraCastClient.GetStationsAsync(ct);
+        foreach (var station in stations)
+        {
+            var downloaded = await _azuraCastClient.DownloadMediaAsync(
+                station.Id,
+                uniqueId,
+                ct);
+
+            if (downloaded is null)
+            {
+                continue;
+            }
+
+            var contentType = !string.IsNullOrWhiteSpace(downloaded.Value.ContentType)
+                ? downloaded.Value.ContentType!
+                : GetContentType(mediaFile.FileType);
+
+            return File(downloaded.Value.Content, contentType, enableRangeProcessing: true);
+        }
+
+        return NotFound(ApiResponse<object>.FailureResponse(
+            "Resource not found",
+            (int)ErrorCode.NotFound));
     }
 
     /// <summary>
@@ -122,15 +190,16 @@ public class MusicCatalogController : ControllerBase
                 (int)ErrorCode.BadRequest));
         }
 
-        // Copy to MemoryStream
-        var ms = new MemoryStream();
-        await request.File.CopyToAsync(ms, ct);
-        ms.Position = 0;
+        using var fileStream = request.File.OpenReadStream();
+        if (fileStream.CanSeek)
+        {
+            fileStream.Position = 0;
+        }
 
         string? tagTitle = null, tagArtist = null, tagAlbum = null;
         try
         {
-            var abstraction = new TagLibStreamAbstraction(ms, request.File.FileName);
+            var abstraction = new TagLibStreamAbstraction(fileStream, request.File.FileName);
             using var tagFile = TagLib.File.Create(abstraction);
             tagTitle  = string.IsNullOrWhiteSpace(tagFile.Tag.Title)  ? null : tagFile.Tag.Title.Trim();
             tagArtist = tagFile.Tag.Performers?.Length > 0
@@ -143,7 +212,10 @@ public class MusicCatalogController : ControllerBase
             _logger.LogWarning(ex, "Could not read tags from {FileName}", request.File.FileName);
         }
 
-        ms.Position = 0;
+        if (fileStream.CanSeek)
+        {
+            fileStream.Position = 0;
+        }
 
         var title  = (!string.IsNullOrWhiteSpace(request.Title)  ? request.Title  : tagTitle)
                      ?? Path.GetFileNameWithoutExtension(request.File.FileName);
@@ -156,9 +228,7 @@ public class MusicCatalogController : ControllerBase
 
         var result = await _commands.Send<UploadMusicCommand, MusicResult>(
             new UploadMusicCommand(stationId, userId, title, artist, album, request.Lyrics,
-                ms, request.File.FileName, request.File.ContentType), ct);
-
-        await ms.DisposeAsync();
+                fileStream, request.File.FileName, request.File.ContentType), ct);
 
         if (!result.IsSuccess)
         {
@@ -242,9 +312,10 @@ public class MusicCatalogController : ControllerBase
     }
 
     /// <summary>
-    /// Get all music for a station
+    /// Get all music for a station (public — guests can browse songs)
     /// </summary>
     [HttpGet("station/{stationId:guid}")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResponse<List<MusicResult>>), 200)]
     public async Task<IActionResult> GetStationMusic(Guid stationId, CancellationToken ct)
     {
@@ -255,6 +326,71 @@ public class MusicCatalogController : ControllerBase
 
         _logger.LogInformation("GetStationMusic: Query completed. IsSuccess={IsSuccess}, ResultCount={Count}, ErrorCode={ErrorCode}",
             result.IsSuccess, result.Data?.Count ?? 0, result.ErrorCode);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.Unauthorized => Unauthorized(result.ToApiResponse()),
+                ErrorCode.Forbidden => StatusCode(403, result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                ErrorCode.UnprocessableEntity => StatusCode(422, result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(result.ToApiResponse());
+    }
+
+    /// <summary>
+    /// Update station music metadata (title/artist/album/lyrics) and sync to AzuraCast.
+    /// </summary>
+    [HttpPut("station/{stationId:guid}/media/{musicId:guid}/metadata")]
+    [ProducesResponseType(typeof(ApiResponse<MusicResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> UpdateStationMusicMetadata(
+        Guid stationId,
+        Guid musicId,
+        [FromBody] UpdateStationMusicMetadataRequest request,
+        CancellationToken ct)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ApiResponse<object>.FailureResponse(
+                "Invalid input",
+                (int)ErrorCode.BadRequest));
+        }
+
+        if (request == null)
+        {
+            return BadRequest(ApiResponse<object>.FailureResponse(
+                "Request body is required",
+                (int)ErrorCode.BadRequest));
+        }
+
+        var hasAnyField = request.Title is not null
+                          || request.Artist is not null
+                          || request.Album is not null
+                          || request.Lyrics is not null;
+
+        if (!hasAnyField)
+        {
+            return BadRequest(ApiResponse<object>.FailureResponse(
+                "At least one field (title, artist, album, lyrics) is required",
+                (int)ErrorCode.BadRequest));
+        }
+
+        var result = await _commands.Send<UpdateMusicMetadataCommand, MusicResult>(
+            new UpdateMusicMetadataCommand(
+                stationId,
+                musicId,
+                request.Title,
+                request.Artist,
+                request.Album,
+                request.Lyrics),
+            ct);
 
         if (!result.IsSuccess)
         {
@@ -367,47 +503,60 @@ public class MusicCatalogController : ControllerBase
                 (int)ErrorCode.BadRequest));
         }
 
-        // Convert IFormFile to BulkUploadFileEntry
-        var fileEntries = new List<BulkUploadFileEntry>();
-        foreach (var file in request.Files)
+        var fileEntries = new List<BulkUploadFileEntry>(request.Files.Count);
+
+        try
         {
-            var ms = new MemoryStream();
-            await file.CopyToAsync(ms, ct);
-            ms.Position = 0;
-
-            fileEntries.Add(new BulkUploadFileEntry(
-                ms,
-                file.FileName,
-                file.ContentType,
-                null,
-                null,
-                null
-            ));
-        }
-
-        var result = await _commands.Send<BulkUploadMusicCommand, BulkUploadMusicResult>(
-            new BulkUploadMusicCommand(stationId, userId, fileEntries), ct);
-
-        // Dispose all streams
-        foreach (var entry in fileEntries)
-        {
-            await entry.FileStream.DisposeAsync();
-        }
-
-        if (!result.IsSuccess)
-        {
-            return result.ErrorCode switch
+            foreach (var file in request.Files)
             {
-                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
-                ErrorCode.Unauthorized => Unauthorized(result.ToApiResponse()),
-                ErrorCode.Forbidden => StatusCode(403, result.ToApiResponse()),
-                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
-                ErrorCode.UnprocessableEntity => StatusCode(422, result.ToApiResponse()),
-                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
-            };
-        }
+                var stream = file.OpenReadStream();
+                fileEntries.Add(new BulkUploadFileEntry(
+                    stream,
+                    file.FileName,
+                    file.ContentType,
+                    null,
+                    null,
+                    null
+                ));
+            }
 
-        return Ok(result.ToApiResponse());
+            var result = await _commands.Send<BulkUploadMusicCommand, BulkUploadMusicResult>(
+                new BulkUploadMusicCommand(stationId, userId, fileEntries), ct);
+
+            if (!result.IsSuccess)
+            {
+                return result.ErrorCode switch
+                {
+                    ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                    ErrorCode.Unauthorized => Unauthorized(result.ToApiResponse()),
+                    ErrorCode.Forbidden => StatusCode(403, result.ToApiResponse()),
+                    ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                    ErrorCode.UnprocessableEntity => StatusCode(422, result.ToApiResponse()),
+                    _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+                };
+            }
+
+            return Ok(result.ToApiResponse());
+        }
+        finally
+        {
+            foreach (var entry in fileEntries)
+            {
+                await entry.FileStream.DisposeAsync();
+            }
+        }
+    }
+
+    private static string GetContentType(string fileType)
+    {
+        return fileType.ToLowerInvariant() switch
+        {
+            "mp3" => "audio/mpeg",
+            "wav" => "audio/wav",
+            "ogg" => "audio/ogg",
+            "flac" => "audio/flac",
+            _ => "application/octet-stream"
+        };
     }
 
     /// <summary>

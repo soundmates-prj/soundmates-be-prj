@@ -12,23 +12,29 @@ namespace LiveSessionService.Application.Features.Playlists.Commands.AddMediaToP
 public sealed class AddMediaToPlaylistHandler
     : ICommandHandler<AddMediaToPlaylistCommand, PlaylistMediaResult>
 {
-    private const string SystemMediaPrefix = "system://";
-    private readonly IStationPlaylistRepository      _playlistRepo;
-    private readonly IMediaFileRepository            _mediaFileRepo;
-    private readonly IAzuraCastClient                _azuraCast;
-    private readonly IDateTimeProvider               _dateTime;
+    private const string SystemMediaPrefix = "system://cloudinary/";
+    private readonly IStationPlaylistRepository _playlistRepo;
+    private readonly IMediaFileRepository       _mediaFileRepo;
+    private readonly IStationMediaFileRepository _stationMediaFileRepo;
+    private readonly IAzuraCastClient            _azuraCast;
+    private readonly ICloudinaryMediaStorage    _cloudinary;
+    private readonly IDateTimeProvider          _dateTime;
     private readonly ILogger<AddMediaToPlaylistHandler> _logger;
 
     public AddMediaToPlaylistHandler(
-        IStationPlaylistRepository      playlistRepo,
-        IMediaFileRepository            mediaFileRepo,
-        IAzuraCastClient                azuraCast,
-        IDateTimeProvider               dateTime,
+        IStationPlaylistRepository   playlistRepo,
+        IMediaFileRepository         mediaFileRepo,
+        IStationMediaFileRepository  stationMediaFileRepo,
+        IAzuraCastClient             azuraCast,
+        ICloudinaryMediaStorage      cloudinary,
+        IDateTimeProvider            dateTime,
         ILogger<AddMediaToPlaylistHandler> logger)
     {
         _playlistRepo  = playlistRepo;
         _mediaFileRepo = mediaFileRepo;
+        _stationMediaFileRepo = stationMediaFileRepo;
         _azuraCast     = azuraCast;
+        _cloudinary    = cloudinary;
         _dateTime      = dateTime;
         _logger        = logger;
     }
@@ -53,69 +59,109 @@ public sealed class AddMediaToPlaylistHandler
         var album = mediaFile.Album;
         var duration = mediaFile.DurationSeconds;
 
-        var localPath = mediaFile.FilePath;
-        if (string.IsNullOrWhiteSpace(azuraMediaId)
-            && !string.IsNullOrWhiteSpace(localPath)
-            && localPath.StartsWith(SystemMediaPrefix, StringComparison.OrdinalIgnoreCase))
-        {
-            var relativePath = localPath.Substring(SystemMediaPrefix.Length)
-                .Replace('/', Path.DirectorySeparatorChar)
-                .Replace('\\', Path.DirectorySeparatorChar);
-            var absolutePath = Path.Combine(AppContext.BaseDirectory, "storage", relativePath);
+        // Prefer station-specific mapping created by ImportSystemMediaBatch.
+        // This avoids downloading/re-uploading an already imported system track.
+        var stationMediaFile = await _stationMediaFileRepo.GetByMediaFileAndStationAsync(
+            mediaFile.Id,
+            playlist.AzuraCastStationId,
+            cancellationToken);
 
-            if (!File.Exists(absolutePath))
+        if (!string.IsNullOrWhiteSpace(stationMediaFile?.AzuraCastMediaId))
+        {
+            azuraMediaId = stationMediaFile.AzuraCastMediaId;
+            _logger.LogInformation(
+                "Resolved station media mapping for MediaId={MediaId}, StationId={StationId}, AzuraCastMediaId={AzuraCastMediaId}",
+                mediaFile.Id,
+                playlist.AzuraCastStationId,
+                azuraMediaId);
+        }
+
+        // 3. If system media (stored on Cloudinary) and not yet on AzuraCast, download and re-upload
+        if (string.IsNullOrWhiteSpace(azuraMediaId)
+            && !string.IsNullOrWhiteSpace(mediaFile.FilePath)
+            && mediaFile.FilePath.StartsWith(SystemMediaPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            // Extract Cloudinary public ID from "system://cloudinary/{publicId}"
+            var publicId = mediaFile.FilePath.Substring(SystemMediaPrefix.Length).Trim();
+
+            if (string.IsNullOrWhiteSpace(publicId))
             {
                 _logger.LogWarning(
-                    "System media file not found on disk. MediaId={MediaId}, FilePath={FilePath}, ExpectedPath={AbsolutePath}",
-                    mediaFile.Id, mediaFile.FilePath, absolutePath);
+                    "Invalid system media FilePath — cannot extract Cloudinary publicId. MediaId={MediaId}, FilePath={FilePath}",
+                    mediaFile.Id, mediaFile.FilePath);
 
                 return Result<PlaylistMediaResult>.Failure(
-                    $"File nhạc '{mediaFile.Title}' chưa được upload lên server. Vui lòng upload file trước khi thêm vào playlist. (Path: {absolutePath})",
-                    ErrorCode.NotFound);
+                    $"File nhạc '{mediaFile.Title}' không hợp lệ hoặc chưa được upload đúng cách.",
+                    ErrorCode.BadRequest);
             }
 
-            await using var fileStream = new FileStream(absolutePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-            var fileName = Path.GetFileName(absolutePath);
-            var uploaded = await _azuraCast.UploadMediaAsync(
-                playlist.AzuraCastStation.ExternalStationId,
-                fileStream,
-                fileName,
-                GetContentType(mediaFile.FileType),
-                mediaFile.Title,
-                mediaFile.Artist ?? "Unknown Artist",
-                mediaFile.Album,
-                cancellationToken);
+            _logger.LogInformation(
+                "System media '{Title}' found on Cloudinary. Downloading and re-uploading to AzuraCast. PublicId={PublicId}",
+                mediaFile.Title, publicId);
 
-            if (uploaded == null || string.IsNullOrWhiteSpace(uploaded.UniqueId))
+            Stream audioStream;
+            try
             {
+                audioStream = await _cloudinary.DownloadAudioAsync(publicId, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to download system media from Cloudinary. MediaId={MediaId}, PublicId={PublicId}",
+                    mediaFile.Id, publicId);
+
                 return Result<PlaylistMediaResult>.Failure(
-                    "Failed to import system media into station",
+                    $"Không thể tải file nhạc '{mediaFile.Title}' từ Cloudinary. Vui lòng thử lại.",
                     ErrorCode.InternalServerError);
             }
 
-            azuraMediaId = uploaded.UniqueId;
-            title = mediaFile.Title;
-            artist = mediaFile.Artist;
-            album = mediaFile.Album;
-            duration = mediaFile.DurationSeconds;
+            var fileName = $"{publicId.Replace("/", "_").Replace(" ", "_")}.{mediaFile.FileType}";
+            await using (audioStream)
+            {
+                var uploaded = await _azuraCast.UploadMediaAsync(
+                    playlist.AzuraCastStation.ExternalStationId,
+                    audioStream,
+                    fileName,
+                    GetContentType(mediaFile.FileType),
+                    mediaFile.Title,
+                    mediaFile.Artist ?? "Unknown Artist",
+                    mediaFile.Album,
+                    cancellationToken);
 
-            mediaFile.AzuraCastMediaId = uploaded.UniqueId;
+                if (uploaded == null || string.IsNullOrWhiteSpace(uploaded.UniqueId))
+                {
+                    return Result<PlaylistMediaResult>.Failure(
+                        $"Không thể upload file nhạc '{mediaFile.Title}' lên AzuraCast. Vui lòng kiểm tra cấu hình station.",
+                        ErrorCode.InternalServerError);
+                }
+
+                azuraMediaId = uploaded.UniqueId;
+            }
+
+            // Update MediaFile with the new AzuraCast media ID
+            mediaFile.AzuraCastMediaId = azuraMediaId;
             await _mediaFileRepo.UpdateAsync(mediaFile, cancellationToken);
+
+            _logger.LogInformation(
+                "Successfully re-uploaded system media '{Title}' to AzuraCast. AzuraCastMediaId={AzuraCastMediaId}",
+                mediaFile.Title, azuraMediaId);
         }
 
         if (string.IsNullOrWhiteSpace(azuraMediaId))
         {
-            return Result<PlaylistMediaResult>.Failure("Media has not been synchronized to AzuraCast", ErrorCode.BadRequest);
+            return Result<PlaylistMediaResult>.Failure(
+                $"File nhạc '{mediaFile.Title}' chưa được đồng bộ lên AzuraCast. Vui lòng sync station trước.",
+                ErrorCode.BadRequest);
         }
 
-        // 3. Assign in AzuraCast
+        // 4. Assign in AzuraCast
         await _azuraCast.AssignMediaToPlaylistAsync(
             playlist.AzuraCastStation.ExternalStationId,
             azuraMediaId,
             playlist.ExternalPlaylistId,
             cancellationToken);
 
-        // 4. Save PlaylistMedia record
+        // 5. Save PlaylistMedia record
         var playlistMedia = new PlaylistMedia
         {
             Id                = Guid.NewGuid(),
@@ -135,8 +181,8 @@ public sealed class AddMediaToPlaylistHandler
         await _playlistRepo.AddMediaAsync(playlistMedia, cancellationToken);
 
         _logger.LogInformation(
-            "Added media '{Title}' to playlist '{Playlist}'",
-            mediaFile.Title, playlist.PlaylistName);
+            "Added media '{Title}' to playlist '{PlaylistId}'",
+            mediaFile.Title, playlist.Id);
 
         return Result<PlaylistMediaResult>.Success(new PlaylistMediaResult
         {
@@ -147,7 +193,7 @@ public sealed class AddMediaToPlaylistHandler
             Artist          = playlistMedia.SongArtist,
             Album           = playlistMedia.SongAlbum,
             ArtworkUrl      = mediaFile.ArtUrl,
-            FileUrl         = mediaFile.FilePath,
+            FileUrl         = mediaFile.FileUrl ?? mediaFile.FilePath,
             FileType        = mediaFile.FileType,
             FileSize        = mediaFile.FileSizeBytes,
             DurationSeconds = playlistMedia.DurationSeconds,

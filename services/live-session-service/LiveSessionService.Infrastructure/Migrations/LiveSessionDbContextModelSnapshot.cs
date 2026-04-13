@@ -17,7 +17,7 @@ namespace LiveSessionService.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.1")
+                .HasAnnotation("ProductVersion", "9.0.4")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -154,7 +154,7 @@ namespace LiveSessionService.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ListenerStatistics");
+                    b.ToTable("ListenerStatistics", (string)null);
                 });
 
             modelBuilder.Entity("LiveSessionService.Domain.Entities.LiveSession", b =>
@@ -314,6 +314,10 @@ namespace LiveSessionService.Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<string>("FileUrl")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
                     b.Property<string>("Genre")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
@@ -386,6 +390,9 @@ namespace LiveSessionService.Infrastructure.Migrations
                     b.Property<Guid>("LiveSessionId")
                         .HasColumnType("uuid")
                         .HasColumnName("live_session_id");
+
+                    b.Property<string>("Lyrics")
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("PlayedAt")
                         .HasColumnType("timestamp with time zone")
@@ -531,100 +538,7 @@ namespace LiveSessionService.Infrastructure.Migrations
 
                     b.HasIndex("StationPlaylistId");
 
-                    b.ToTable("PlaylistMedias");
-                });
-
-            modelBuilder.Entity("LiveSessionService.Domain.Entities.PodcastRequest", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<string>("AzuraCastMediaId")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("azuracast_media_id");
-
-                    b.Property<string>("AudioUrl")
-                        .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)")
-                        .HasColumnName("audio_url");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)")
-                        .HasColumnName("description");
-
-                    b.Property<int>("DurationSeconds")
-                        .HasColumnType("integer")
-                        .HasColumnName("duration_seconds");
-
-                    b.Property<Guid>("LiveSessionId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("live_session_id");
-
-                    b.Property<string>("RejectReason")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)")
-                        .HasColumnName("reject_reason");
-
-                    b.Property<DateTime>("RequestedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("requested_at");
-
-                    b.Property<Guid>("RequestedByUserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("requested_by_user_id");
-
-                    b.Property<DateTime?>("ReviewedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("reviewed_at");
-
-                    b.Property<Guid?>("ReviewedByUserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("reviewed_by_user_id");
-
-                    b.Property<string>("ScriptText")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("script_text");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)")
-                        .HasColumnName("status");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("title");
-
-                    b.Property<string>("VoiceCode")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("voice_code");
-
-                    b.Property<string>("VoiceDisplayName")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("voice_display_name");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("LiveSessionId");
-
-                    b.HasIndex("RequestedAt");
-
-                    b.HasIndex("RequestedByUserId");
-
-                    b.HasIndex("Status");
-
-                    b.ToTable("podcast_requests", (string)null);
+                    b.ToTable("PlaylistMedias", (string)null);
                 });
 
             modelBuilder.Entity("LiveSessionService.Domain.Entities.Podcast", b =>
@@ -742,6 +656,103 @@ namespace LiveSessionService.Infrastructure.Migrations
                     b.ToTable("podcast_episodes", (string)null);
                 });
 
+            modelBuilder.Entity("LiveSessionService.Domain.Entities.PodcastRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AudioUrl")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("audio_url");
+
+                    b.Property<string>("AzuraCastMediaId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("azuracast_media_id");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("description");
+
+                    b.Property<int>("DurationSeconds")
+                        .HasColumnType("integer")
+                        .HasColumnName("duration_seconds");
+
+                    b.Property<Guid>("LiveSessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("live_session_id");
+
+                    b.Property<string>("RejectReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("reject_reason");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("requested_at");
+
+                    b.Property<Guid>("RequestedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("requested_by_user_id");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reviewed_at");
+
+                    b.Property<Guid?>("ReviewedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reviewed_by_user_id");
+
+                    b.Property<string>("ScriptText")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("script_text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("title");
+
+                    b.Property<string>("VoiceCode")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("voice_code");
+
+                    b.Property<string>("VoiceDisplayName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("voice_display_name");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LiveSessionId")
+                        .HasDatabaseName("ix_podcast_requests_live_session_id");
+
+                    b.HasIndex("RequestedAt")
+                        .HasDatabaseName("ix_podcast_requests_requested_at");
+
+                    b.HasIndex("RequestedByUserId")
+                        .HasDatabaseName("ix_podcast_requests_requested_by_user_id");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_podcast_requests_status");
+
+                    b.ToTable("podcast_requests", (string)null);
+                });
+
             modelBuilder.Entity("LiveSessionService.Domain.Entities.SessionActivity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -770,7 +781,7 @@ namespace LiveSessionService.Infrastructure.Migrations
 
                     b.HasIndex("LiveSessionId");
 
-                    b.ToTable("SessionActivities");
+                    b.ToTable("SessionActivities", (string)null);
                 });
 
             modelBuilder.Entity("LiveSessionService.Domain.Entities.SessionListener", b =>
@@ -822,7 +833,7 @@ namespace LiveSessionService.Infrastructure.Migrations
 
                     b.HasIndex("LiveSessionId");
 
-                    b.ToTable("SessionListeners");
+                    b.ToTable("SessionListeners", (string)null);
                 });
 
             modelBuilder.Entity("LiveSessionService.Domain.Entities.SessionParticipant", b =>
@@ -862,7 +873,7 @@ namespace LiveSessionService.Infrastructure.Migrations
 
                     b.HasIndex("LiveSessionId");
 
-                    b.ToTable("SessionParticipants");
+                    b.ToTable("SessionParticipants", (string)null);
                 });
 
             modelBuilder.Entity("LiveSessionService.Domain.Entities.SessionSchedule", b =>
@@ -1054,7 +1065,7 @@ namespace LiveSessionService.Infrastructure.Migrations
 
                     b.HasIndex("AzuraCastStationId");
 
-                    b.ToTable("StationMounts");
+                    b.ToTable("StationMounts", (string)null);
                 });
 
             modelBuilder.Entity("LiveSessionService.Domain.Entities.StationPlaylist", b =>
@@ -1107,7 +1118,7 @@ namespace LiveSessionService.Infrastructure.Migrations
 
                     b.HasIndex("AzuraCastStationId");
 
-                    b.ToTable("StationPlaylists");
+                    b.ToTable("StationPlaylists", (string)null);
                 });
 
             modelBuilder.Entity("LiveSessionService.Domain.Entities.UserPlaylist", b =>
@@ -1260,17 +1271,6 @@ namespace LiveSessionService.Infrastructure.Migrations
                     b.Navigation("LiveSession");
                 });
 
-            modelBuilder.Entity("LiveSessionService.Domain.Entities.PodcastRequest", b =>
-                {
-                    b.HasOne("LiveSessionService.Domain.Entities.LiveSession", "LiveSession")
-                        .WithMany("PodcastRequests")
-                        .HasForeignKey("LiveSessionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("LiveSession");
-                });
-
             modelBuilder.Entity("LiveSessionService.Domain.Entities.NowPlayingHistory", b =>
                 {
                     b.HasOne("LiveSessionService.Domain.Entities.LiveSession", "LiveSession")
@@ -1309,6 +1309,17 @@ namespace LiveSessionService.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Podcast");
+                });
+
+            modelBuilder.Entity("LiveSessionService.Domain.Entities.PodcastRequest", b =>
+                {
+                    b.HasOne("LiveSessionService.Domain.Entities.LiveSession", "LiveSession")
+                        .WithMany("PodcastRequests")
+                        .HasForeignKey("LiveSessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("LiveSession");
                 });
 
             modelBuilder.Entity("LiveSessionService.Domain.Entities.SessionActivity", b =>
@@ -1446,11 +1457,11 @@ namespace LiveSessionService.Infrastructure.Migrations
 
                     b.Navigation("Participants");
 
+                    b.Navigation("PodcastRequests");
+
                     b.Navigation("SessionSchedules");
 
                     b.Navigation("SongRequests");
-
-                    b.Navigation("PodcastRequests");
                 });
 
             modelBuilder.Entity("LiveSessionService.Domain.Entities.MediaFile", b =>

@@ -1,4 +1,3 @@
-using LiveSessionService.Application.Abstractions;
 using LiveSessionService.Application.Abstractions.Messaging;
 using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Features.Results;
@@ -11,20 +10,17 @@ namespace LiveSessionService.Application.Features.Music.Queries.GetMediaFilesByS
 public sealed class GetMediaFilesByStationHandler
     : IQueryHandler<GetMediaFilesByStationQuery, List<MusicResult>>
 {
-    private readonly IMediaFileRepository _mediaFiles;
+    private readonly IStationMediaFileRepository _stationMediaFiles;
     private readonly IAzuraCastStationRepository _stations;
-    private readonly IAzuraCastClient _azuraCast;
     private readonly ILogger<GetMediaFilesByStationHandler> _logger;
 
     public GetMediaFilesByStationHandler(
-        IMediaFileRepository mediaFiles,
+        IStationMediaFileRepository stationMediaFiles,
         IAzuraCastStationRepository stations,
-        IAzuraCastClient azuraCast,
         ILogger<GetMediaFilesByStationHandler> logger)
     {
-        _mediaFiles = mediaFiles;
+        _stationMediaFiles = stationMediaFiles;
         _stations = stations;
-        _azuraCast = azuraCast;
         _logger = logger;
     }
 
@@ -48,32 +44,30 @@ public sealed class GetMediaFilesByStationHandler
             _logger.LogInformation("GetMediaFilesByStation: Station found - StationId={StationId}, StationName={StationName}",
                 station.Id, station.StationName);
 
-            var stationFiles = await _azuraCast.GetStationFilesAsync(station.ExternalStationId, cancellationToken);
-            var stationUniqueIds = stationFiles
-                .Select(f => f.UniqueId)
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-            var entities = await _mediaFiles.GetByAzuraCastMediaIdsAsync(stationUniqueIds.ToList(), cancellationToken);
+            // Query StationMediaFile mapping table
+            var stationMediaFiles = await _stationMediaFiles.GetByStationIdAsync(query.StationId, cancellationToken);
 
             _logger.LogInformation("GetMediaFilesByStation: Retrieved {Count} media files for StationId={StationId}",
-                entities.Count, query.StationId);
+                stationMediaFiles.Count, query.StationId);
 
-            var results = entities
-                .Select(m => new MusicResult
+            var results = stationMediaFiles
+                .Select(smf => new MusicResult
                 {
-                    Id = m.Id,
+                    Id = smf.MediaFile.Id,
                     SourceType = "station",
-                    Title = m.Title,
-                    Artist = m.Artist ?? string.Empty,
-                    Album = m.Album,
-                    ArtworkUrl = m.ArtUrl,
-                    Lyrics = m.Lyrics,
-                    Duration = m.DurationSeconds,
-                    FileUrl = m.FilePath,
-                    FileType = m.FileType,
-                    FileSize = m.FileSizeBytes,
-                    UploadedAt = m.UploadedAt
+                    Title = smf.MediaFile.Title,
+                    Artist = smf.MediaFile.Artist ?? string.Empty,
+                    Album = smf.MediaFile.Album,
+                    ArtworkUrl = smf.MediaFile.ArtUrl,
+                    Lyrics = smf.MediaFile.Lyrics,
+                    Duration = smf.MediaFile.DurationSeconds,
+                    FileUrl = !string.IsNullOrWhiteSpace(smf.MediaFile.FileUrl)
+                        ? smf.MediaFile.FileUrl
+                        : smf.MediaFile.FilePath,
+                    FileType = smf.MediaFile.FileType,
+                    FileSize = smf.MediaFile.FileSizeBytes,
+                    UploadedAt = smf.MediaFile.UploadedAt,
+                    AzuraCastMediaId = smf.AzuraCastMediaId,
                 })
                 .ToList();
 

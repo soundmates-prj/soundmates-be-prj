@@ -89,6 +89,27 @@ public sealed class UploadMusicHandler
                 if (media == null)
                     return Result<MusicResult>.Failure("Failed to upload media to AzuraCast", ErrorCode.InternalServerError);
 
+                try
+                {
+                    await _azuraCast.UpdateMediaMetadataAsync(
+                        station.ExternalStationId,
+                        media.UniqueId,
+                        command.Title,
+                        command.Artist,
+                        command.Album,
+                        command.Lyrics,
+                        cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    // Keep upload successful even if metadata sync fails.
+                    _logger.LogWarning(
+                        ex,
+                        "Uploaded media {UniqueId} to station {StationId} but failed to sync metadata (lyrics/title/artist/album) to AzuraCast.",
+                        media.UniqueId,
+                        station.ExternalStationId);
+                }
+
                 mediaFile = new MediaFile
                 {
                     Id = Guid.NewGuid(),
@@ -99,7 +120,9 @@ public sealed class UploadMusicHandler
                     Lyrics = command.Lyrics,
                     DurationSeconds = localDurationSeconds,
                     FilePath = media.UniqueId, // Same as UniqueId for station media
+                    FileUrl = null,
                     AzuraCastMediaId = media.UniqueId,
+                    OriginalSourceType = "station",
                     FileType = extension,
                     FileSizeBytes = fileSizeBytes,
                     UploadedByUserId = command.UploadedByUserId,
@@ -112,6 +135,8 @@ public sealed class UploadMusicHandler
                 var cloudAudioFileName = $"audio-{Guid.NewGuid():N}{extensionWithDot}";
                 audioUpload = await _cloudinaryStorage.UploadAudioAsync(command.FileStream, cloudAudioFileName, cancellationToken);
 
+                var systemFilePath = $"system://cloudinary/{audioUpload.PublicId}";
+
                 mediaFile = new MediaFile
                 {
                     Id = Guid.NewGuid(),
@@ -121,8 +146,10 @@ public sealed class UploadMusicHandler
                     ArtUrl = artworkUpload?.Url,
                     Lyrics = command.Lyrics,
                     DurationSeconds = localDurationSeconds,
-                    FilePath = audioUpload.Url,
+                    FilePath = systemFilePath,
+                    FileUrl = audioUpload.Url,
                     AzuraCastMediaId = null,
+                    OriginalSourceType = "system",
                     FileType = extension,
                     FileSizeBytes = fileSizeBytes,
                     UploadedByUserId = command.UploadedByUserId,
@@ -150,7 +177,7 @@ public sealed class UploadMusicHandler
                 ArtworkUrl = mediaFile.ArtUrl,
                 Lyrics = mediaFile.Lyrics,
                 Duration = mediaFile.DurationSeconds,
-                FileUrl = mediaFile.FilePath,
+                FileUrl = mediaFile.FileUrl ?? mediaFile.FilePath,
                 FileType = mediaFile.FileType,
                 FileSize = mediaFile.FileSizeBytes,
                 UploadedAt = mediaFile.UploadedAt

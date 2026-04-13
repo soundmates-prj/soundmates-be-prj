@@ -19,4 +19,9 @@ public sealed class MusicResult
     public string FileType { get; init; } = null!;
     public long FileSize { get; init; }
     public DateTime UploadedAt { get; init; }
+
+    /// <summary>
+    /// AzuraCast unique_id — only set for station-sourced media.
+    /// </summary>
+    public string? AzuraCastMediaId { get; init; }
 }
