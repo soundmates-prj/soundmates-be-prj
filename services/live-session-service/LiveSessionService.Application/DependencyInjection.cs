@@ -22,6 +22,7 @@ using LiveSessionService.Application.Features.Music.Commands.BulkUploadMusic;
 using LiveSessionService.Application.Features.Music.Commands.DeleteMedia;
 using LiveSessionService.Application.Features.Music.Commands.ImportSystemMediaBatch;
 using LiveSessionService.Application.Features.Music.Commands.SyncMediaFiles;
+using LiveSessionService.Application.Features.Music.Commands.UpdateMusicMetadata;
 using LiveSessionService.Application.Features.Music.Commands.UploadMusic;
 using LiveSessionService.Application.Features.Music.Queries.GetAllMediaFiles;
 using LiveSessionService.Application.Features.Music.Queries.GetMediaFilesByStation;
@@ -87,6 +88,7 @@ using LiveSessionService.Application.Features.Stations.Commands.SyncStations;
 using LiveSessionService.Application.Features.Stations.Queries.GetAllStations;
 using LiveSessionService.Application.Features.Stations.Queries.GetStationNowPlaying;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Http;
 
 namespace LiveSessionService.Application;
 
@@ -137,11 +139,13 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<RemoveTracksFromUserPlaylistCommand>, RemoveTracksFromUserPlaylistHandler>();
 
         // Register Music Command Handlers
+        services.AddHttpClient(); // Used by ImportSystemMediaBatchHandler to download Cloudinary files
         services.AddScoped<ICommandHandler<UploadMusicCommand, MusicResult>, UploadMusicHandler>();
         services.AddScoped<ICommandHandler<BulkUploadMusicCommand, BulkUploadMusicResult>, BulkUploadMusicHandler>();
         services.AddScoped<ICommandHandler<SyncMediaFilesCommand, SyncMediaFilesResult>, SyncMediaFilesHandler>();
         services.AddScoped<ICommandHandler<ImportSystemMediaBatchCommand, ImportSystemMediaBatchResult>, ImportSystemMediaBatchHandler>();
         services.AddScoped<ICommandHandler<DeleteMediaCommand>, DeleteMediaHandler>();
+        services.AddScoped<ICommandHandler<UpdateMusicMetadataCommand, MusicResult>, UpdateMusicMetadataHandler>();
 
         // Register Music Query Handlers
         services.AddScoped<IQueryHandler<GetAllMediaFilesQuery, List<MusicResult>>, GetAllMediaFilesHandler>();
@@ -199,6 +203,11 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<GetPodcastRequestsQuery, List<PodcastRequestResult>>, GetPodcastRequestsHandler>();
         services.AddScoped<IQueryHandler<GetMyPodcastRequestsQuery, List<PodcastRequestResult>>, GetMyPodcastRequestsHandler>();
         services.AddScoped<IQueryHandler<GetPodcastRequestByIdQuery, PodcastRequestResult>, GetPodcastRequestByIdHandler>();
+
+        // Register Sync Services
+        services.AddScoped<LiveSessionService.Application.Services.IInputValidationService, LiveSessionService.Application.Services.InputValidationService>();
+        services.AddSingleton<LiveSessionService.Application.Services.ISyncConfigurationService, LiveSessionService.Application.Services.SyncConfigurationService>();
+        services.AddScoped<LiveSessionService.Application.Services.IAzuraCastErrorHandler, LiveSessionService.Application.Services.AzuraCastErrorHandler>();
 
         return services;
     }

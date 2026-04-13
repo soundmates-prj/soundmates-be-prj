@@ -1,6 +1,8 @@
-﻿using AccountContentService.Application.Interfaces.Repositories;
+﻿using AccountContentService.Application.Interfaces;
+using AccountContentService.Application.Interfaces.Repositories;
 using AccountContentService.Domain.Entities;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Shared.Contracts.Events.Notifications;
 using System;
@@ -12,10 +14,19 @@ namespace AccountContentService.Infrastructure.Messaging.Consumers.Notifications
     public class LiveSessionScheduledConsumer
     {
         private readonly INotificationRepository _repo;
-        public LiveSessionScheduledConsumer(INotificationRepository repo)
+        private readonly INotificationPusher _notificationPusher;
+        private readonly ILogger<LiveSessionScheduledConsumer> _logger;
+
+        public LiveSessionScheduledConsumer(
+            INotificationRepository repo,
+            INotificationPusher notificationPusher,
+            ILogger<LiveSessionScheduledConsumer> logger)
         {
             _repo = repo;
+            _notificationPusher = notificationPusher;
+            _logger = logger;
         }
+
         public async Task Handle(
             LiveSessionScheduledEvent evt,
             CancellationToken cancellationToken)
@@ -34,6 +45,16 @@ namespace AccountContentService.Infrastructure.Messaging.Consumers.Notifications
 
             await _repo.AddAsync(notification, cancellationToken);
 
+            // Push notification to user in real-time via SignalR
+            try
+            {
+                await _notificationPusher.PushToUserAsync(evt.HostId, notification, cancellationToken);
+                _logger.LogInformation("Pushed live session notification {NotificationId} to user {UserId}", notification.Id, evt.HostId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to push live session notification {NotificationId} to user {UserId}", notification.Id, evt.HostId);
+            }
         }
     }
 }

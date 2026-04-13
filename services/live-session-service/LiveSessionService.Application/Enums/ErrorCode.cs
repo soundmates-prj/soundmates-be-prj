@@ -2,7 +2,7 @@ namespace LiveSessionService.Application.Enums;
 
 /// <summary>
 /// Standard HTTP error codes as enum
-/// Tránh magic numbers trong code
+/// Trï¿½nh magic numbers trong code
 /// </summary>
 public enum ErrorCode
 {
@@ -16,8 +16,10 @@ public enum ErrorCode
     Unauthorized = 401,
     Forbidden = 403,
     NotFound = 404,
+    RequestTimeout = 408,
     Conflict = 409,
     UnprocessableEntity = 422,
+    TooManyRequests = 429,
     
     // 5xx Server Errors
     InternalServerError = 500,

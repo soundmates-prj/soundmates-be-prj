@@ -38,7 +38,15 @@ public sealed class GetActiveLiveSessionsHandler : IQueryHandler<GetActiveLiveSe
             PublicPlayerUrl = s.AzuraCastStation?.PublicPlayerUrl,
             ThumbnailUrl = s.ThumbnailUrl,
             Genre = s.Genre,
-            ListenersCount = s.Listeners?.Count(l => l.IsConnected) ?? 0
+            ListenersCount = s.Listeners == null
+                ? 0
+                : s.Listeners
+                    .Where(l => l.IsConnected)
+                    .Select(l => l.UserId.HasValue
+                        ? $"u:{l.UserId.Value}"
+                        : $"a:{l.AnonymousIdentifier ?? l.Id.ToString()}")
+                    .Distinct()
+                    .Count()
         }).ToList();
 
         return Result<List<LiveSessionResult>>.Success(results);

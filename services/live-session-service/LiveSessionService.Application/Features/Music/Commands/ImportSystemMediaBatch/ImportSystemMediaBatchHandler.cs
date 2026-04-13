@@ -3,6 +3,7 @@ using LiveSessionService.Application.Abstractions.Messaging;
 using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Features.Results;
 using LiveSessionService.Application.Features.Results.Music;
+using LiveSessionService.Domain.Entities;
 using LiveSessionService.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 
@@ -11,22 +12,26 @@ namespace LiveSessionService.Application.Features.Music.Commands.ImportSystemMed
 public sealed class ImportSystemMediaBatchHandler
     : ICommandHandler<ImportSystemMediaBatchCommand, ImportSystemMediaBatchResult>
 {
-    private const string SystemMediaPrefix = "system://";
-
     private readonly IAzuraCastStationRepository _stationRepository;
     private readonly IMediaFileRepository _mediaFileRepository;
+    private readonly IStationMediaFileRepository _stationMediaFileRepository;
     private readonly IAzuraCastClient _azuraCastClient;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<ImportSystemMediaBatchHandler> _logger;
 
     public ImportSystemMediaBatchHandler(
         IAzuraCastStationRepository stationRepository,
         IMediaFileRepository mediaFileRepository,
+        IStationMediaFileRepository stationMediaFileRepository,
         IAzuraCastClient azuraCastClient,
+        IHttpClientFactory httpClientFactory,
         ILogger<ImportSystemMediaBatchHandler> logger)
     {
         _stationRepository = stationRepository;
         _mediaFileRepository = mediaFileRepository;
+        _stationMediaFileRepository = stationMediaFileRepository;
         _azuraCastClient = azuraCastClient;
+        _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
 
@@ -60,6 +65,8 @@ public sealed class ImportSystemMediaBatchHandler
         var importedItems = new List<ImportedSystemMediaItemResult>();
         var errors = new List<string>();
         var skippedCount = 0;
+        using var httpClient = _httpClientFactory.CreateClient();
+        httpClient.Timeout = TimeSpan.FromSeconds(120);
 
         foreach (var mediaId in requestedIds)
         {
@@ -70,31 +77,56 @@ public sealed class ImportSystemMediaBatchHandler
             }
 
             if (string.IsNullOrWhiteSpace(media.FilePath)
-                || !media.FilePath.StartsWith(SystemMediaPrefix, StringComparison.OrdinalIgnoreCase))
+                || !media.FilePath.StartsWith("system://", StringComparison.OrdinalIgnoreCase))
             {
                 skippedCount++;
                 continue;
             }
 
-            var relativePath = media.FilePath.Substring(SystemMediaPrefix.Length)
-                .Replace('/', Path.DirectorySeparatorChar)
-                .Replace('\\', Path.DirectorySeparatorChar);
-            var absolutePath = Path.Combine(AppContext.BaseDirectory, "storage", relativePath);
+            var existingMapping = await _stationMediaFileRepository.GetByMediaFileAndStationAsync(
+                media.Id,
+                station.Id,
+                cancellationToken);
 
-            if (!File.Exists(absolutePath))
+            if (!string.IsNullOrWhiteSpace(existingMapping?.AzuraCastMediaId))
             {
-                errors.Add($"System media '{media.Title}' not found on server");
+                skippedCount++;
+                continue;
+            }
+
+            var sourceUrl = !string.IsNullOrWhiteSpace(media.FileUrl)
+                ? media.FileUrl
+                : (Uri.TryCreate(media.FilePath, UriKind.Absolute, out var absolute)
+                    && (absolute.Scheme == Uri.UriSchemeHttp || absolute.Scheme == Uri.UriSchemeHttps)
+                        ? media.FilePath
+                        : null);
+
+            if (string.IsNullOrWhiteSpace(sourceUrl))
+            {
+                errors.Add($"Media '{media.Title}' không có URL tải hợp lệ để import vào station");
                 continue;
             }
 
             try
             {
-                await using var stream = new FileStream(absolutePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                // Download audio from Cloudinary
+                using var memoryStream = new MemoryStream();
+                using var response = await httpClient.GetAsync(
+                    sourceUrl,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    cancellationToken);
+                response.EnsureSuccessStatusCode();
+                await response.Content.CopyToAsync(memoryStream, cancellationToken);
+
+                memoryStream.Position = 0;
+                var extension = media.FileType.ToLowerInvariant();
+                var tempFileName = $"{media.Title.Replace(" ", "_")}_{Guid.NewGuid():N}.{extension}";
+
                 var uploaded = await _azuraCastClient.UploadMediaAsync(
                     station.ExternalStationId,
-                    stream,
-                    Path.GetFileName(absolutePath),
-                    GetContentType(media.FileType),
+                    memoryStream,
+                    tempFileName,
+                    GetContentType(extension),
                     media.Title,
                     media.Artist ?? "Unknown Artist",
                     media.Album,
@@ -106,9 +138,17 @@ public sealed class ImportSystemMediaBatchHandler
                     continue;
                 }
 
-                media.AzuraCastMediaId = uploaded.UniqueId;
-                media.UpdatedAt = DateTime.UtcNow;
-                await _mediaFileRepository.UpdateAsync(media, cancellationToken);
+                // Create mapping record instead of updating MediaFile
+                var stationMediaFile = new StationMediaFile
+                {
+                    Id = Guid.NewGuid(),
+                    MediaFileId = media.Id,
+                    StationId = station.Id,
+                    AzuraCastMediaId = uploaded.UniqueId,
+                    ImportedAt = DateTime.UtcNow
+                };
+
+                await _stationMediaFileRepository.AddAsync(stationMediaFile, cancellationToken);
 
                 importedItems.Add(new ImportedSystemMediaItemResult
                 {
@@ -124,7 +164,7 @@ public sealed class ImportSystemMediaBatchHandler
                     "Failed importing system media {MediaId} into station {StationId}",
                     media.Id,
                     station.Id);
-                errors.Add($"Failed to import '{media.Title}'");
+                errors.Add($"Failed to import '{media.Title}': {ex.Message}");
             }
         }
 

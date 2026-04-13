@@ -27,10 +27,10 @@ public sealed class NowPlayingTrackResult
     public string? Genre { get; init; }
     public string? ArtUrl { get; init; }
     public string? Lyrics { get; init; }
-    public long PlayedAt { get; init; }
-    public long? Duration { get; init; }
-    public long Elapsed { get; init; }
-    public long Remaining { get; init; }
+    public double PlayedAt { get; init; }
+    public double? Duration { get; init; }
+    public double Elapsed { get; init; }
+    public double Remaining { get; init; }
     public bool IsRequest { get; init; }
 }
 

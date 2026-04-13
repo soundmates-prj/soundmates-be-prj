@@ -40,7 +40,24 @@ public static class JwtExtensions
                     ValidAudience    = audience,
 
                     ValidateLifetime = true,
-                    ClockSkew        = TimeSpan.Zero   // no tolerance for expired tokens
+                    ClockSkew        = TimeSpan.FromMinutes(5)   // 5-minute tolerance for clock skew and token refresh
+                };
+
+                // Enable SignalR authentication
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        var accessToken = context.Request.Query["access_token"];
+                        var path = context.HttpContext.Request.Path;
+                        
+                        if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                        {
+                            context.Token = accessToken;
+                        }
+                        
+                        return Task.CompletedTask;
+                    }
                 };
             });
 

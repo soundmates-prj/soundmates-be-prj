@@ -43,4 +43,6 @@ public partial class AzuraCastStation
     public virtual ICollection<StationPlaylist> Playlists { get; set; } = new List<StationPlaylist>();
     
     public virtual ICollection<StationMount> Mounts { get; set; } = new List<StationMount>();
+    
+    public virtual ICollection<StationMediaFile> StationMediaFiles { get; set; } = new List<StationMediaFile>();
 }

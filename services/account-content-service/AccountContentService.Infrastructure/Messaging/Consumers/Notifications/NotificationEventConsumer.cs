@@ -1,6 +1,8 @@
-﻿using AccountContentService.Application.Interfaces.Repositories;
+﻿using AccountContentService.Application.Interfaces;
+using AccountContentService.Application.Interfaces.Repositories;
 using AccountContentService.Domain.Entities;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -21,6 +23,7 @@ namespace AccountContentService.Infrastructure.Messaging.Consumers.Notifications
         private const string QueueName = "account-content.notification-events";
 
         private readonly INotificationRepository _repo;
+        private readonly IServiceProvider _serviceProvider;
         private readonly RabbitMqOptions _options;
         private readonly ILogger<NotificationEventConsumer> _logger;
         private readonly ConnectionFactory _factory;
@@ -32,10 +35,12 @@ namespace AccountContentService.Infrastructure.Messaging.Consumers.Notifications
         public NotificationEventConsumer(
             IOptions<RabbitMqOptions> options,
             INotificationRepository repo,
+            IServiceProvider serviceProvider,
             ILogger<NotificationEventConsumer> logger)
         {
             _options = options.Value;
             _repo = repo;
+            _serviceProvider = serviceProvider;
             _logger = logger;
             _factory = new ConnectionFactory
             {
@@ -161,6 +166,21 @@ namespace AccountContentService.Infrastructure.Messaging.Consumers.Notifications
 
             await _repo.AddAsync(notification, cancellationToken);
 
+            // Push notification to user in real-time via SignalR
+            using var scope = _serviceProvider.CreateScope();
+            var notificationPusher = scope.ServiceProvider.GetService<INotificationPusher>();
+            if (notificationPusher != null)
+            {
+                try
+                {
+                    await notificationPusher.PushToUserAsync(evt.ReceiveUserId, notification, cancellationToken);
+                    _logger.LogInformation("Pushed notification {NotificationId} to user {UserId}", notification.Id, evt.ReceiveUserId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to push notification {NotificationId} to user {UserId}", notification.Id, evt.ReceiveUserId);
+                }
+            }
         }
 
         public async ValueTask DisposeAsync()

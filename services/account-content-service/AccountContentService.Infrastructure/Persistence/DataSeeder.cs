@@ -11,34 +11,6 @@ public static class DataSeeder
         var now = DateTime.UtcNow;
         var userId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
-        // ALWAYS SEED MISSING THEMES
-        if (!await context.Themes.AnyAsync(t => t.Name == "Dark Theme"))
-        {
-            context.Themes.Add(new Theme
-            {
-                Id = Guid.NewGuid(),
-                Name = "Dark Theme",
-                Mode = "dark",
-                IsActive = true,
-                PrimaryColor = "#000000",
-                BackgroundColor = "#121212",
-                TextColor = "#FFFFFF",
-                Mood = "chill",
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            });
-        }
-        else
-        {
-            var existing = await context.Themes.FirstAsync(t => t.Name == "Dark Theme");
-            existing.PrimaryColor = "#000000";
-            existing.SecondaryColor = null;
-            existing.BackgroundColor = "#121212";
-            existing.TextColor = "#FFFFFF";
-            existing.ConfigJson = null;
-            existing.GradientBackground = null;
-        }
-
         if (!await context.Themes.AnyAsync(t => t.Name == "Chill Lofi"))
         {
             context.Themes.Add(new Theme
@@ -90,7 +62,7 @@ public static class DataSeeder
                     "borderRadius": "24px",
                     "boxShadow": "0 8px 24px rgba(255, 77, 109, 0.2)",
                     "iconStyle": "heart",
-                    "backgroundImage": "https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&w=1920&q=80"
+                    "backgroundImage": "https://static.vecteezy.com/system/resources/previews/002/092/177/non_2x/love-heart-pattern-with-dots-and-stars-free-vector.jpg"
                 }
                 """).RootElement
             });

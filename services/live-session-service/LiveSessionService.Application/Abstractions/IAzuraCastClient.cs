@@ -68,6 +68,16 @@ public interface IAzuraCastClient
         string? album,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Updates metadata for an existing AzuraCast media file.</summary>
+    Task UpdateMediaMetadataAsync(
+        int stationId,
+        string fileUniqueId,
+        string title,
+        string? artist,
+        string? album,
+        string? lyrics,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Assigns an existing AzuraCast media file to a playlist</summary>
     Task AssignMediaToPlaylistAsync(
         int stationId,
@@ -90,6 +100,12 @@ public interface IAzuraCastClient
 
     /// <summary>Deletes an existing AzuraCast media file from station library</summary>
     Task DeleteMediaAsync(
+        int stationId,
+        string fileUniqueId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Downloads a media file binary from AzuraCast station by unique_id.</summary>
+    Task<(byte[] Content, string? ContentType, string? FileName)?> DownloadMediaAsync(
         int stationId,
         string fileUniqueId,
         CancellationToken cancellationToken = default);

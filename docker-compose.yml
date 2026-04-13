@@ -1,4 +1,4 @@
-name: soundmates
+name: soundmates-be-prj
 
 services:
   # PostgreSQL Database
