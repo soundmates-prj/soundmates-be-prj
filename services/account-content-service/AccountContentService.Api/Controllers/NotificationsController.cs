@@ -69,7 +69,7 @@ namespace AccountContentService.Api.Controllers
                 result.PageSize,
                 result.TotalCount);
 
-            return Ok(ApiResponse<PaginationResponse<NotificationResponse>>.Ok(response, "Get posts successfully"));
+            return Ok(ApiResponse<PaginationResponse<NotificationResponse>>.Ok(response, "Get notifications successfully"));
         }
 
         /// <summary>
@@ -106,7 +106,7 @@ namespace AccountContentService.Api.Controllers
                 result.PageSize,
                 result.TotalCount);
 
-            return Ok(ApiResponse<PaginationResponse<NotificationResponse>>.Ok(response, "Get posts successfully"));
+            return Ok(ApiResponse<PaginationResponse<NotificationResponse>>.Ok(response, "Get notifications successfully"));
         }
 
         /// <summary>
@@ -143,7 +143,7 @@ namespace AccountContentService.Api.Controllers
                 result.PageSize,
                 result.TotalCount);
 
-            return Ok(ApiResponse<PaginationResponse<NotificationResponse>>.Ok(response, "Get posts successfully"));
+            return Ok(ApiResponse<PaginationResponse<NotificationResponse>>.Ok(response, "Get notifications successfully"));
         }
 
         /// <summary>
@@ -180,7 +180,7 @@ namespace AccountContentService.Api.Controllers
                 result.PageSize,
                 result.TotalCount);
 
-            return Ok(ApiResponse<PaginationResponse<NotificationResponse>>.Ok(response, "Get posts successfully"));
+            return Ok(ApiResponse<PaginationResponse<NotificationResponse>>.Ok(response, "Get notifications successfully"));
         }
 
         /// <summary>
