@@ -126,7 +126,7 @@ public sealed class GetLiveSessionNowPlayingHandler
             Artist    = track.Song?.Artist,
             Album     = track.Song?.Album,
             Genre     = track.Song?.Genre,
-            ArtUrl    = artUrl,
+            ArtUrl    = ResolveHttpsUrl(artUrl),
             Lyrics    = lyrics,
             PlayedAt  = track.PlayedAt,
             Duration  = track.Duration,
@@ -145,7 +145,7 @@ public sealed class GetLiveSessionNowPlayingHandler
             Artist    = track.Song?.Artist,
             Album     = track.Song?.Album,
             Genre     = track.Song?.Genre,
-            ArtUrl    = track.Song?.Art,
+            ArtUrl    = ResolveHttpsUrl(track.Song?.Art),
             Lyrics    = track.Song?.Lyrics,
             PlayedAt  = track.PlayedAt,
             Duration  = track.Duration,
@@ -171,5 +171,15 @@ public sealed class GetLiveSessionNowPlayingHandler
         return uri.IsLoopback
             || uri.Host.Equals("host.docker.internal", StringComparison.OrdinalIgnoreCase)
             || uri.Host.Equals("0.0.0.0", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? ResolveHttpsUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return url;
+        if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+        {
+            return "https://" + url.Substring(7);
+        }
+        return url;
     }
 }
