@@ -135,7 +135,7 @@ public sealed class GetStationNowPlayingHandler
             Artist    = track.Song?.Artist,
             Album     = track.Song?.Album,
             Genre     = track.Song?.Genre,
-            ArtUrl    = artUrl,
+            ArtUrl    = ResolveHttpsUrl(artUrl),
             Lyrics    = lyrics,
             PlayedAt  = track.PlayedAt,
             Duration  = track.Duration,
@@ -154,7 +154,7 @@ public sealed class GetStationNowPlayingHandler
             Artist   = h.Song?.Artist,
             Album    = h.Song?.Album,
             Genre    = h.Song?.Genre,
-            ArtUrl   = h.Song?.Art,
+            ArtUrl   = ResolveHttpsUrl(h.Song?.Art),
             Lyrics   = h.Song?.Lyrics,
             PlayedAt = h.PlayedAt
         };
@@ -178,5 +178,15 @@ public sealed class GetStationNowPlayingHandler
         return uri.IsLoopback
             || uri.Host.Equals("host.docker.internal", StringComparison.OrdinalIgnoreCase)
             || uri.Host.Equals("0.0.0.0", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? ResolveHttpsUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return url;
+        if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+        {
+            return "https://" + url.Substring(7);
+        }
+        return url;
     }
 }
