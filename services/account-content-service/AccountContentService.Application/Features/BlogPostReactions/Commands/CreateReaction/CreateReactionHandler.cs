@@ -53,22 +53,25 @@ namespace AccountContentService.Application.Features.BlogPostReactions.Commands.
 
             await _repository.AddAsync(reaction);
 
-
-            var @event = new NotificationEvent
+            if (post.UserId != request.UserId)
             {
-                Title = "New Reaction",
-                ReceiveUserId = post.UserId,
-                ReferenceId = reaction.PostId,
-                Type = "post-reaction",
-                Message = $"{userProfile.FullName} reacted on your post: {reaction.ReactionType}"
-            };
 
-            var payload = JsonSerializer.Serialize(@event);
+                var @event = new NotificationEvent
+                {
+                    Title = "New Reaction",
+                    ReceiveUserId = post.UserId,
+                    ReferenceId = reaction.PostId,
+                    Type = "post-reaction",
+                    Message = $"{userProfile.FullName} reacted on your post: {reaction.ReactionType}"
+                };
 
-            await _eventBus.PublishAsync(
-                    "notification.created",
-                    payload
-            );
+                var payload = JsonSerializer.Serialize(@event);
+
+                await _eventBus.PublishAsync(
+                        "notification.created",
+                        payload
+                );
+            }
 
             return _mapper.Map<ReactionDto>(reaction);
         }

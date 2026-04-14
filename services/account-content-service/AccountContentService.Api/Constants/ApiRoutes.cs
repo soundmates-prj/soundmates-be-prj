@@ -140,10 +140,10 @@
             public const string GetUserReactions = $"{BaseRoute}/{{userId:guid}}/reactions";
 
             /// <summary>Retrieve Transaction follow a user.</summary>
-            public const string GetUserTransactions = $"{BaseRoute}/users/{{userId:guid}}";
+            public const string GetUserTransactions = $"{BaseRoute}/{{userId:guid}}";
 
             /// <summary>Retrieve notifications follow a user.</summary>
-            public const string GetUserNotifications = $"{BaseRoute}/users/{{userId:guid}}/notifications";
+            public const string GetUserNotifications = $"{BaseRoute}/{{userId:guid}}/notifications";
         }
 
         // =====================================================

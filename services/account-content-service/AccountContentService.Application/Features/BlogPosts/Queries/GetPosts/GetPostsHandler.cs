@@ -3,8 +3,10 @@ using AccountContentService.Application.Common.Result;
 using AccountContentService.Application.DTOs;
 using AccountContentService.Application.Exceptions;
 using AccountContentService.Application.Interfaces.Repositories;
+using AccountContentService.Application.Interfaces.Services;
 using AutoMapper;
 using MediatR;
+using System.Xml.Linq;
 
 namespace AccountContentService.Application.Features.BlogPosts.Queries.GetPosts;
 
@@ -15,16 +17,21 @@ public class GetPostsHandler:
     IRequestHandler<GetPublisedPostDetailQuery, PostDto>,
     IRequestHandler<GetUserPostDetailQuery, PaginationResult<PostDto>>,
     IRequestHandler<GetCurrentUserPostDetailQuery, PaginationResult<PostDto>>
+
 {
     private readonly IBlogPostRepository _repository;
     private readonly IMapper _mapper;
+    private readonly IUserProfileCache _userProfileCache;
+
 
     public GetPostsHandler(
         IBlogPostRepository repository,
-        IMapper mapper)
+        IMapper mapper,
+        IUserProfileCache userProfileCache)
     {
         _repository = repository;
         _mapper = mapper;
+        _userProfileCache = userProfileCache;
     }
 
     public async Task<PaginationResult<PostDto>> Handle(
@@ -34,6 +41,7 @@ public class GetPostsHandler:
         var result = await _repository.GetAllPostsAsync(request, cancellationToken);
 
         var items = _mapper.Map<IEnumerable<PostDto>>(result.Items);
+        await PopulateUserProfilesAsync(items.ToList(), cancellationToken);
 
         return new PaginationResult<PostDto>
         {
@@ -51,6 +59,7 @@ public class GetPostsHandler:
         var result = await _repository.GetAllPublishedPostsAsync(request, cancellationToken);
 
         var items = _mapper.Map<IEnumerable<PostDto>>(result.Items);
+        await PopulateUserProfilesAsync(items.ToList(), cancellationToken);
 
         return new PaginationResult<PostDto>
         {
@@ -70,7 +79,10 @@ public class GetPostsHandler:
         {
             throw new NotFoundException($"Post with id {request.PostId} was not found.");
         }
-        return _mapper.Map<PostDto>(post);
+        var dto = _mapper.Map<PostDto>(post);
+        await PopulateUserProfileAsync(dto, cancellationToken);
+
+        return dto;
     }
 
     public async Task<PostDto> Handle(
@@ -82,7 +94,12 @@ public class GetPostsHandler:
         {
             throw new NotFoundException($"Post with id {request.PostId} was not found.");
         }
-        return _mapper.Map<PostDto>(post);
+
+
+        var dto = _mapper.Map<PostDto>(post);
+        await PopulateUserProfileAsync(dto, cancellationToken);
+
+        return dto;
     }
 
     public async Task<PaginationResult<PostDto>> Handle(
@@ -91,6 +108,7 @@ public class GetPostsHandler:
     {
         var result = await _repository.GetByUserIdAsync(request.UserId, request.PageSize, request.Page, cancellationToken);
         var items = _mapper.Map<IEnumerable<PostDto>>(result.Items);
+        await PopulateUserProfilesAsync(items.ToList(), cancellationToken);
 
         return new PaginationResult<PostDto>
         {
@@ -107,6 +125,7 @@ public class GetPostsHandler:
     {
         var result = await _repository.GetByUserIdAsync(request.UserId, request.PageSize, request.Page, cancellationToken);
         var items = _mapper.Map<IEnumerable<PostDto>>(result.Items);
+        await PopulateUserProfilesAsync(items.ToList(), cancellationToken);
 
         return new PaginationResult<PostDto>
         {
@@ -115,5 +134,25 @@ public class GetPostsHandler:
             Page = request.Page,
             PageSize = request.PageSize
         };
+    }
+
+    /// <summary>
+    /// Refreshes userFullName and userAvatarUrl from the local read-model
+    /// projection for every comment in the list (including replies).
+    /// </summary>
+    private async Task PopulateUserProfilesAsync(List<PostDto> posts, CancellationToken ct)
+    {
+        foreach (var post in posts)
+        {
+            await PopulateUserProfileAsync(post, ct);
+        }
+    }
+
+    private async Task PopulateUserProfileAsync(PostDto post, CancellationToken ct)
+    {
+        if (post.UserId == Guid.Empty) return;
+        var profile = await _userProfileCache.GetProfileAsync(post.UserId, ct);
+        post.UserFullName = profile.FullName;
+        post.UserAvatarUrl = profile.AvatarUrl ?? string.Empty;
     }
 }

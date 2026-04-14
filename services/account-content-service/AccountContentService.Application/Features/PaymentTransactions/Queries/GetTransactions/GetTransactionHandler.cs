@@ -39,7 +39,7 @@ namespace AccountContentService.Application.Features.PaymentTransactions.Queries
             var dto = _mapper.Map<TransactionDto>(result);
 
             // Populate userProfile from local read-model (IUserProfileCache)
-            await PopulateUserProfileAsync(result, dto, cancellationToken);
+            dto.userProfile = await PopulateUserProfileAsync(result, dto, cancellationToken);
 
             return dto;
         }
@@ -53,7 +53,7 @@ namespace AccountContentService.Application.Features.PaymentTransactions.Queries
             // Populate userProfile for each transaction
             foreach (var (item, idx) in items.Select((x, i) => (x, i)))
             {
-                await PopulateUserProfileAsync(result.Items.ElementAt(idx), item, cancellationToken);
+                item.userProfile = await PopulateUserProfileAsync(result.Items.ElementAt(idx), item, cancellationToken);
             }
 
             return new PaginationResult<TransactionDto>
@@ -75,7 +75,7 @@ namespace AccountContentService.Application.Features.PaymentTransactions.Queries
             // Populate userProfile for each transaction
             foreach (var (item, idx) in items.Select((x, i) => (x, i)))
             {
-                await PopulateUserProfileAsync(result.Items.ElementAt(idx), item, cancellationToken);
+                item.userProfile = await PopulateUserProfileAsync(result.Items.ElementAt(idx), item, cancellationToken);
             }
 
             return new PaginationResult<TransactionDto>
@@ -92,20 +92,20 @@ namespace AccountContentService.Application.Features.PaymentTransactions.Queries
         /// attaches it to the TransactionDto. Falls back to UserId-only
         /// data if the projection is not yet available.
         /// </summary>
-        private async Task PopulateUserProfileAsync(
+        private async Task<UserProfileDto> PopulateUserProfileAsync(
             Domain.Entities.PaymentTransaction transaction,
             TransactionDto dto,
             CancellationToken ct)
         {
             // Transaction → Payment → UserId
             var userId = transaction.Payment?.UserId ?? Guid.Empty;
-            if (userId == Guid.Empty) return;
+            if (userId == Guid.Empty) return new UserProfileDto();
 
             var profile = await _userProfileCache.GetProfileAsync(userId, ct);
 
             // Split FullName → FirstName / LastName (best effort)
             var nameParts = (profile.FullName ?? "Unknown User").Split(' ', 2);
-            dto.userProfile = new UserProfileDto
+            return new UserProfileDto
             {
                 Id = profile.UserId,
                 FirstName = nameParts[0],
