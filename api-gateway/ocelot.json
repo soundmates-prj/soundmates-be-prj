@@ -1520,11 +1520,14 @@
           "Port": 8080
         }
       ],
-      "UpstreamPathTemplate": "/liveHub",
+      "UpstreamPathTemplate": "/hubs/live-session",
       "UpstreamHttpMethod": [
         "GET",
+        "POST",
+        "DELETE",
         "OPTIONS"
       ],
+      "AllowToProxyTo": true,
       "LoadBalancerOptions": {
         "Type": "RoundRobin"
       }
@@ -1538,14 +1541,49 @@
           "Port": 8080
         }
       ],
-      "UpstreamPathTemplate": "/nowPlayingHub",
+      "UpstreamPathTemplate": "/hubs/now-playing",
       "UpstreamHttpMethod": [
         "GET",
+        "POST",
+        "DELETE",
         "OPTIONS"
       ],
+      "AllowToProxyTo": true,
       "LoadBalancerOptions": {
         "Type": "RoundRobin"
       }
+    },
+    {
+      "DownstreamPathTemplate": "/hubs/live-session/negotiate",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "live-session-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/hubs/live-session/negotiate",
+      "UpstreamHttpMethod": [
+        "POST",
+        "OPTIONS"
+      ],
+      "AllowToProxyTo": true
+    },
+    {
+      "DownstreamPathTemplate": "/hubs/now-playing/negotiate",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "live-session-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/hubs/now-playing/negotiate",
+      "UpstreamHttpMethod": [
+        "POST",
+        "OPTIONS"
+      ],
+      "AllowToProxyTo": true
     },
     {
       "DownstreamPathTemplate": "/api/v1/Playlist",
