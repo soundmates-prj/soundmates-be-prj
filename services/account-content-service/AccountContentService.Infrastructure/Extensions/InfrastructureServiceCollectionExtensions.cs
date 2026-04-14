@@ -3,6 +3,7 @@ using AccountContentService.Application.Interfaces.Repositories;
 using AccountContentService.Application.Interfaces.Services;
 using AccountContentService.Application.Services;
 using AccountContentService.Infrastructure.Configurations;
+using AccountContentService.Infrastructure.Integrations.PaymentGateway;
 using AccountContentService.Infrastructure.Integrations.Services;
 using AccountContentService.Infrastructure.Messaging;
 using AccountContentService.Infrastructure.Messaging.Consumers;

@@ -55,23 +55,26 @@ namespace AccountContentService.Application.Features.BlogComments.Commands.Creat
 
             await _repository.AddAsync(comment);
 
-
-            var @event = new NotificationEvent
+            if (comment.UserId != post.UserId)
             {
-                Title = "New Comment",
-                SendUserId = comment.UserId,
-                ReceiveUserId = post.UserId,
-                ReferenceId = post.Id,
-                Type = "post-comment",
-                Message = $"{userProfile.FullName} commented on your post: {comment.Content}"
-            };
+                var @event = new NotificationEvent
+                {
+                    Title = "New Comment",
+                    SendUserId = comment.UserId,
+                    ReceiveUserId = post.UserId,
+                    ReferenceId = post.Id,
+                    Type = "post-comment",
+                    Message = $"{userProfile.FullName} commented on your post: {comment.Content}"
+                };
 
-            var payload = JsonSerializer.Serialize(@event);
+                var payload = JsonSerializer.Serialize(@event);
 
-            await _eventBus.PublishAsync(
-                    "notification.created",
-                    payload
-            );
+                await _eventBus.PublishAsync(
+                        "notification.created",
+                        payload
+                );
+            }
+
             return _mapper.Map<CommentDto>(comment);
         }
     }

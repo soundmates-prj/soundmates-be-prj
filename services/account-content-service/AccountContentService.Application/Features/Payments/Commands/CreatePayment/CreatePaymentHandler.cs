@@ -68,7 +68,7 @@ namespace AccountContentService.Application.Features.Payments.Commands.CreatePay
 
             if (request.OrderCode.HasValue)
             {
-                payment.SetOrderCode(request.OrderCode.Value);
+                payment.SetOrderCode((int)Math.Abs(request.OrderCode.Value % int.MaxValue));
             }
 
             await _paymentRepo.AddAsync(payment);
