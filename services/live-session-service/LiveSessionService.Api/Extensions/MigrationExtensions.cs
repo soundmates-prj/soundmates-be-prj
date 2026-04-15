@@ -62,8 +62,8 @@ public static class MigrationExtensions
 
                 logger.LogInformation("Applying runtime schema updates for new columns...");
                 await dbContext.Database.ExecuteSqlRawAsync(@"
-                    ALTER TABLE ""LiveSessionChats"" ADD COLUMN IF NOT EXISTS ""AvatarUrl"" text;
-                    ALTER TABLE ""LiveSessionChats"" ADD COLUMN IF NOT EXISTS ""UserName"" text;
+                    ALTER TABLE ""live_session_chats"" ADD COLUMN IF NOT EXISTS ""avatar_url"" text;
+                    ALTER TABLE ""live_session_chats"" ADD COLUMN IF NOT EXISTS ""user_name"" text;
                 ");
 
                 logger.LogInformation("Database migration completed successfully.");
