@@ -41,7 +41,9 @@ public sealed class GetUserPlaylistTracksHandler : IQueryHandler<GetUserPlaylist
                 Artist = x.MediaFile.Artist,
                 Album = x.MediaFile.Album,
                 ArtworkUrl = x.MediaFile.ArtUrl,
-                FileUrl = x.MediaFile.FilePath,
+                FileUrl = !string.IsNullOrWhiteSpace(x.MediaFile.FileUrl)
+                    ? x.MediaFile.FileUrl
+                    : x.MediaFile.FilePath,
                 FileType = x.MediaFile.FileType,
                 FileSize = x.MediaFile.FileSizeBytes,
                 DurationSeconds = x.MediaFile.DurationSeconds,
