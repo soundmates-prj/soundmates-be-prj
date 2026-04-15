@@ -210,10 +210,10 @@ public sealed class LiveSessionHub : Hub
         await Clients.Caller.SendAsync("SessionReconnected", sessionId, Context.ConnectionAborted);
     }
 
-    public async Task SendChat(Guid sessionId, Guid userId, string message)
-        => await SendMessage(sessionId, userId, message);
+    public async Task SendChat(Guid sessionId, Guid userId, string message, string? userName = null)
+        => await SendMessage(sessionId, userId, message, userName);
 
-    public async Task SendMessage(Guid sessionId, Guid userId, string message)
+    public async Task SendMessage(Guid sessionId, Guid userId, string message, string? userName = null)
     {
         if (string.IsNullOrWhiteSpace(message))
         {
@@ -248,6 +248,7 @@ public sealed class LiveSessionHub : Hub
             chat.Id,
             chat.LiveSessionId,
             chat.UserId,
+            UserName = userName ?? "Ẩn danh",
             chat.Message,
             chat.CreatedAt
         }, Context.ConnectionAborted);
