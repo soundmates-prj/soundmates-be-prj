@@ -14,6 +14,11 @@ public sealed class CreatePodcastRequest
     [StringLength(200, ErrorMessage = "Author cannot exceed 200 characters")]
     public string? Author { get; set; }
 
+    [Required(ErrorMessage = "Status is required")]
+    [RegularExpression("(?i)^(public|private|draft|pendingreview|published|archived)$",
+        ErrorMessage = "Status must be one of: public, private, draft, pendingreview, published, archived")]
+    public string Status { get; set; } = null!;
+
     [StringLength(100, ErrorMessage = "Type cannot exceed 100 characters")]
     public string? Type { get; set; }
 
