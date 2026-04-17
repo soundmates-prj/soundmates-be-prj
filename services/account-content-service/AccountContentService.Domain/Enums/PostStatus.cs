@@ -9,6 +9,8 @@ namespace AccountContentService.Domain.Enums
         Draft,
         Published,
         Edited,
-        Archived
+        Archived,
+        Banned,
+        Deleted
     }
 }
