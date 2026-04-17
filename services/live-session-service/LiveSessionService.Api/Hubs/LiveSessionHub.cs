@@ -5,11 +5,15 @@ using LiveSessionService.Infrastructure.Persistence;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 
 namespace LiveSessionService.Api.Hubs;
 
 public sealed class LiveSessionHub : Hub
 {
+    // sessionId → connectionId of the host currently broadcasting mic
+    private static readonly ConcurrentDictionary<string, string> _micHosts = new();
+
     private readonly LiveSessionDbContext _dbContext;
     private readonly ILiveSessionRepository _sessionRepository;
     private readonly IDateTimeProvider _dateTimeProvider;
@@ -303,6 +307,116 @@ public sealed class LiveSessionHub : Hub
         // Broadcast completely removed event
         await Clients.Group(GetSessionGroup(sessionId)).SendAsync("ChatDeleted", chatId, Context.ConnectionAborted);
     }
+
+    // ─── WebRTC Signaling ────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Called by the Host when they start broadcasting their microphone.
+    /// Stores host connectionId and broadcasts "HostMicStarted" to all listeners.
+    /// sdpOffer is NOT sent in the broadcast — each listener will call ListenerAnswerMic
+    /// to do individual peer-to-peer negotiation.
+    /// </summary>
+    public async Task StartMicrophone(Guid sessionId, string sdpOffer)
+    {
+        var sessionIdStr = sessionId.ToString();
+        _micHosts[sessionIdStr] = Context.ConnectionId;
+        _logger.LogInformation("[StartMicrophone] Host {ConnId} started mic for session {SessionId}", Context.ConnectionId, sessionId);
+
+        // Broadcast to all listeners that host mic is now live
+        await Clients
+            .GroupExcept(GetSessionGroup(sessionId), Context.ConnectionId)
+            .SendAsync("HostMicStarted", sessionIdStr, Context.ConnectionAborted);
+    }
+
+    /// <summary>
+    /// Called by the Host when they stop broadcasting their microphone.
+    /// Broadcasts "HostMicStopped" to all listeners.
+    /// </summary>
+    public async Task StopMicrophone(Guid sessionId)
+    {
+        var sessionIdStr = sessionId.ToString();
+        _micHosts.TryRemove(sessionIdStr, out _);
+        _logger.LogInformation("[StopMicrophone] Host {ConnId} stopped mic for session {SessionId}", Context.ConnectionId, sessionId);
+
+        await Clients
+            .GroupExcept(GetSessionGroup(sessionId), Context.ConnectionId)
+            .SendAsync("HostMicStopped", sessionIdStr, Context.ConnectionAborted);
+    }
+
+    /// <summary>
+    /// Called by a Listener when they want to receive the host mic stream.
+    /// Sends the listener's SDP Offer to the host so the host can create an Answer.
+    /// </summary>
+    public async Task ListenerRequestMic(Guid sessionId, string sdpOffer)
+    {
+        var sessionIdStr = sessionId.ToString();
+        if (!_micHosts.TryGetValue(sessionIdStr, out var hostConnId))
+        {
+            throw new HubException("Host is not currently broadcasting microphone");
+        }
+
+        // Relay listener's SDP offer to the host
+        await Clients.Client(hostConnId).SendAsync(
+            "ListenerWantsToSubscribe",
+            sessionIdStr,
+            Context.ConnectionId,
+            sdpOffer,
+            Context.ConnectionAborted);
+    }
+
+    /// <summary>
+    /// Called by the Host to send SDP Answer back to a specific listener.
+    /// </summary>
+    public async Task HostAnswerListener(Guid sessionId, string listenerConnectionId, string sdpAnswer)
+    {
+        _logger.LogDebug("[HostAnswerListener] Session {SessionId} → Listener {ListenerConnId}", sessionId, listenerConnectionId);
+        await Clients.Client(listenerConnectionId).SendAsync(
+            "ReceiveHostAnswer",
+            sessionId.ToString(),
+            sdpAnswer,
+            Context.ConnectionAborted);
+    }
+
+    /// <summary>
+    /// Relay ICE candidates between host and listeners (both directions).
+    /// targetConnectionId = the specific peer to forward the candidate to.
+    /// </summary>
+    public async Task IceCandidateRelay(Guid sessionId, string targetConnectionId, string candidate)
+    {
+        var sessionIdStr = sessionId.ToString();
+        var relayTarget = targetConnectionId;
+
+        // If target is empty, assume it's sent from a listener to the host
+        if (string.IsNullOrEmpty(relayTarget))
+        {
+            if (_micHosts.TryGetValue(sessionIdStr, out var hostConnId))
+            {
+                relayTarget = hostConnId;
+            }
+            else
+            {
+                return;
+            }
+        }
+
+        _logger.LogDebug("[IceCandidateRelay] Session {SessionId}: {From} → {To}", sessionId, Context.ConnectionId, relayTarget);
+        await Clients.Client(relayTarget).SendAsync(
+            "ReceiveIceCandidate",
+            sessionIdStr,
+            candidate,
+            Context.ConnectionAborted);
+    }
+
+    public async Task HostUpdateGlobalVolume(Guid sessionId, double volume)
+    {
+        // Broadcast the volume adjustment to all listeners
+        await Clients.Group(GetSessionGroup(sessionId)).SendAsync(
+            "GlobalVolumeUpdated",
+            volume,
+            Context.ConnectionAborted);
+    }
+
+    // ─── Private helpers ─────────────────────────────────────────────────────────
 
     private async Task<SessionListener?> FindExistingListenerAsync(
         Guid sessionId,
