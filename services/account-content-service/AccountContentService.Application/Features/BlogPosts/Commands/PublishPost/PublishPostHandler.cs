@@ -29,10 +29,11 @@ namespace AccountContentService.Application.Features.BlogPosts.Commands.PublishP
                 throw new NotFoundException("Post not found");
             }
 
-            if (!post.Status.ToLower().Equals(PostStatus.Draft.ToString().ToLower()))
+            if (post.Status.ToLower().Equals(PostStatus.Banned.ToString().ToLower()))
             {
-                throw new InvalidOperationException("Only draft posts can be published");
+                throw new InvalidOperationException("This post can not be published");
             }
+
             post.Status = PostStatus.Published.ToString();
             post.PublishedAt = DateTime.UtcNow;
 
