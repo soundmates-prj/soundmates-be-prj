@@ -83,7 +83,7 @@ public sealed class VerifyEmailHandler : ICommandHandler<VerifyEmailCommand, Aut
             };
             await _refreshTokenRepository.AddAsync(refreshTokenEntity);
 
-            // Enqueue user updated event BEFORE commit — outbox lives in same transaction
+            // Enqueue UserUpdatedEvent — outbox lives in same transaction
             await _outbox.EnqueueAsync(RoutingKeys.Auth.UserUpdated, new UserUpdatedEvent
             {
                 Id = user.Id,
@@ -95,6 +95,16 @@ public sealed class VerifyEmailHandler : ICommandHandler<VerifyEmailCommand, Aut
                 RoleName = user.Role?.Name ?? "MEMBER",
                 IsActive = true,
                 UpdatedAt = _dateTimeProvider.UtcNow
+            }, cancellationToken);
+
+            // Enqueue UserEmailVerifiedEvent so auth-query-service syncs isVerified=true in MongoDB
+            await _outbox.EnqueueAsync(RoutingKeys.Auth.UserEmailVerified, new UserEmailVerifiedEvent
+            {
+                UserId = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                EmailVerifiedAt = user.EmailVerifiedAt ?? _dateTimeProvider.UtcNow,
+                IsActive = true
             }, cancellationToken);
 
             await _unitOfWork.CommitAsync(cancellationToken);
