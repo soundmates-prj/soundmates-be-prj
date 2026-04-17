@@ -59,6 +59,13 @@ public static class MigrationExtensions
                 // so MigrateAsync will succeed even when snapshot is out of sync with the model.
                 logger.LogInformation("Applying migrations...");
                 await dbContext.Database.MigrateAsync();
+
+                logger.LogInformation("Applying runtime schema updates for new columns...");
+                await dbContext.Database.ExecuteSqlRawAsync(@"
+                    ALTER TABLE ""live_session_chats"" ADD COLUMN IF NOT EXISTS ""avatar_url"" text;
+                    ALTER TABLE ""live_session_chats"" ADD COLUMN IF NOT EXISTS ""user_name"" text;
+                ");
+
                 logger.LogInformation("Database migration completed successfully.");
 
                 var remainingPending = dbContext.Database.GetPendingMigrations().ToList();

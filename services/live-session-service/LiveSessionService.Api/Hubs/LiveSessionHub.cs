@@ -168,6 +168,33 @@ public sealed class LiveSessionHub : Hub
                 .SendAsync("UserJoined", sessionId, userId, currentListeners, Context.ConnectionAborted);
 
             _logger.LogInformation("[JoinSession] Success. SessionId={SessionId}, Listeners={Listeners}", sessionId, currentListeners);
+
+            // 7. Send Chat History to the new listener
+            try
+            {
+                var history = await _dbContext.LiveSessionChats
+                    .Where(c => c.LiveSessionId == sessionId)
+                    .OrderByDescending(c => c.CreatedAt)
+                    .Take(50)
+                    .Select(c => new
+                    {
+                        c.Id,
+                        c.LiveSessionId,
+                        c.UserId,
+                        UserName = c.UserName ?? "Ẩn danh",
+                        AvatarUrl = c.AvatarUrl,
+                        c.Message,
+                        c.CreatedAt
+                    })
+                    .ToListAsync(Context.ConnectionAborted);
+
+                history.Reverse();
+                await Clients.Caller.SendAsync("ChatHistory", history, Context.ConnectionAborted);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[JoinSession] Failed to fetch chat history for {SessionId}", sessionId);
+            }
         }
         catch (HubException)
         {
@@ -210,10 +237,10 @@ public sealed class LiveSessionHub : Hub
         await Clients.Caller.SendAsync("SessionReconnected", sessionId, Context.ConnectionAborted);
     }
 
-    public async Task SendChat(Guid sessionId, Guid userId, string message, string? userName = null)
-        => await SendMessage(sessionId, userId, message, userName);
+    public async Task SendChat(Guid sessionId, Guid userId, string message, string? userName = null, string? avatarUrl = null)
+        => await SendMessage(sessionId, userId, message, userName, avatarUrl);
 
-    public async Task SendMessage(Guid sessionId, Guid userId, string message, string? userName = null)
+    public async Task SendMessage(Guid sessionId, Guid userId, string message, string? userName = null, string? avatarUrl = null)
     {
         if (string.IsNullOrWhiteSpace(message))
         {
@@ -236,6 +263,8 @@ public sealed class LiveSessionHub : Hub
             Id = Guid.NewGuid(),
             LiveSessionId = sessionId,
             UserId = userId,
+            UserName = userName,
+            AvatarUrl = avatarUrl,
             Message = message.Trim(),
             CreatedAt = _dateTimeProvider.UtcNow
         };
@@ -248,10 +277,31 @@ public sealed class LiveSessionHub : Hub
             chat.Id,
             chat.LiveSessionId,
             chat.UserId,
-            UserName = userName ?? "Ẩn danh",
+            UserName = chat.UserName ?? "Ẩn danh",
+            AvatarUrl = chat.AvatarUrl,
             chat.Message,
             chat.CreatedAt
         }, Context.ConnectionAborted);
+    }
+
+    public async Task DeleteChat(Guid sessionId, Guid chatId, Guid requestUserId, string requestUserRole)
+    {
+        var chat = await _dbContext.LiveSessionChats.FirstOrDefaultAsync(c => c.Id == chatId, Context.ConnectionAborted);
+        if (chat == null) return; // NotFound
+
+        // Validation: Must be host, staff, or the sender themselves
+        bool isStaffOrHost = requestUserRole == "Host" || requestUserRole == "Staff" || requestUserRole == "Admin";
+        if (!isStaffOrHost && chat.UserId != requestUserId)
+        {
+            throw new HubException("Bạn không có quyền xóa tin nhắn này.");
+        }
+
+        // We completely delete from database to match 'xóa không để lại dấu vết' option
+        _dbContext.LiveSessionChats.Remove(chat);
+        await _dbContext.SaveChangesAsync(Context.ConnectionAborted);
+
+        // Broadcast completely removed event
+        await Clients.Group(GetSessionGroup(sessionId)).SendAsync("ChatDeleted", chatId, Context.ConnectionAborted);
     }
 
     private async Task<SessionListener?> FindExistingListenerAsync(

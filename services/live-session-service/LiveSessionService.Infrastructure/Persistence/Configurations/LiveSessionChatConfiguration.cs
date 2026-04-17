@@ -29,6 +29,16 @@ public sealed class LiveSessionChatConfiguration : IEntityTypeConfiguration<Live
             .HasColumnName("user_id")
             .IsRequired();
 
+        builder.Property(x => x.UserName)
+            .HasColumnName("user_name")
+            .HasMaxLength(255)
+            .IsRequired(false);
+
+        builder.Property(x => x.AvatarUrl)
+            .HasColumnName("avatar_url")
+            .HasMaxLength(2000)
+            .IsRequired(false);
+
         builder.Property(x => x.LiveSessionId)
             .HasColumnName("live_session_id")
             .IsRequired();

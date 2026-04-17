@@ -1,4 +1,4 @@
-﻿namespace LiveSessionService.Domain.Entities
+namespace LiveSessionService.Domain.Entities
 {
     public partial class LiveSessionChat
     {
@@ -9,6 +9,10 @@
         public DateTime CreatedAt { get; set; }
 
         public Guid UserId { get; set; }
+
+        public string? UserName { get; set; }
+
+        public string? AvatarUrl { get; set; }
 
         public Guid LiveSessionId { get; set; }
 
