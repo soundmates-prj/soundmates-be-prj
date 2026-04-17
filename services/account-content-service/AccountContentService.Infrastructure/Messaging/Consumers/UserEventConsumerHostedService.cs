@@ -24,25 +24,47 @@ public sealed class UserEventConsumerHostedService : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         // Give the app a moment to fully start before connecting to RabbitMQ
-        await Task.Delay(TimeSpan.FromSeconds(3), stoppingToken);
+        await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
 
-        try
-        {
-            await using var scope = _scopeFactory.CreateAsyncScope();
-            var consumer = scope.ServiceProvider.GetRequiredService<UserEventConsumer>();
-            await consumer.StartAsync(stoppingToken);
+        var retryDelay = TimeSpan.FromSeconds(5);
+        const int maxRetryDelaySeconds = 60;
 
-            // Keep alive until cancellation is requested
-            await Task.Delay(Timeout.Infinite, stoppingToken);
-        }
-        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        while (!stoppingToken.IsCancellationRequested)
         {
-            _logger.LogInformation("UserEventConsumerHostedService is shutting down");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "UserEventConsumerHostedService failed to start. " +
-                "User profile events will not be consumed until the service restarts.");
+            // IMPORTANT: scope must stay alive for the entire consumer lifetime
+            // because UserEventConsumer holds IUserProfileReadModelRepository (Scoped).
+            // Do NOT dispose the scope until the consumer is done.
+            var scope = _scopeFactory.CreateAsyncScope();
+            try
+            {
+                var consumer = scope.ServiceProvider.GetRequiredService<UserEventConsumer>();
+                await consumer.StartAsync(stoppingToken);
+
+                _logger.LogInformation("UserEventConsumerHostedService: consumer started successfully.");
+
+                // Keep alive until cancellation — scope is still open here
+                await Task.Delay(Timeout.Infinite, stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                _logger.LogInformation("UserEventConsumerHostedService is shutting down.");
+                await scope.DisposeAsync();
+                return;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "UserEventConsumerHostedService failed (will retry in {Delay}s). " +
+                    "User profile events are NOT being consumed.", retryDelay.TotalSeconds);
+            }
+            finally
+            {
+                await scope.DisposeAsync();
+            }
+
+            // Exponential backoff before retry
+            await Task.Delay(retryDelay, stoppingToken);
+            retryDelay = TimeSpan.FromSeconds(Math.Min(retryDelay.TotalSeconds * 2, maxRetryDelaySeconds));
         }
     }
 }
