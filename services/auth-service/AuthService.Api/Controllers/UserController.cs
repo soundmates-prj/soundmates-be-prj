@@ -174,9 +174,18 @@ public class UserController : ControllerBase
         var result = await _commands.Send<VerifyUserEmailCommand, bool>(cmd, ct);
 
         if (!result.IsSuccess)
+        {
+            if (result.ErrorCode == 409)
+                return Conflict(ApiResponse<bool>.FailureResponse(
+                    result.ErrorMessage ?? "Email is already verified",
+                    result.ErrorCode ?? 409));
+            if (result.ErrorCode == 404)
+                return NotFound(ApiResponse<bool>.FailureResponse(
+                    result.ErrorMessage ?? "User not found", 404));
             return BadRequest(ApiResponse<bool>.FailureResponse(
                 result.ErrorMessage ?? "Failed to verify email",
                 result.ErrorCode ?? 400));
+        }
 
         return Ok(ApiResponse<bool>.SuccessResponse(true,
             result.ErrorMessage ?? "Email verified and account activated"));
