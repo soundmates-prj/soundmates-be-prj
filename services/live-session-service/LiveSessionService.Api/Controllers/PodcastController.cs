@@ -117,11 +117,19 @@ public class PodcastController : ControllerBase
                 (int)ErrorCode.Unauthorized));
         }
 
+        if (!TryResolvePodcastStatus(request.Status, out var resolvedStatus))
+        {
+            return BadRequest(ApiResponse<object>.FailureResponse(
+                "Invalid podcast status",
+                (int)ErrorCode.BadRequest));
+        }
+
         var command = new CreatePodcastCommand(
             userId,
             request.Title,
             request.Description,
             request.Author,
+            resolvedStatus,
             request.Type,
             request.Banner);
 

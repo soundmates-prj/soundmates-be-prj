@@ -30,7 +30,7 @@ public sealed class CreatePodcastHandler : ICommandHandler<CreatePodcastCommand,
             Author = command.Author,
             Type = command.Type,
             Banner = command.Banner,
-            Status = PodcastStatus.Draft,
+            Status = command.Status,
             CreatedAt = _dateTimeProvider.UtcNow
         };
 
