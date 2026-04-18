@@ -307,6 +307,32 @@ services:
       - soundmates-network
     restart: unless-stopped
 
+  # ─── TURN Server (Coturn) ───────────────────────────────────────────────────
+  # Dùng để relay WebRTC audio (Host Mic → Listeners) khi NAT/Firewall chặn P2P
+  coturn:
+    image: coturn/coturn:latest
+    container_name: soundmates-coturn
+    # host networking bắt buộc để TURN hoạt động đúng — UDP cần bind IP thực
+    network_mode: host
+    restart: unless-stopped
+    command: >
+      -n
+      --log-file=stdout
+      --listening-port=3478
+      --tls-listening-port=5349
+      --relay-ip=${TURN_RELAY_IP}
+      --external-ip=${TURN_EXTERNAL_IP}/${TURN_RELAY_IP}
+      --min-port=49152
+      --max-port=65535
+      --realm=soundmates.xyz
+      --user=${TURN_USERNAME}:${TURN_PASSWORD}
+      --lt-cred-mech
+      --fingerprint
+      --no-multicast-peers
+      --denied-peer-ip=10.0.0.0-10.255.255.255
+      --denied-peer-ip=192.168.0.0-192.168.255.255
+      --denied-peer-ip=172.16.0.0-172.31.255.255
+
 networks:
   soundmates-network:
     driver: bridge
