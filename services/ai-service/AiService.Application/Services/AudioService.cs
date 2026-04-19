@@ -17,6 +17,7 @@ public class AudioService : IAudioService
     private readonly IUnitOfWork _uow;
     private readonly ITtsClient _tts;
     private readonly IAudioStorage _storage;
+    private readonly IAudioConversionService _audioConversion;
     private readonly IUsageService _usage;
     private readonly ILogger<AudioService> _logger;
 
@@ -27,6 +28,7 @@ public class AudioService : IAudioService
         IUnitOfWork uow,
         ITtsClient tts,
         IAudioStorage storage,
+        IAudioConversionService audioConversion,
         IUsageService usage,
         ILogger<AudioService> logger)
     {
@@ -36,6 +38,7 @@ public class AudioService : IAudioService
         _uow = uow;
         _tts = tts;
         _storage = storage;
+        _audioConversion = audioConversion;
         _usage = usage;
         _logger = logger;
     }
@@ -80,7 +83,7 @@ public class AudioService : IAudioService
                     Pitch: request.Pitch),
                 cancellationToken);
 
-            var validationError = ValidateTtsResponse(script.ContentText, ttsResp);
+            var validationError = ValidateTtsResponse(script.ContentText, (double)(request.Speed ?? 1.0m), ttsResp);
             if (validationError is not null)
             {
                 audio.Status = AudioStatus.Failed.ToString().ToLowerInvariant();
@@ -91,11 +94,30 @@ public class AudioService : IAudioService
             }
 
             var ext = ttsResp.ContentType.Contains("wav", StringComparison.OrdinalIgnoreCase) ? ".wav" : ".mp3";
+            var finalBytes = ttsResp.AudioBytes;
+            var contentType = ttsResp.ContentType;
+
+            if (!string.IsNullOrWhiteSpace(request.BgmUrl))
+            {
+                var mixResult = await _audioConversion.MixWithBackgroundMusicAsync(
+                    finalBytes, 
+                    ext, 
+                    request.BgmUrl, 
+                    cancellationToken);
+                
+                if (mixResult.IsSuccess && mixResult.MixedBytes != null)
+                {
+                    finalBytes = mixResult.MixedBytes;
+                    ext = ".mp3";
+                    contentType = "audio/mpeg";
+                }
+            }
+
             var stored = await _storage.SaveAsync(
                 fileNameWithoutExtension: audio.AudioId.ToString("N"),
                 extensionWithDot: ext,
-                contentType: ttsResp.ContentType,
-                bytes: ttsResp.AudioBytes,
+                contentType: contentType,
+                bytes: finalBytes,
                 cancellationToken: cancellationToken);
 
             audio.AudioPath = stored.RelativePath;
@@ -148,7 +170,7 @@ public class AudioService : IAudioService
         }
     }
 
-    private static string? ValidateTtsResponse(string sourceText, TtsSynthesizeResponse response)
+    private static string? ValidateTtsResponse(string sourceText, double speed, TtsSynthesizeResponse response)
     {
         if (response.AudioBytes.Length == 0)
             return "TTS returned empty audio bytes.";
@@ -177,10 +199,10 @@ public class AudioService : IAudioService
         var compactLength = CountNonWhitespaceChars(sourceText);
         if (compactLength >= 20)
         {
-            // Natural Vietnamese speech at ~18-22 chars/s. Higher = looser check.
-            // 2837 chars / 15 chars·s⁻¹ ≈ 189s minimum → TTS returned 194s → passes.
-            var minimumDuration = (int)Math.Ceiling(compactLength / 15d);
-            if (response.DurationSeconds.Value < minimumDuration)
+            // Natural Vietnamese speech at ~18-22 chars/s. We use 35 chars/s as a loose bound to account for fast models and custom speeds.
+            var effectiveCharsPerSec = 35d * speed;
+            var minimumDuration = (int)Math.Floor(compactLength / effectiveCharsPerSec);
+            if (minimumDuration > 2 && response.DurationSeconds.Value < minimumDuration)
                 return $"TTS returned suspiciously short duration ({response.DurationSeconds.Value}s for {compactLength} chars).";
         }
 

@@ -9,7 +9,8 @@ public record GenerateAudioFromScriptRequest(
     Guid ScriptId,
     string VoiceCode,
     decimal? Speed,
-    decimal? Pitch);
+    decimal? Pitch,
+    string? BgmUrl);
 
 public record AudioFileStreamResult(
     Stream Stream,
