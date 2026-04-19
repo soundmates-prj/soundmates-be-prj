@@ -250,6 +250,31 @@ public class LiveSessionController : ControllerBase
     }
 
     /// <summary>
+    /// Reload the broadcast config and playlist for a live session without restarting
+    /// </summary>
+    [HttpPost("{id:guid}/reload")]
+    [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> Reload(Guid id, CancellationToken ct)
+    {
+        var command = new Application.Features.LiveSessions.Commands.ReloadBroadcast.ReloadSessionBroadcastCommand(id);
+        var result = await _commands.Send<Application.Features.LiveSessions.Commands.ReloadBroadcast.ReloadSessionBroadcastCommand, bool>(command, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(ApiResponse<bool>.SuccessResponse(true, "Station reload requested"));
+    }
+
+    /// <summary>
     /// Create a new live stream session
     /// </summary>
     [HttpPost]

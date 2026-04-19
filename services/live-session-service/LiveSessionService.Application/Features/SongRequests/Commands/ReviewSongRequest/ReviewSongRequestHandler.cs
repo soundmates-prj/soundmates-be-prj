@@ -14,6 +14,7 @@ namespace LiveSessionService.Application.Features.SongRequests.Commands.ReviewSo
 public sealed class ReviewSongRequestHandler : ICommandHandler<ReviewSongRequestCommand, SongRequestResult>
 {
     private readonly ISongRequestRepository _songRequestRepository;
+    private readonly IStationMediaFileRepository _stationMediaFileRepository;
     private readonly IAzuraCastClient _azuraCastClient;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IMessageBusPublisher _eventBus;
@@ -21,12 +22,14 @@ public sealed class ReviewSongRequestHandler : ICommandHandler<ReviewSongRequest
 
     public ReviewSongRequestHandler(
         ISongRequestRepository songRequestRepository,
+        IStationMediaFileRepository stationMediaFileRepository,
         IAzuraCastClient azuraCastClient,
         IDateTimeProvider dateTimeProvider,
         IMessageBusPublisher eventBus,
         ILogger<ReviewSongRequestHandler> logger)
     {
         _songRequestRepository = songRequestRepository;
+        _stationMediaFileRepository = stationMediaFileRepository;
         _azuraCastClient = azuraCastClient;
         _dateTimeProvider = dateTimeProvider;
         _eventBus = eventBus;
@@ -48,14 +51,21 @@ public sealed class ReviewSongRequestHandler : ICommandHandler<ReviewSongRequest
             if (station == null)
                 return Result<SongRequestResult>.Failure("Live session station not found", ErrorCode.BadRequest);
 
-            if (string.IsNullOrWhiteSpace(songRequest.MediaFile.AzuraCastMediaId))
+            var mapping = await _stationMediaFileRepository.GetByMediaFileAndStationAsync(
+                songRequest.MediaFileId, 
+                station.Id, 
+                cancellationToken);
+
+            var azuraMediaId = mapping?.AzuraCastMediaId ?? songRequest.MediaFile.AzuraCastMediaId;
+
+            if (string.IsNullOrWhiteSpace(azuraMediaId))
                 return Result<SongRequestResult>.Failure("Media file has not been synced to AzuraCast yet", ErrorCode.BadRequest);
 
             try 
             {
                 await _azuraCastClient.QueueSongRequestAsync(
                     station.ExternalStationId,
-                    songRequest.MediaFile.AzuraCastMediaId,
+                    azuraMediaId,
                     cancellationToken);
 
                 songRequest.Status = SongRequestStatus.Approved;
@@ -85,7 +95,7 @@ public sealed class ReviewSongRequestHandler : ICommandHandler<ReviewSongRequest
                     {
                         await _azuraCastClient.AssignMediaToPlaylistAsync(
                             station.ExternalStationId, 
-                            songRequest.MediaFile.AzuraCastMediaId, 
+                            azuraMediaId, 
                             reqPlaylist.Id, 
                             cancellationToken);
                             
@@ -93,7 +103,7 @@ public sealed class ReviewSongRequestHandler : ICommandHandler<ReviewSongRequest
                         
                         await _azuraCastClient.QueueSongRequestAsync(
                             station.ExternalStationId,
-                            songRequest.MediaFile.AzuraCastMediaId,
+                            azuraMediaId,
                             cancellationToken);
                             
                         songRequest.Status = SongRequestStatus.Approved;

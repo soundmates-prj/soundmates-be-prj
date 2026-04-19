@@ -628,10 +628,21 @@ public sealed class AzuraCastClient : IAzuraCastClient
         var endpoint = $"api/station/{stationId}/restart";
         _logger.LogInformation("Restarting station {StationId}", stationId);
 
-        using var response = await _httpClient.PostAsync(endpoint, null, cancellationToken);
+        using var response = await _httpClient.PostAsync(endpoint, new StringContent(string.Empty), cancellationToken);
         await EnsureAzuraCastSuccessAsync(response, $"restart station {stationId}", cancellationToken);
 
         _logger.LogInformation("Successfully requested restart for station {StationId}", stationId);
+    }
+
+    public async Task ReloadStationAsync(int stationId, CancellationToken cancellationToken = default)
+    {
+        var endpoint = $"api/station/{stationId}/reload";
+        _logger.LogInformation("Reloading broadcasting config for station {StationId}", stationId);
+
+        using var response = await _httpClient.PostAsync(endpoint, new StringContent(string.Empty), cancellationToken);
+        await EnsureAzuraCastSuccessAsync(response, $"reload station {stationId}", cancellationToken);
+
+        _logger.LogInformation("Successfully requested reload for station {StationId}", stationId);
     }
 
     public async Task<(byte[] Content, string? ContentType, string? FileName)?> DownloadMediaAsync(
