@@ -17,12 +17,14 @@ internal static class ScheduleOccurrenceCalculator
 
     public static DateTime? GetNextOccurrenceUtc(IEnumerable<SessionSchedule> schedules, DateTime nowUtc)
     {
-        return schedules
+        var occurrences = schedules
             .Select(x => GetNextOccurrenceUtc(x, nowUtc))
             .Where(x => x.HasValue)
             .Select(x => x!.Value)
             .OrderBy(x => x)
-            .FirstOrDefault();
+            .ToList();
+
+        return occurrences.Count > 0 ? occurrences.First() : null;
     }
 
     private static DateTime? GetOneTimeOccurrenceUtc(SessionSchedule schedule, DateTime nowUtc)
