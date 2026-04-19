@@ -25,13 +25,8 @@ public sealed class GetStaffDashboardOverviewHandler : IQueryHandler<GetStaffDas
         var normalizedDays = query.Days <= 0 ? 7 : Math.Min(query.Days, 90);
         var utcToday = DateTime.UtcNow.Date;
 
-        var stationsTask = _stationRepository.GetAllEnabledAsync(cancellationToken);
-        var dashboardTask = _liveSessionRepository.GetStaffDashboardOverviewAsync(normalizedDays, cancellationToken);
-
-        await Task.WhenAll(stationsTask, dashboardTask);
-
-        var stations = stationsTask.Result;
-        var dashboard = dashboardTask.Result;
+        var stations = await _stationRepository.GetAllEnabledAsync(cancellationToken);
+        var dashboard = await _liveSessionRepository.GetStaffDashboardOverviewAsync(normalizedDays, cancellationToken);
 
         var result = new StaffDashboardOverviewResult
         {

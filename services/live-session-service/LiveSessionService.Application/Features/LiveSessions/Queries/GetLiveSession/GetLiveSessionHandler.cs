@@ -55,11 +55,13 @@ public sealed class GetLiveSessionHandler : IQueryHandler<GetLiveSessionQuery, L
         // Fetch now playing data from AzuraCast if session has a station
         NowPlayingTrackResult? currentTrack = null;
         NowPlayingTrackResult? playingNext = null;
+        List<NowPlayingTrackResult> upcomingQueue = [];
         List<NowPlayingTrackResult> songHistory = [];
 
+        AzuraCastNowPlayingData? nowPlayingData = null;
         if (session.AzuraCastStation != null)
         {
-            var nowPlayingData = await _azuraCastClient.GetNowPlayingAsync(
+            nowPlayingData = await _azuraCastClient.GetNowPlayingAsync(
                 session.AzuraCastStation.ExternalStationId, cancellationToken);
 
             if (nowPlayingData != null)
@@ -69,6 +71,8 @@ public sealed class GetLiveSessionHandler : IQueryHandler<GetLiveSessionQuery, L
                 songHistory = nowPlayingData.SongHistory?
                     .Select(MapHistoryTrack)
                     .ToList() ?? [];
+                
+                upcomingQueue = await MapQueueAsync(session.AzuraCastStation.ExternalStationId, cancellationToken);
             }
         }
 
@@ -81,7 +85,10 @@ public sealed class GetLiveSessionHandler : IQueryHandler<GetLiveSessionQuery, L
             PublicPlayerUrl = session.AzuraCastStation?.PublicPlayerUrl,
             CurrentTrack = currentTrack,
             PlayingNext = playingNext,
-            SongHistory = songHistory
+            UpcomingQueue = upcomingQueue,
+            SongHistory = songHistory,
+            TotalListeners = nowPlayingData?.Listeners?.Unique ?? 0,
+            UniqueListeners = nowPlayingData?.Listeners?.Unique ?? 0
         } : null;
 
         var result = new LiveSessionResult
@@ -187,6 +194,26 @@ public sealed class GetLiveSessionHandler : IQueryHandler<GetLiveSessionQuery, L
             Remaining = track.Remaining,
             IsRequest = track.IsRequest
         };
+    }
+
+    private async Task<List<NowPlayingTrackResult>> MapQueueAsync(int externalStationId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var queueData = await _azuraCastClient.GetUpcomingQueueAsync(externalStationId, cancellationToken);
+            if (queueData == null || queueData.Count == 0) return [];
+
+            var mapped = new List<NowPlayingTrackResult>();
+            foreach (var q in queueData)
+            {
+                mapped.Add(await MapTrackAsync(q, cancellationToken));
+            }
+            return mapped;
+        }
+        catch (Exception)
+        {
+            return [];
+        }
     }
 
     private static NowPlayingTrackResult MapHistoryTrack(AzuraCastSongHistoryData h)

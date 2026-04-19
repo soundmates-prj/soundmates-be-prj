@@ -14,6 +14,7 @@ public sealed class StationNowPlayingResult
     public int UniqueListeners { get; init; }
     public NowPlayingTrackResult? CurrentTrack { get; init; }
     public NowPlayingTrackResult? PlayingNext { get; init; }
+    public List<NowPlayingTrackResult> UpcomingQueue { get; init; } = [];
     public List<NowPlayingTrackResult> SongHistory { get; init; } = [];
 }
 

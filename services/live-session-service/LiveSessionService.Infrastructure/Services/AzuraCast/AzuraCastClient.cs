@@ -597,6 +597,43 @@ public sealed class AzuraCastClient : IAzuraCastClient
             stationId);
     }
 
+    public async Task SkipTrackAsync(int stationId, CancellationToken cancellationToken = default)
+    {
+        var endpoint = $"api/station/{stationId}/backend/skip";
+        _logger.LogInformation("Skipping track for station {StationId}", stationId);
+
+        using var response = await _httpClient.PostAsync(endpoint, null, cancellationToken);
+        await EnsureAzuraCastSuccessAsync(response, $"skip track for station {stationId}", cancellationToken);
+
+        _logger.LogInformation("Successfully skipped track for station {StationId}", stationId);
+    }
+
+    public async Task<List<AzuraCastCurrentSongData>> GetUpcomingQueueAsync(int stationId, CancellationToken cancellationToken = default)
+    {
+        var endpoint = $"api/station/{stationId}/queue";
+        _logger.LogInformation("Fetching upcoming queue for station {StationId}", stationId);
+
+        var apiResponse = await _httpClient.GetFromJsonAsync<List<AzuraCastApiNowPlaying>>(endpoint, cancellationToken);
+
+        if (apiResponse == null)
+        {
+            return new List<AzuraCastCurrentSongData>();
+        }
+
+        return apiResponse.Select(q => q.ToApplicationModel()).ToList();
+    }
+
+    public async Task RestartStationAsync(int stationId, CancellationToken cancellationToken = default)
+    {
+        var endpoint = $"api/station/{stationId}/restart";
+        _logger.LogInformation("Restarting station {StationId}", stationId);
+
+        using var response = await _httpClient.PostAsync(endpoint, null, cancellationToken);
+        await EnsureAzuraCastSuccessAsync(response, $"restart station {stationId}", cancellationToken);
+
+        _logger.LogInformation("Successfully requested restart for station {StationId}", stationId);
+    }
+
     public async Task<(byte[] Content, string? ContentType, string? FileName)?> DownloadMediaAsync(
         int stationId,
         string fileUniqueId,

@@ -182,6 +182,45 @@ namespace AuthQueryService.Api.Controllers
         }
 
         /// <summary>
+        /// Get user's public profile by ID (Accessible to anyone)
+        /// </summary>
+        /// <param name="id">User ID</param>
+        /// <param name="ct">Cancellation token</param>
+        /// <returns>User's public profile information</returns>
+        [AllowAnonymous]
+        [HttpGet("{id:guid}/public-profile")]
+        [ProducesResponseType(typeof(ApiResponse<UserFullProfileDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<UserFullProfileDto>), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetPublicProfile(Guid id, CancellationToken ct)
+        {
+            _logger.LogInformation("Retrieving public profile for user {UserId}", id);
+            
+            var res = await _queries.Query(new GetFullUserProfileQuery(id), ct);
+            
+            if (!res.Success)
+            {
+                _logger.LogWarning("Public profile not found for user {UserId}", id);
+                return NotFound(res);
+            }
+
+            // Strip sensitive fields for non-owners/non-admins
+            var currentUserId = ResolveUserId();
+            var isAdmin = User.IsInRole("ADMIN");
+
+            if ((currentUserId == null || currentUserId != id) && !isAdmin)
+            {
+                var publicDto = res.Data! with
+                {
+                    Email = string.Empty, // Hide email
+                    Phone = null  // Hide phone
+                };
+                return Ok(ApiResponse<UserFullProfileDto>.SuccessResponse(publicDto));
+            }
+
+            return Ok(res);
+        }
+
+        /// <summary>
         /// Search users with pagination (Admin only)
         /// </summary>
         /// <param name="q">Search query (username, email, display name)</param>
@@ -278,6 +317,17 @@ namespace AuthQueryService.Api.Controllers
 
             var res = await _queries.Query(new GetUsersByRoleQuery("HOST", page, pageSize), ct);
             return Ok(res);
+        }
+
+        private Guid? ResolveUserId()
+        {
+            var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
+                          ?? User.FindFirst("sub")?.Value;
+            
+            if (Guid.TryParse(userIdStr, out var userId))
+                return userId;
+            
+            return null;
         }
     }
 }

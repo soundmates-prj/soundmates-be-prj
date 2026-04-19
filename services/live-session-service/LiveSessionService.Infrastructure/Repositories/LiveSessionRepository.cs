@@ -89,8 +89,8 @@ public sealed class LiveSessionRepository : ILiveSessionRepository
         var utcToday = DateTime.UtcNow.Date;
         var fromDate = utcToday.AddDays(-(normalizedDays - 1));
 
-        var totalSessionsTask = _context.LiveSessions.CountAsync(cancellationToken);
-        var liveSessionsTask = _context.LiveSessions.CountAsync(
+        var totalSessions = await _context.LiveSessions.CountAsync(cancellationToken);
+        var liveSessions = await _context.LiveSessions.CountAsync(
             x => x.Status == Domain.Enums.SessionStatus.Live,
             cancellationToken);
 
@@ -99,8 +99,6 @@ public sealed class LiveSessionRepository : ILiveSessionRepository
             .Where(x => x.ConnectedAt >= fromDate)
             .Select(x => new { x.Id, x.ConnectedAt, x.UserId, x.AnonymousIdentifier })
             .ToListAsync(cancellationToken);
-
-        await Task.WhenAll(totalSessionsTask, liveSessionsTask);
 
         string ToListenerKey(Guid id, Guid? userId, string? anonymousIdentifier)
         {
@@ -141,8 +139,8 @@ public sealed class LiveSessionRepository : ILiveSessionRepository
 
         return new StaffDashboardOverview
         {
-            TotalSessions = totalSessionsTask.Result,
-            LiveSessions = liveSessionsTask.Result,
+            TotalSessions = totalSessions,
+            LiveSessions = liveSessions,
             ListenersToday = listenersToday,
             DailyListeners = dailyListeners
         };

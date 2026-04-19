@@ -110,6 +110,15 @@ public interface IAzuraCastClient
         string fileUniqueId,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Skips the currently playing track on the station</summary>
+    Task SkipTrackAsync(int stationId, CancellationToken cancellationToken = default);
+
+    /// <summary>Gets the list of upcoming tracks in the station's queue</summary>
+    Task<List<AzuraCastCurrentSongData>> GetUpcomingQueueAsync(int stationId, CancellationToken cancellationToken = default);
+
+    /// <summary>Restarts the AzuraCast station</summary>
+    Task RestartStationAsync(int stationId, CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Updates the AzuraCast configuration at runtime.
     /// Called by AzuraCastConfigEventConsumer when admin changes the config.

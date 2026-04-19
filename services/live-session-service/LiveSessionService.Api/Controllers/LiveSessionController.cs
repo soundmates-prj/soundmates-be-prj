@@ -21,6 +21,9 @@ using LiveSessionService.Application.Features.Results.SongRequests;
 using LiveSessionService.Application.Features.SongRequests.Commands.CreateSongRequest;
 using LiveSessionService.Application.Features.SongRequests.Commands.ReviewSongRequest;
 using LiveSessionService.Application.Features.SongRequests.Queries.GetSongRequestsBySession;
+using LiveSessionService.Application.Features.LiveSessions.Commands.RestartBroadcast;
+using LiveSessionService.Application.Features.LiveSessions.Commands.SkipTrack;
+using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSessionQueue;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -170,6 +173,80 @@ public class LiveSessionController : ControllerBase
         }
 
         return Ok(ApiResponse<StationNowPlayingResult>.SuccessResponse(result.Data!, "Success"));
+    }
+
+    /// <summary>
+    /// Get upcoming song queue for a live session
+    /// </summary>
+    [HttpGet("{id:guid}/queue")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResponse<LiveSessionQueueResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> GetQueue(Guid id, CancellationToken ct)
+    {
+        var query = new GetLiveSessionQueueQuery(id);
+        var result = await _queries.Send<GetLiveSessionQueueQuery, LiveSessionQueueResult>(query, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(ApiResponse<LiveSessionQueueResult>.SuccessResponse(result.Data!, "Queue retrieved"));
+    }
+
+    /// <summary>
+    /// Skip the currently playing track in a live session
+    /// </summary>
+    [HttpPost("{id:guid}/skip")]
+    [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> Skip(Guid id, CancellationToken ct)
+    {
+        var command = new SkipSessionTrackCommand(id);
+        var result = await _commands.Send<SkipSessionTrackCommand, bool>(command, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(ApiResponse<bool>.SuccessResponse(true, "Track skipped"));
+    }
+
+    /// <summary>
+    /// Restart the broadcast/station for a live session
+    /// </summary>
+    [HttpPost("{id:guid}/restart")]
+    [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> Restart(Guid id, CancellationToken ct)
+    {
+        var command = new RestartSessionBroadcastCommand(id);
+        var result = await _commands.Send<RestartSessionBroadcastCommand, bool>(command, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(ApiResponse<bool>.SuccessResponse(true, "Station restart requested"));
     }
 
     /// <summary>
