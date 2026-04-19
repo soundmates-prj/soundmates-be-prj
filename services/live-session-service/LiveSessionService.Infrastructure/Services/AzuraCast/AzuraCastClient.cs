@@ -628,7 +628,7 @@ public sealed class AzuraCastClient : IAzuraCastClient
         var endpoint = $"api/station/{stationId}/restart";
         _logger.LogInformation("Restarting station {StationId}", stationId);
 
-        using var response = await _httpClient.PostAsync(endpoint, new StringContent(string.Empty), cancellationToken);
+        using var response = await _httpClient.PostAsync(endpoint, new StringContent("{}", System.Text.Encoding.UTF8, "application/json"), cancellationToken);
         await EnsureAzuraCastSuccessAsync(response, $"restart station {stationId}", cancellationToken);
 
         _logger.LogInformation("Successfully requested restart for station {StationId}", stationId);
@@ -639,7 +639,7 @@ public sealed class AzuraCastClient : IAzuraCastClient
         var endpoint = $"api/station/{stationId}/reload";
         _logger.LogInformation("Reloading broadcasting config for station {StationId}", stationId);
 
-        using var response = await _httpClient.PostAsync(endpoint, new StringContent(string.Empty), cancellationToken);
+        using var response = await _httpClient.PostAsync(endpoint, new StringContent("{}", System.Text.Encoding.UTF8, "application/json"), cancellationToken);
         await EnsureAzuraCastSuccessAsync(response, $"reload station {stationId}", cancellationToken);
 
         _logger.LogInformation("Successfully requested reload for station {StationId}", stationId);

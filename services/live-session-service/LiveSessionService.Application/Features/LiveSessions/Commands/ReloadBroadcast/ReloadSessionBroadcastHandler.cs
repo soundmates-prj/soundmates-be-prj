@@ -41,9 +41,14 @@ public sealed class ReloadSessionBroadcastHandler : ICommandHandler<ReloadSessio
             await _azuraCastClient.ReloadStationAsync(session.AzuraCastStation.ExternalStationId, cancellationToken);
             return Result<bool>.Success(true);
         }
+        catch (LiveSessionService.Application.Exceptions.AzuraCastException ex)
+        {
+            _logger.LogError(ex, "Failed to reload station {StationId} (AzuraCast API error)", session.AzuraCastStation.ExternalStationId);
+            return Result<bool>.Failure($"Failed to reload station: {ex.Message}", ex.ErrorCode);
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to reload station {StationId}", session.AzuraCastStation.ExternalStationId);
+            _logger.LogError(ex, "Failed to reload station {StationId} (Internal error)", session.AzuraCastStation.ExternalStationId);
             return Result<bool>.Failure($"Failed to reload station: {ex.Message}", ErrorCode.InternalServerError);
         }
     }

@@ -41,9 +41,14 @@ public sealed class RestartSessionBroadcastHandler : ICommandHandler<RestartSess
             await _azuraCastClient.RestartStationAsync(session.AzuraCastStation.ExternalStationId, cancellationToken);
             return Result<bool>.Success(true);
         }
+        catch (LiveSessionService.Application.Exceptions.AzuraCastException ex)
+        {
+            _logger.LogError(ex, "Failed to restart station {StationId} (AzuraCast API error)", session.AzuraCastStation.ExternalStationId);
+            return Result<bool>.Failure($"Failed to restart station: {ex.Message}", ex.ErrorCode);
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to restart station {StationId}", session.AzuraCastStation.ExternalStationId);
+            _logger.LogError(ex, "Failed to restart station {StationId} (Internal error)", session.AzuraCastStation.ExternalStationId);
             return Result<bool>.Failure($"Failed to restart station: {ex.Message}", ErrorCode.InternalServerError);
         }
     }
