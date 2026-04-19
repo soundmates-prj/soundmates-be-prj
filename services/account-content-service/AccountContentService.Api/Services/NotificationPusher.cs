@@ -34,4 +34,26 @@ public sealed class NotificationPusher : INotificationPusher
                 notification.CreatedAt
             }, cancellationToken);
     }
+
+    /// <summary>
+    /// Broadcast a notification payload to ALL connected SignalR clients.
+    /// Used for events like new broadcast schedules that all users should see.
+    /// </summary>
+    public async Task PushToAllAsync(object payload, CancellationToken cancellationToken = default)
+    {
+        await _hubContext.Clients
+            .All
+            .SendAsync("ReceiveBroadcastNotification", payload, cancellationToken);
+    }
+
+    public async Task PushDeleteToUserAsync(Guid userId, Guid referenceId, string type, CancellationToken cancellationToken = default)
+    {
+        await _hubContext.Clients
+            .Group($"user-{userId}")
+            .SendAsync("RemoveNotification", new
+            {
+                ReferenceId = referenceId,
+                Type = type
+            }, cancellationToken);
+    }
 }

@@ -59,6 +59,28 @@ builder.Services.AddDbContext<AccountContentDbContext>(options =>
 // Authentication
 builder.Services.AddJwtAuthentication(builder.Configuration);
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("CorsPolicy", policy =>
+    {
+        var origins = builder.Configuration["CORS_ALLOWED_ORIGINS"]?.Split(',', StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>();
+        if (origins.Length > 0 && !origins.Contains("*"))
+        {
+            policy.WithOrigins(origins)
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
+        }
+        else
+        {
+            policy.SetIsOriginAllowed(_ => true)
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
+        }
+    });
+});
+
 // SignalR for real-time notifications
 builder.Services.AddSignalR();
 builder.Services.AddScoped<INotificationPusher, NotificationPusher>();
@@ -103,6 +125,7 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 // If you need HTTPS in production, configure TLS at the container/reverse-proxy level instead.
 // app.UseHttpsRedirection();
 
+app.UseCors("CorsPolicy");
 app.UseAuthentication();
 
 app.UseAuthorization();

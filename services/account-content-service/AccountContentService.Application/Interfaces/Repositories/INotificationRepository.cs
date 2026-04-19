@@ -1,4 +1,4 @@
-﻿using AccountContentService.Domain.Entities;
+using AccountContentService.Domain.Entities;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -21,5 +21,5 @@ namespace AccountContentService.Application.Interfaces.Repositories
 
         Task MarkAllAsReadAsync(Guid userId, CancellationToken cancellationToken);
 
-    }
+        Task DeleteByReferenceAndTypeAsync(Guid referenceId, string type, string messageKeyword, CancellationToken cancellationToken);    }
 }
