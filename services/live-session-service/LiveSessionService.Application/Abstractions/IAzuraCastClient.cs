@@ -119,6 +119,9 @@ public interface IAzuraCastClient
     /// <summary>Restarts the AzuraCast station</summary>
     Task RestartStationAsync(int stationId, CancellationToken cancellationToken = default);
 
+    /// <summary>Reloads the broadcasting configuration and playlist of the AzuraCast station without restarting it completely</summary>
+    Task ReloadStationAsync(int stationId, CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Updates the AzuraCast configuration at runtime.
     /// Called by AzuraCastConfigEventConsumer when admin changes the config.

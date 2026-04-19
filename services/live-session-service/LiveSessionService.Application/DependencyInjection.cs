@@ -82,6 +82,9 @@ using LiveSessionService.Application.Features.SongRequests.Commands.ReviewSongRe
 using LiveSessionService.Application.Features.SongRequests.Queries.GetSongRequestsBySession;
 using LiveSessionService.Application.Features.Stations.Commands.CreateStation;
 using LiveSessionService.Application.Features.Stations.Commands.SyncStations;
+using LiveSessionService.Application.Features.Stations.Commands.RestartStation;
+using LiveSessionService.Application.Features.Stations.Commands.ReloadStation;
+using LiveSessionService.Application.Features.LiveSessions.Commands.ReloadBroadcast;
 using LiveSessionService.Application.Features.Stations.Queries.GetAllStations;
 using LiveSessionService.Application.Features.Stations.Queries.GetStationNowPlaying;
 using Microsoft.Extensions.DependencyInjection;
@@ -103,6 +106,8 @@ public static class DependencyInjection
         // Register Station Command Handlers
         services.AddScoped<ICommandHandler<CreateStationCommand, StationResult>, CreateStationHandler>();
         services.AddScoped<ICommandHandler<SyncStationsCommand, SyncStationsResult>, SyncStationsHandler>();
+        services.AddScoped<ICommandHandler<RestartStationCommand, bool>, RestartStationHandler>();
+        services.AddScoped<ICommandHandler<ReloadStationCommand, bool>, ReloadStationHandler>();
 
         // Register LiveSession Command Handlers
         services.AddScoped<ICommandHandler<CreateLiveSessionCommand, LiveSessionResult>, CreateLiveSessionHandler>();
@@ -115,6 +120,7 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<StopSessionCommand, LiveSessionResult>, StopSessionHandler>();
         services.AddScoped<ICommandHandler<SkipSessionTrackCommand, bool>, SkipSessionTrackHandler>();
         services.AddScoped<ICommandHandler<RestartSessionBroadcastCommand, bool>, RestartSessionBroadcastHandler>();
+        services.AddScoped<ICommandHandler<ReloadSessionBroadcastCommand, bool>, ReloadSessionBroadcastHandler>();
 
         // Register NowPlaying Query Handlers
         services.AddScoped<IQueryHandler<GetNowPlayingQuery, NowPlayingResult>, GetNowPlayingHandler>();

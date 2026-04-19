@@ -145,6 +145,60 @@ public class StationController : ControllerBase
     }
 
     /// <summary>
+    /// Restarts the AzuraCast station broadcast
+    /// </summary>
+    /// <param name="id">Station local Guid</param>
+    [HttpPost("{id:guid}/restart")]
+    [Authorize(Roles = "ADMIN,STAFF")]
+    [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> Restart(Guid id, CancellationToken ct)
+    {
+        var command = new Application.Features.Stations.Commands.RestartStation.RestartStationCommand(id);
+        var result = await _commands.Send<Application.Features.Stations.Commands.RestartStation.RestartStationCommand, bool>(command, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(ApiResponse<bool>.SuccessResponse(true, "Station restart requested"));
+    }
+
+    /// <summary>
+    /// Reloads the AzuraCast station broadcast config
+    /// </summary>
+    /// <param name="id">Station local Guid</param>
+    [HttpPost("{id:guid}/reload")]
+    [Authorize(Roles = "ADMIN,STAFF")]
+    [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> Reload(Guid id, CancellationToken ct)
+    {
+        var command = new Application.Features.Stations.Commands.ReloadStation.ReloadStationCommand(id);
+        var result = await _commands.Send<Application.Features.Stations.Commands.ReloadStation.ReloadStationCommand, bool>(command, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(ApiResponse<bool>.SuccessResponse(true, "Station reload requested"));
+    }
+
+    /// <summary>
     /// Sync all stations from AzuraCast to local database
     /// </summary>
     /// <response code="200">Sync completed with statistics</response>
