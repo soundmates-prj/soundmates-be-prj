@@ -71,4 +71,11 @@ public sealed class UserPlaylistRepository : IUserPlaylistRepository
             .Where(x => x.UserPlaylistId == playlistId)
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
+
+    public Task<List<UserPlaylist>> GetPublicPlaylistsByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+        => _db.UserPlaylists
+            .Include(x => x.UserPlaylistMedias)
+            .Where(x => x.UserId == userId && x.Visibility == LiveSessionService.Domain.Enums.PlaylistVisibility.Public && x.IsEnabled)
+            .OrderByDescending(x => x.CreatedAt)
+            .ToListAsync(cancellationToken);
 }

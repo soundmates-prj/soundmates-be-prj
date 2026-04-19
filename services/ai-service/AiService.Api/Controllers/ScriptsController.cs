@@ -3,6 +3,7 @@ using AiService.Api.Models.Requests.Scripts;
 using AiService.Api.Models.Responses;
 using AiService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
 using AiService.Application.Enums;
+using AiService.Application.Features.Scripts.Commands.CreateManualScript;
 using AiService.Application.Features.Scripts.Commands.GeneratePodcastScript;
 using AiService.Application.Features.Scripts.Commands.SplitScript;
 using AiService.Application.Features.Scripts.Commands.DeleteScript;
@@ -11,6 +12,7 @@ using AiService.Application.Features.Scripts.Queries.GetMyScripts;
 using AiService.Application.Features.Scripts.Queries.GetScriptById;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+
 
 namespace AiService.Api.Controllers;
 
@@ -53,6 +55,27 @@ public class ScriptsController : ControllerBase
                 request.EditorInstruction,
                 request.UseAutoContext,
                 request.StrictFactMode),
+            cancellationToken);
+
+        return result.IsSuccess
+            ? Ok(ApiResponse<object>.SuccessResponse(new { script = result.Data }))
+            : BadRequest(ApiResponse<string>.Error(ApiStatusCode.HB40001, result.ErrorMessage ?? "Failed"));
+    }
+
+    /// <summary>
+    /// Create a script manually from user-provided content — no AI involved.
+    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> CreateManual([FromBody] CreateManualScriptRequest request, CancellationToken cancellationToken)
+    {
+        if (!User.TryGetCurrentUserId(out var userId))
+            return Unauthorized(ApiResponse<string>.Error(ApiStatusCode.HB40101, "Invalid token"));
+
+        if (string.IsNullOrWhiteSpace(request.ContentText))
+            return BadRequest(ApiResponse<string>.Error(ApiStatusCode.HB40001, "contentText is required"));
+
+        var result = await _commands.Send<CreateManualScriptCommand, Domain.Entities.Script>(
+            new CreateManualScriptCommand(userId, request.ContentText, request.Title, request.Topic),
             cancellationToken);
 
         return result.IsSuccess

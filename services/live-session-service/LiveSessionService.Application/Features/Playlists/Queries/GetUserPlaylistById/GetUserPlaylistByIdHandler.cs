@@ -23,7 +23,7 @@ public sealed class GetUserPlaylistByIdHandler : IQueryHandler<GetUserPlaylistBy
             return Result<UserPlaylistResult>.Failure("Playlist not found", ErrorCode.NotFound);
         }
 
-        if (playlist.UserId != query.UserId)
+        if (playlist.UserId != query.UserId && playlist.Visibility != LiveSessionService.Domain.Enums.PlaylistVisibility.Public)
         {
             return Result<UserPlaylistResult>.Failure("You do not have permission to access this playlist", ErrorCode.Forbidden);
         }
