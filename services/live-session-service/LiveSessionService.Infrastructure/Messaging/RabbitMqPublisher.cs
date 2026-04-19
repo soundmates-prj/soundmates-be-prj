@@ -90,7 +90,14 @@ public sealed class RabbitMqPublisher : IMessageBusPublisher
 
     public async Task PublishAsync(string type, string payload, CancellationToken ct = default)
     {
-        const string exchange = "livesession.events";
+        // Notification events must go to soundmates.events (consumed by account-content-service)
+        // All other live-session events stay on livesession.events
+        const string notificationExchange = "soundmates.events";
+        const string liveSessionExchange = "livesession.events";
+
+        var exchange = type.StartsWith("notification.", StringComparison.OrdinalIgnoreCase)
+            ? notificationExchange
+            : liveSessionExchange;
 
         try
         {
@@ -120,7 +127,7 @@ public sealed class RabbitMqPublisher : IMessageBusPublisher
                 body: body,
                 cancellationToken: ct);
 
-            _logger.LogInformation("Published message to RabbitMQ: {Type}", type);
+            _logger.LogInformation("Published message to RabbitMQ exchange={Exchange} routingKey={Type}", exchange, type);
         }
         catch (Exception ex)
         {
@@ -128,4 +135,5 @@ public sealed class RabbitMqPublisher : IMessageBusPublisher
             throw;
         }
     }
+
 }

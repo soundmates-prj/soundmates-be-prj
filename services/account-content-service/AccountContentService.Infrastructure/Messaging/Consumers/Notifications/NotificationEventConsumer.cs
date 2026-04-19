@@ -1,4 +1,4 @@
-﻿using AccountContentService.Application.Interfaces;
+using AccountContentService.Application.Interfaces;
 using AccountContentService.Application.Interfaces.Repositories;
 using AccountContentService.Domain.Entities;
 using Microsoft.EntityFrameworkCore.Metadata;
@@ -152,6 +152,64 @@ namespace AccountContentService.Infrastructure.Messaging.Consumers.Notifications
                 _logger.LogWarning("Failed to deserialize UserCreatedEvent: {Json}", json);
                 return;
             }
+
+            using var scope = _serviceProvider.CreateScope();
+            var notificationPusher = scope.ServiceProvider.GetService<INotificationPusher>();
+
+            // ── BROADCAST: notify ALL connected users (e.g. new broadcast schedule) ──
+            if (evt.IsBroadcast)
+            {
+                var baseGuid = Guid.NewGuid();
+                var dbContext = scope.ServiceProvider.GetService<AccountContentDbContext>();
+                if (dbContext != null)
+                {
+                    var allUserIds = dbContext.UserProfileReadModels.Select(x => x.Id).ToList();
+                    var notifications = allUserIds.Select(userId => new Notification
+                    {
+                        Id = Guid.NewGuid(),
+                        UserId = userId,
+                        Title = evt.Title,
+                        ReferenceId = evt.ReferenceId,
+                        Type = evt.Type,
+                        Message = evt.Message,
+                        IsRead = false,
+                        CreatedAt = DateTime.UtcNow
+                    }).ToList();
+
+                    if (notifications.Count > 0)
+                    {
+                        dbContext.Notifications.AddRange(notifications);
+                        await dbContext.SaveChangesAsync(cancellationToken);
+                    }
+                }
+
+                var broadcastPayload = new
+                {
+                    Id = baseGuid,
+                    Title = evt.Title,
+                    Message = evt.Message,
+                    Type = evt.Type,
+                    ReferenceId = evt.ReferenceId,
+                    IsRead = false,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                if (notificationPusher != null)
+                {
+                    try
+                    {
+                        await notificationPusher.PushToAllAsync(broadcastPayload, cancellationToken);
+                        _logger.LogInformation("Broadcast notification sent: {Title}", evt.Title);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to broadcast notification: {Title}", evt.Title);
+                    }
+                }
+                return;
+            }
+
+            // ── PERSONAL: persist & push to specific user ──
             var notification = new Notification
             {
                 Id = Guid.NewGuid(),
@@ -167,8 +225,6 @@ namespace AccountContentService.Infrastructure.Messaging.Consumers.Notifications
             await _repo.AddAsync(notification, cancellationToken);
 
             // Push notification to user in real-time via SignalR
-            using var scope = _serviceProvider.CreateScope();
-            var notificationPusher = scope.ServiceProvider.GetService<INotificationPusher>();
             if (notificationPusher != null)
             {
                 try

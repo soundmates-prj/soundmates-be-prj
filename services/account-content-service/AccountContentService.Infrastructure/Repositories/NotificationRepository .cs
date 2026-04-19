@@ -1,4 +1,4 @@
-﻿using AccountContentService.Application.Interfaces.Repositories;
+using AccountContentService.Application.Interfaces.Repositories;
 using AccountContentService.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -96,6 +96,25 @@ namespace AccountContentService.Infrastructure.Repositories
                 _context.Notifications.Update(noti);
             }
             await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        public async Task DeleteByReferenceAndTypeAsync(Guid referenceId, string type, string messageKeyword, CancellationToken cancellationToken)
+        {
+            var query = _context.Notifications
+                .Where(x => x.ReferenceId == referenceId && x.Type == type);
+                
+            if (!string.IsNullOrEmpty(messageKeyword))
+            {
+                query = query.Where(x => x.Message.Contains(messageKeyword));
+            }
+
+            var notifications = await query.ToListAsync(cancellationToken);
+
+            if (notifications.Any())
+            {
+                _context.Notifications.RemoveRange(notifications);
+                await _context.SaveChangesAsync(cancellationToken);
+            }
         }
     }
 }

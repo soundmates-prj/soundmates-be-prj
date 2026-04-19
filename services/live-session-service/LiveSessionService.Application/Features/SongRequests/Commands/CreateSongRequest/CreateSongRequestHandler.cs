@@ -6,6 +6,8 @@ using LiveSessionService.Application.Features.Results.SongRequests;
 using LiveSessionService.Domain.Entities;
 using LiveSessionService.Domain.Enums;
 using LiveSessionService.Domain.Interfaces;
+using shared.Contracts.Events.Notifications;
+using System.Text.Json;
 
 namespace LiveSessionService.Application.Features.SongRequests.Commands.CreateSongRequest;
 
@@ -15,17 +17,20 @@ public sealed class CreateSongRequestHandler : ICommandHandler<CreateSongRequest
     private readonly IMediaFileRepository _mediaFileRepository;
     private readonly ISongRequestRepository _songRequestRepository;
     private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly IMessageBusPublisher _eventBus;
 
     public CreateSongRequestHandler(
         ILiveSessionRepository liveSessionRepository,
         IMediaFileRepository mediaFileRepository,
         ISongRequestRepository songRequestRepository,
-        IDateTimeProvider dateTimeProvider)
+        IDateTimeProvider dateTimeProvider,
+        IMessageBusPublisher eventBus)
     {
         _liveSessionRepository = liveSessionRepository;
         _mediaFileRepository = mediaFileRepository;
         _songRequestRepository = songRequestRepository;
         _dateTimeProvider = dateTimeProvider;
+        _eventBus = eventBus;
     }
 
     public async Task<Result<SongRequestResult>> Handle(CreateSongRequestCommand command, CancellationToken cancellationToken)
@@ -53,6 +58,34 @@ public sealed class CreateSongRequestHandler : ICommandHandler<CreateSongRequest
         };
 
         await _songRequestRepository.AddAsync(songRequest, cancellationToken);
+
+        // Notify host that a member has requested a song
+        try
+        {
+            var songTitle = string.IsNullOrWhiteSpace(mediaFile.Artist)
+                ? mediaFile.Title
+                : $"{mediaFile.Title} - {mediaFile.Artist}";
+
+            var notifyHostEvent = new NotificationEvent
+            {
+                Title = "Yêu cầu bài hát mới",
+                SendUserId = command.RequestedByUserId,
+                ReceiveUserId = liveSession.HostUserId,
+                ReferenceId = songRequest.Id,
+                Type = "song_request",
+                Message = $"Thành viên đã yêu cầu bài '{songTitle}'. Nhấn vào để xem yêu cầu.",
+                IsBroadcast = false
+            };
+
+            await _eventBus.PublishAsync(
+                "notification.created",
+                JsonSerializer.Serialize(notifyHostEvent),
+                cancellationToken);
+        }
+        catch (Exception)
+        {
+            // Fire-and-forget: notification failure should not block the request
+        }
 
         return Result<SongRequestResult>.Success(new SongRequestResult
         {

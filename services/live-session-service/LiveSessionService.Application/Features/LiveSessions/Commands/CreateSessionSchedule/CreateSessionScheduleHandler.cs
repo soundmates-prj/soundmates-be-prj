@@ -1,4 +1,4 @@
-﻿using LiveSessionService.Application.Abstractions.Messaging;
+using LiveSessionService.Application.Abstractions.Messaging;
 using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Features.LiveSessions.Scheduling;
 using LiveSessionService.Application.Features.Results;
@@ -122,14 +122,16 @@ public sealed class CreateSessionScheduleHandler : ICommandHandler<CreateSession
             session.Schedule(nextOccurrence.Value, _dateTimeProvider);
             await _sessionRepository.UpdateAsync(session, cancellationToken);
 
+            var nextTimeLocal = ScheduleTimeConverter.ConvertUtcToVietnamLocal(nextOccurrence.Value);
             var @event = new NotificationEvent
             {
-                Title = "Live Session Scheduled",
+                Title = "Lịch phát sóng mới",
                 SendUserId = schedule.CreatedBy,
-                ReceiveUserId = session.HostUserId,
+                ReceiveUserId = Guid.Empty, // ignored when IsBroadcast = true
                 ReferenceId = session.Id,
                 Type = "live_session",
-                Message = $"Your session is scheduled at {session.StartedAt:HH:mm dd/MM/yyyy}"
+                Message = $"{session.SessionName} sẽ phát sóng lúc {nextTimeLocal:HH:mm dd/MM/yyyy}",
+                IsBroadcast = true
             };
 
             var payload = JsonSerializer.Serialize(@event);
