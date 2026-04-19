@@ -14,6 +14,12 @@ public sealed class LiveSessionHub : Hub
     // sessionId → connectionId of the host currently broadcasting mic
     private static readonly ConcurrentDictionary<string, string> _micHosts = new();
 
+    // sessionId → current global volume set by the host (default starts at 1.0)
+    private static readonly ConcurrentDictionary<string, double> _sessionVolumes = new();
+
+    // connectionId → (sessionId, userId, anonymousIdentifier) to cleanup on disconnect
+    private static readonly ConcurrentDictionary<string, (Guid SessionId, Guid? UserId, string? AnonymousId)> _connections = new();
+
     private readonly LiveSessionDbContext _dbContext;
     private readonly ILiveSessionRepository _sessionRepository;
     private readonly IDateTimeProvider _dateTimeProvider;
@@ -173,6 +179,9 @@ public sealed class LiveSessionHub : Hub
 
             _logger.LogInformation("[JoinSession] Success. SessionId={SessionId}, Listeners={Listeners}", sessionId, currentListeners);
 
+            // Register connection for cleanup
+            _connections[Context.ConnectionId] = (sessionId, userId, anonymousIdentifier);
+
             // 7. Send Chat History to the new listener
             try
             {
@@ -198,6 +207,19 @@ public sealed class LiveSessionHub : Hub
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "[JoinSession] Failed to fetch chat history for {SessionId}", sessionId);
+            }
+
+            // 8. Sync Live Ephemeral State (Mic & Volume) to the new listener
+            var sessionIdStr = sessionId.ToString();
+            
+            if (_micHosts.ContainsKey(sessionIdStr))
+            {
+                await Clients.Caller.SendAsync("HostMicStarted", sessionIdStr, Context.ConnectionAborted);
+            }
+            
+            if (_sessionVolumes.TryGetValue(sessionIdStr, out var currentVolume))
+            {
+                await Clients.Caller.SendAsync("GlobalVolumeUpdated", currentVolume, Context.ConnectionAborted);
             }
         }
         catch (HubException)
@@ -233,6 +255,24 @@ public sealed class LiveSessionHub : Hub
 
         await Clients.Group(GetSessionGroup(sessionId))
             .SendAsync("UserLeft", sessionId, userId, currentListeners, Context.ConnectionAborted);
+    }
+
+    public override async Task OnDisconnectedAsync(Exception? exception)
+    {
+        if (_connections.TryRemove(Context.ConnectionId, out var data))
+        {
+            try
+            {
+                await LeaveSession(data.SessionId, data.UserId, data.AnonymousId);
+                _logger.LogInformation("[OnDisconnectedAsync] Auto cleaned up listener {ConnId} for Session {SessionId}",
+                    Context.ConnectionId, data.SessionId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[OnDisconnectedAsync] Failed to auto LeaveSession for {ConnId}", Context.ConnectionId);
+            }
+        }
+        await base.OnDisconnectedAsync(exception);
     }
 
     public async Task ReconnectSession(Guid sessionId, Guid? userId = null, string? anonymousIdentifier = null)
@@ -409,6 +449,9 @@ public sealed class LiveSessionHub : Hub
 
     public async Task HostUpdateGlobalVolume(Guid sessionId, double volume)
     {
+        var sessionIdStr = sessionId.ToString();
+        _sessionVolumes[sessionIdStr] = volume;
+
         // Broadcast the volume adjustment to all listeners
         await Clients.Group(GetSessionGroup(sessionId)).SendAsync(
             "GlobalVolumeUpdated",
