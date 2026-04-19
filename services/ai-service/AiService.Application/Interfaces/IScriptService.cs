@@ -28,5 +28,6 @@ public interface IScriptService
     Task<Result<IReadOnlyList<Script>>> GetMyScriptsAsync(Guid userId, string? contextType, string? status, CancellationToken cancellationToken);
     Task<Result<bool>> DeleteAsync(Guid userId, Guid scriptId, CancellationToken cancellationToken);
     Task<Result<bool>> UpdateAsync(Guid userId, Guid scriptId, string? title, string? contentText, CancellationToken cancellationToken);
+    Task<Result<Script>> CreateManualAsync(Guid userId, string contentText, string? title, string? topic, CancellationToken cancellationToken);
 }
 

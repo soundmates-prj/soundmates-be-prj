@@ -56,6 +56,7 @@ public class MusicCatalogController : ControllerBase
     /// Supports direct HTTP file URLs and AzuraCast unique_id-based media.
     /// </summary>
     [HttpGet("{id:guid}/stream")]
+    [AllowAnonymous]
     [ProducesResponseType(200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
     public async Task<IActionResult> StreamById(Guid id, CancellationToken ct)
@@ -114,6 +115,7 @@ public class MusicCatalogController : ControllerBase
     /// Get all media files in music catalog
     /// </summary>
     [HttpGet]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResponse<List<MusicResult>>), 200)]
     public async Task<IActionResult> GetAllMusic(CancellationToken ct)
     {

@@ -23,7 +23,7 @@ public sealed class GetUserPlaylistTracksHandler : IQueryHandler<GetUserPlaylist
             return Result<List<PlaylistMediaResult>>.Failure("Playlist not found", ErrorCode.NotFound);
         }
 
-        if (playlist.UserId != query.UserId)
+        if (playlist.UserId != query.UserId && playlist.Visibility != LiveSessionService.Domain.Enums.PlaylistVisibility.Public)
         {
             return Result<List<PlaylistMediaResult>>.Failure("You do not have permission to access this playlist", ErrorCode.Forbidden);
         }

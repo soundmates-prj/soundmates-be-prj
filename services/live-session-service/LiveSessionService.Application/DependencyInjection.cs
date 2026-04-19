@@ -56,6 +56,7 @@ using LiveSessionService.Application.Features.Playlists.Queries.GetAllPublicUser
 using LiveSessionService.Application.Features.Playlists.Queries.GetUserPlaylistById;
 using LiveSessionService.Application.Features.Playlists.Queries.GetUserPlaylists;
 using LiveSessionService.Application.Features.Playlists.Queries.GetUserPlaylistTracks;
+using LiveSessionService.Application.Features.Playlists.Queries.GetPublicUserPlaylistsByUserId;
 using LiveSessionService.Application.Features.Podcasts.Commands.CreatePodcast;
 using LiveSessionService.Application.Features.Podcasts.Commands.CreatePodcastEpisode;
 using LiveSessionService.Application.Features.Podcasts.Commands.DeletePodcast;
@@ -172,6 +173,7 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<GetPlaylistsByStationQuery, List<PlaylistResult>>, GetPlaylistsByStationHandler>();
         services.AddScoped<IQueryHandler<GetAllPublicUserPlaylistsQuery, List<UserPlaylistResult>>, GetAllPublicUserPlaylistsHandler>();
         services.AddScoped<IQueryHandler<GetUserPlaylistsQuery, List<UserPlaylistResult>>, GetUserPlaylistsHandler>();
+        services.AddScoped<IQueryHandler<GetPublicUserPlaylistsByUserIdQuery, List<UserPlaylistResult>>, GetPublicUserPlaylistsByUserIdHandler>();
         services.AddScoped<IQueryHandler<GetUserPlaylistByIdQuery, UserPlaylistResult>, GetUserPlaylistByIdHandler>();
         services.AddScoped<IQueryHandler<GetPlaylistTracksQuery, List<PlaylistMediaResult>>, GetPlaylistTracksHandler>();
         services.AddScoped<IQueryHandler<GetUserPlaylistTracksQuery, List<PlaylistMediaResult>>, GetUserPlaylistTracksHandler>();

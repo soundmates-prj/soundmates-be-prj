@@ -196,6 +196,33 @@ public class ScriptService : IScriptService
         return Result<bool>.Success(true);
     }
 
+    /// <summary>
+    /// Creates a script directly from user-provided content, bypassing AI generation entirely.
+    /// </summary>
+    public async Task<Result<Script>> CreateManualAsync(Guid userId, string contentText, string? title, string? topic, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(contentText))
+            return Result<Script>.Failure("contentText is required");
+
+        var script = new Script
+        {
+            ScriptId = Guid.NewGuid(),
+            AuthorId = userId,
+            ScriptSource = "manual",
+            ContextType = "podcast",
+            Title = string.IsNullOrWhiteSpace(title) ? null : title.Trim(),
+            ContentText = contentText.Trim(),
+            Status = Domain.Enums.ScriptStatus.Generated.ToString().ToLowerInvariant(),
+            PromptId = null,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await _scripts.AddAsync(script, cancellationToken);
+        await _uow.SaveChangesAsync(cancellationToken);
+
+        return Result<Script>.Success(script);
+    }
+
     private static List<string> SplitByMaxChars(string text, int maxChars)
     {
         var parts = new List<string>();

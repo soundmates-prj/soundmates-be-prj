@@ -10,6 +10,7 @@ using LiveSessionService.Application.Features.Playlists.Commands.RemoveTracksFro
 using LiveSessionService.Application.Features.Playlists.Commands.UpdateUserPlaylist;
 using LiveSessionService.Application.Features.Playlists.Queries.GetUserPlaylistById;
 using LiveSessionService.Application.Features.Playlists.Queries.GetUserPlaylistTracks;
+using LiveSessionService.Application.Features.Playlists.Queries.GetPublicUserPlaylistsByUserId;
 using LiveSessionService.Application.Features.Playlists.Queries.GetUserPlaylists;
 using LiveSessionService.Application.Features.Results.Playlists;
 using Microsoft.AspNetCore.Authorization;
@@ -67,8 +68,8 @@ public sealed class UserPlaylistController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<List<UserPlaylistResult>>), 200)]
     public async Task<IActionResult> GetByUserId(Guid userId, CancellationToken ct)
     {
-        var result = await _queries.Send<GetUserPlaylistsQuery, List<UserPlaylistResult>>(
-            new GetUserPlaylistsQuery(userId),
+        var result = await _queries.Send<GetPublicUserPlaylistsByUserIdQuery, List<UserPlaylistResult>>(
+            new GetPublicUserPlaylistsByUserIdQuery(userId),
             ct);
 
         return Ok(result.ToApiResponse());
@@ -98,19 +99,17 @@ public sealed class UserPlaylistController : ControllerBase
     /// <param name="ct"></param>
     /// <returns></returns>
     [HttpGet("{id:guid}")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResponse<UserPlaylistResult>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 401)]
     [ProducesResponseType(typeof(ApiResponse<object>), 403)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
     {
-        if (!TryGetCurrentUserId(out var userId))
-        {
-            return Unauthorized(ApiResponse<object>.FailureResponse("Invalid or missing user token", (int)ErrorCode.Unauthorized));
-        }
+        TryGetCurrentUserId(out var userId);
 
         var result = await _queries.Send<GetUserPlaylistByIdQuery, UserPlaylistResult>(
-            new GetUserPlaylistByIdQuery(id, userId),
+            new GetUserPlaylistByIdQuery(id, userId == Guid.Empty ? null : userId),
             ct);
 
         if (!result.IsSuccess)
@@ -253,19 +252,17 @@ public sealed class UserPlaylistController : ControllerBase
     /// Get all tracks of a user playlist for the current user
     /// </summary>
     [HttpGet("{id:guid}/tracks")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResponse<List<PlaylistMediaResult>>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 401)]
     [ProducesResponseType(typeof(ApiResponse<object>), 403)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
     public async Task<IActionResult> GetTracks(Guid id, CancellationToken ct)
     {
-        if (!TryGetCurrentUserId(out var userId))
-        {
-            return Unauthorized(ApiResponse<object>.FailureResponse("Invalid or missing user token", (int)ErrorCode.Unauthorized));
-        }
+        TryGetCurrentUserId(out var userId);
 
         var result = await _queries.Send<GetUserPlaylistTracksQuery, List<PlaylistMediaResult>>(
-            new GetUserPlaylistTracksQuery(id, userId),
+            new GetUserPlaylistTracksQuery(id, userId == Guid.Empty ? null : userId),
             ct);
 
         if (!result.IsSuccess)

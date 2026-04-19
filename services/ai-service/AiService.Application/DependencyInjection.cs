@@ -2,10 +2,12 @@ using AiService.Application.Abstractions.Messaging.Dispatcher;
 using AiService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
 using AiService.Application.Features.Audios.Commands.GenerateAudio;
 using AiService.Application.Features.Audios.Queries.GetAudioById;
+using AiService.Application.Features.Scripts.Commands.CreateManualScript;
 using AiService.Application.Features.Scripts.Commands.GeneratePodcastScript;
 using AiService.Application.Features.Scripts.Commands.SplitScript;
 using AiService.Application.Features.Scripts.Commands.DeleteScript;
 using AiService.Application.Features.Scripts.Commands.UpdateScript;
+
 using AiService.Application.Features.Scripts.Queries.GetMyScripts;
 using AiService.Application.Features.Scripts.Queries.GetScriptById;
 using AiService.Application.Features.Voices.Commands.CreateVoice;
@@ -34,6 +36,7 @@ public static class DependencyInjection
         services.AddScoped<IPodcastGenerationService, PodcastGenerationService>();
 
         // Handlers
+        services.AddScoped<Abstractions.Messaging.ICommandHandler<CreateManualScriptCommand, Domain.Entities.Script>, CreateManualScriptHandler>();
         services.AddScoped<Abstractions.Messaging.ICommandHandler<GeneratePodcastScriptCommand, Domain.Entities.Script>, GeneratePodcastScriptHandler>();
         services.AddScoped<Abstractions.Messaging.ICommandHandler<SplitScriptPartsCommand, IReadOnlyList<Domain.Entities.Script>>, SplitScriptPartsHandler>();
         services.AddScoped<Abstractions.Messaging.ICommandHandler<DeleteScriptCommand, bool>, DeleteScriptHandler>();

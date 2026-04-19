@@ -13,4 +13,5 @@ public interface IUserPlaylistRepository
     Task AddTracksAsync(IEnumerable<UserPlaylistMedia> tracks, CancellationToken cancellationToken = default);
     Task RemoveTracksAsync(IEnumerable<UserPlaylistMedia> tracks, CancellationToken cancellationToken = default);
     Task<List<UserPlaylistMedia>> GetTracksAsync(Guid playlistId, CancellationToken cancellationToken = default);
+    Task<List<UserPlaylist>> GetPublicPlaylistsByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
 }

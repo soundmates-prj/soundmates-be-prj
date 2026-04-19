@@ -3,4 +3,4 @@ using LiveSessionService.Application.Features.Results.Playlists;
 
 namespace LiveSessionService.Application.Features.Playlists.Queries.GetUserPlaylistById;
 
-public sealed record GetUserPlaylistByIdQuery(Guid PlaylistId, Guid UserId) : IQuery<UserPlaylistResult>;
+public sealed record GetUserPlaylistByIdQuery(Guid PlaylistId, Guid? UserId) : IQuery<UserPlaylistResult>;
