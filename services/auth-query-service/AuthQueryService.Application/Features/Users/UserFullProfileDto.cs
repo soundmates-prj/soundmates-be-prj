@@ -1,6 +1,6 @@
 namespace AuthQueryService.Application.DTOs
 {
-    public sealed class UserFullProfileDto
+    public sealed record UserFullProfileDto
     {
         // Account Information
         public Guid Id { get; init; }

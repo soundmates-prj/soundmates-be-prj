@@ -106,7 +106,7 @@ public class GetPostsHandler:
        GetUserPostDetailQuery request,
        CancellationToken cancellationToken)
     {
-        var result = await _repository.GetByUserIdAsync(request.UserId, request.PageSize, request.Page, cancellationToken);
+        var result = await _repository.GetPublishedByUserIdAsync(request.UserId, request.PageSize, request.Page, cancellationToken);
         var items = _mapper.Map<IEnumerable<PostDto>>(result.Items);
         await PopulateUserProfilesAsync(items.ToList(), cancellationToken);
 

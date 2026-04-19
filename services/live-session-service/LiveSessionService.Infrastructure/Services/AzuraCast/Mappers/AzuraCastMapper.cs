@@ -60,7 +60,7 @@ internal static class AzuraCastMapper
             Mounts = api.Mounts?.Select(m => m.ToApplicationModel()).ToList()
         };
 
-    private static AzuraCastCurrentSongData ToApplicationModel(this AzuraCastApiNowPlaying api)
+    internal static AzuraCastCurrentSongData ToApplicationModel(this AzuraCastApiNowPlaying api)
         => new()
         {
             ShId      = api.ShId,

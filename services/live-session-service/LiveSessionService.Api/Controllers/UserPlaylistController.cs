@@ -60,6 +60,21 @@ public sealed class UserPlaylistController : ControllerBase
     }
 
     /// <summary>
+    /// Get all playlists for a specific user
+    /// </summary>
+    [HttpGet("user/{userId:guid}")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResponse<List<UserPlaylistResult>>), 200)]
+    public async Task<IActionResult> GetByUserId(Guid userId, CancellationToken ct)
+    {
+        var result = await _queries.Send<GetUserPlaylistsQuery, List<UserPlaylistResult>>(
+            new GetUserPlaylistsQuery(userId),
+            ct);
+
+        return Ok(result.ToApiResponse());
+    }
+
+    /// <summary>
     /// Get all public user playlists
     /// </summary>
     /// <param name="ct"></param>

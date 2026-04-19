@@ -55,6 +55,21 @@ public sealed class UserSavedPodcastController : ControllerBase
     }
 
     /// <summary>
+    /// Retrieves the list of podcasts followed by a specific user
+    /// </summary>
+    [HttpGet("/api/v1/users/{userId:guid}/saved-podcasts")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResponse<List<PodcastResult>>), 200)]
+    public async Task<IActionResult> GetByUser(Guid userId, CancellationToken ct)
+    {
+        var result = await _queries.Send<GetFollowedPodcastsQuery, List<PodcastResult>>(
+            new GetFollowedPodcastsQuery(userId),
+            ct);
+
+        return Ok(result.ToApiResponse());
+    }
+
+    /// <summary>
     /// Follows a podcast for the current user
     /// </summary>
     [HttpPost("{podcastId:guid}")]

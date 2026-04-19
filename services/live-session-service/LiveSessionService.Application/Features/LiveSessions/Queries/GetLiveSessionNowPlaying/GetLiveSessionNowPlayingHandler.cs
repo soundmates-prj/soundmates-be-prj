@@ -68,6 +68,7 @@ public sealed class GetLiveSessionNowPlayingHandler
             UniqueListeners   = data.Listeners?.Unique ?? 0,
             CurrentTrack      = data.NowPlaying != null ? await MapTrackAsync(data.NowPlaying, cancellationToken) : null,
             PlayingNext       = data.PlayingNext != null ? await MapTrackAsync(data.PlayingNext, cancellationToken) : null,
+            UpcomingQueue     = await MapQueueAsync(session.AzuraCastStation.ExternalStationId, cancellationToken),
             SongHistory       = data.SongHistory?
                 .Select(MapHistoryTrack)
                 .ToList() ?? []
@@ -134,6 +135,27 @@ public sealed class GetLiveSessionNowPlayingHandler
             Remaining = track.Remaining,
             IsRequest = track.IsRequest
         };
+    }
+
+    private async Task<List<NowPlayingTrackResult>> MapQueueAsync(int externalStationId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var queueData = await _azuraCastClient.GetUpcomingQueueAsync(externalStationId, cancellationToken);
+            if (queueData == null || queueData.Count == 0) return [];
+
+            var mapped = new List<NowPlayingTrackResult>();
+            foreach (var q in queueData)
+            {
+                mapped.Add(await MapTrackAsync(q, cancellationToken));
+            }
+            return mapped;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to fetch upcoming queue for station {ExternalId}", externalStationId);
+            return [];
+        }
     }
 
     private static NowPlayingTrackResult MapHistoryTrack(AzuraCastSongHistoryData track)

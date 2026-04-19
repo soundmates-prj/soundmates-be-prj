@@ -195,6 +195,52 @@ public static class DataSeeder
             });
         }
 
+        if (!await context.Themes.AnyAsync(t => t.Name == "Sunset Balcony Theme"))
+        {
+            context.Themes.Add(new Theme
+            {
+                Id = Guid.NewGuid(),
+                Name = "Sunset Balcony Theme",
+                Mode = "dark",
+                IsActive = true,
+                PrimaryColor = "#FF8A65",
+                SecondaryColor = "#FFB74D",
+                BackgroundColor = "#2A233C",
+                TextColor = "#FFE0B2",
+                Mood = "sunset",
+                FontFamily = "'Poppins', 'Nunito', sans-serif",
+                GradientBackground = "linear-gradient(135deg, #2A233C 0%, #4A3B52 60%, #FF8A65 100%)",
+                PlayerColor = "#FF5252",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                ConfigJson = System.Text.Json.JsonDocument.Parse("""
+                {
+                    "borderRadius": "12px",
+                    "boxShadow": "0 8px 32px rgba(255, 138, 101, 0.25)",
+                    "backgroundImage": "https://i.postimg.cc/ZR0F56kY/bcf4f37fcab5a44ddf8c2b4cb6279e84.jpg"
+                }
+                """).RootElement
+            });
+        }
+        else
+        {
+            var existing = await context.Themes.FirstAsync(t => t.Name == "Sunset Balcony Theme");
+            existing.PrimaryColor = "#FF8A65";
+            existing.SecondaryColor = "#FFB74D";
+            existing.BackgroundColor = "#2A233C";
+            existing.TextColor = "#FFE0B2";
+            existing.GradientBackground = "linear-gradient(135deg, #2A233C 0%, #4A3B52 60%, #FF8A65 100%)";
+            existing.PlayerColor = "#FF5252";
+            existing.ConfigJson = System.Text.Json.JsonDocument.Parse("""
+                {
+                    "borderRadius": "12px",
+                    "boxShadow": "0 8px 32px rgba(255, 138, 101, 0.25)",
+                    "backgroundImage": "https://i.postimg.cc/ZR0F56kY/bcf4f37fcab5a44ddf8c2b4cb6279e84.jpg"
+                }
+                """).RootElement;
+        }
+
+
         await context.SaveChangesAsync();
 
         // ── ALWAYS patch existing plan limits in case they were created before the VoiceClone migration ──

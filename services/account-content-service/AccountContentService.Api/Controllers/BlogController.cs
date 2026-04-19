@@ -285,7 +285,7 @@ public class BlogController : ControllerBase
     /// <param name="request"></param>
     /// <response code="200">Post retrieved successfully</response>
     /// <response code="404">Post not found</response>
-    [Authorize]
+    [AllowAnonymous]
     [HttpGet(ApiRoutes.Users.GetUserPosts)]
     public async Task<IActionResult> GetPostByUserId([FromRoute] Guid userId, [FromQuery]PaginationRequest request)
     {

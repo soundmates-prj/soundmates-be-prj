@@ -103,6 +103,41 @@ namespace AccountContentService.Infrastructure.Repositories
         }
 
         // =========================
+        // GET PUBLISHED POSTS BY USER
+        // =========================
+        public async Task<PaginationResult<BlogPost>> GetPublishedByUserIdAsync(
+            Guid userId,
+            int pageSize,
+            int page,
+            CancellationToken cancellationToken)
+        {
+            var query = _context.BlogPosts
+                .Include(x => x.Comments)
+                .Include(x => x.Reactions)
+                .AsNoTracking()
+                .Where(x => x.UserId == userId &&
+                           (x.Status.ToLower() == PostStatus.Published.ToString().ToLower()
+                            || x.Status.ToLower() == PostStatus.Edited.ToString().ToLower())
+                            && x.PrivacyScope.ToLower() == "public");
+
+            var totalCount = await query.CountAsync(cancellationToken);
+
+            var posts = await query
+                .OrderByDescending(x => x.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+
+            return new PaginationResult<BlogPost>
+            {
+                Items = posts,
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize
+            };
+        }
+
+        // =========================
         // QUERY BUILDER
         // =========================
         private IQueryable<BlogPost> BuildQuery(

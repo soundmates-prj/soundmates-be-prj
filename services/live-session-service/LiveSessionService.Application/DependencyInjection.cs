@@ -17,6 +17,9 @@ using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSessio
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetSessionSchedules;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetScheduleById;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetStaffDashboardOverview;
+using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSessionQueue;
+using LiveSessionService.Application.Features.LiveSessions.Commands.RestartBroadcast;
+using LiveSessionService.Application.Features.LiveSessions.Commands.SkipTrack;
 using LiveSessionService.Application.Features.LiveSessions.Queries.SearchSchedules;
 using LiveSessionService.Application.Features.Music.Commands.BulkUploadMusic;
 using LiveSessionService.Application.Features.Music.Commands.DeleteMedia;
@@ -61,12 +64,6 @@ using LiveSessionService.Application.Features.Podcasts.Commands.UpdatePodcast;
 using LiveSessionService.Application.Features.Podcasts.Commands.UpdatePodcastEpisode;
 using LiveSessionService.Application.Features.Podcasts.Commands.FollowPodcast;
 using LiveSessionService.Application.Features.Podcasts.Commands.UnfollowPodcast;
-using LiveSessionService.Application.Features.PodcastRequests.Commands.CreatePodcastRequest;
-using LiveSessionService.Application.Features.PodcastRequests.Commands.ReviewPodcastRequest;
-using LiveSessionService.Application.Features.PodcastRequests.Commands.CancelPodcastRequest;
-using LiveSessionService.Application.Features.PodcastRequests.Queries.GetPodcastRequests;
-using LiveSessionService.Application.Features.PodcastRequests.Queries.GetMyPodcastRequests;
-using LiveSessionService.Application.Features.PodcastRequests.Queries.GetPodcastRequestById;
 using LiveSessionService.Application.Features.Podcasts.Queries.GetPodcast;
 using LiveSessionService.Application.Features.Podcasts.Queries.GetPodcastEpisodeById;
 using LiveSessionService.Application.Features.Podcasts.Queries.GetPodcastEpisodes;
@@ -116,6 +113,8 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<PauseSessionCommand, LiveSessionResult>, PauseSessionHandler>();
         services.AddScoped<ICommandHandler<ResumeSessionCommand, LiveSessionResult>, ResumeSessionHandler>();
         services.AddScoped<ICommandHandler<StopSessionCommand, LiveSessionResult>, StopSessionHandler>();
+        services.AddScoped<ICommandHandler<SkipSessionTrackCommand, bool>, SkipSessionTrackHandler>();
+        services.AddScoped<ICommandHandler<RestartSessionBroadcastCommand, bool>, RestartSessionBroadcastHandler>();
 
         // Register NowPlaying Query Handlers
         services.AddScoped<IQueryHandler<GetNowPlayingQuery, NowPlayingResult>, GetNowPlayingHandler>();
@@ -154,6 +153,7 @@ public static class DependencyInjection
         // Register LiveSession Query Handlers
         services.AddScoped<IQueryHandler<GetLiveSessionQuery, LiveSessionResult>, GetLiveSessionHandler>();
         services.AddScoped<IQueryHandler<GetLiveSessionNowPlayingQuery, StationNowPlayingResult>, GetLiveSessionNowPlayingHandler>();
+        services.AddScoped<IQueryHandler<GetLiveSessionQueueQuery, LiveSessionQueueResult>, GetLiveSessionQueueHandler>();
         services.AddScoped<IQueryHandler<GetAllLiveSessionsQuery, PagedResult<LiveSessionResult>>, GetAllLiveSessionsHandler>();
         services.AddScoped<IQueryHandler<GetSessionSchedulesQuery, List<SessionScheduleResult>>, GetSessionSchedulesHandler>();
         services.AddScoped<IQueryHandler<GetAllSessionSchedulesQuery, List<SessionScheduleResult>>, GetAllSessionSchedulesHandler>();

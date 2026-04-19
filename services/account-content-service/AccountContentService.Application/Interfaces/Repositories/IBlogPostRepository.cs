@@ -29,6 +29,7 @@ namespace AccountContentService.Application.Interfaces.Repositories
         Task<BlogPost> GetByIdAsync(Guid id, CancellationToken cancellationToken);
         Task<PostStatsResponse> GetPostStatsAsync(Guid postId);
         Task<PaginationResult<BlogPost>> GetByUserIdAsync(Guid userId, int pageSize, int page, CancellationToken cancellationToken);
+        Task<PaginationResult<BlogPost>> GetPublishedByUserIdAsync(Guid userId, int pageSize, int page, CancellationToken cancellationToken);
         Task<BlogPost> GetPublishByIdAsync(Guid id, CancellationToken cancellationToken);
         Task<PaginationResult<TrendingPostResponse>> GetTrendingPostsAsync(GetTrendingPostsQuery request, CancellationToken cancellationToken);
         Task<PaginationResult<PopularPostsResponse>> GetPopularPostsAsync(GetPopularPostsQuery request, CancellationToken cancellationToken);
