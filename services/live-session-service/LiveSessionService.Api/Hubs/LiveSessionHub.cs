@@ -39,17 +39,21 @@ public sealed class LiveSessionHub : Hub
 
     private async Task<int> CountConnectedListenersAsync(Guid sessionId, CancellationToken cancellationToken)
     {
-        var connected = await _dbContext.SessionListeners
-            .Where(x => x.LiveSessionId == sessionId && x.IsConnected)
-            .Select(x => new { x.UserId, x.AnonymousIdentifier, x.Id })
-            .ToListAsync(cancellationToken);
+        var hostUserId = await _dbContext.LiveSessions
+            .Where(s => s.Id == sessionId)
+            .Select(s => s.HostUserId)
+            .FirstOrDefaultAsync(cancellationToken);
 
-        return connected
-            .Select(x => x.UserId.HasValue
-                ? $"u:{x.UserId.Value}"
-                : $"a:{x.AnonymousIdentifier ?? x.Id.ToString()}")
+        var currentListeners = await _dbContext.SessionListeners
+            .Where(x => x.LiveSessionId == sessionId 
+                     && x.IsConnected
+                     && x.UserId.HasValue
+                     && x.UserId.Value != hostUserId)
+            .Select(x => x.UserId)
             .Distinct()
-            .Count();
+            .CountAsync(cancellationToken);
+
+        return currentListeners;
     }
 
     public async Task JoinSession(Guid sessionId, Guid? userId = null, string? anonymousIdentifier = null)
