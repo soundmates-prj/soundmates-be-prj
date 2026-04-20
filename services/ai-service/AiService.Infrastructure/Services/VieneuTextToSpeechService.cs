@@ -164,11 +164,17 @@ public class VieneuTextToSpeechService : ITextToSpeechService
         if (audioBytes == null || audioBytes.Length == 0)
             return Result<bool>.Failure("audio file is empty", (int)ApiStatusCode.HB40001);
 
-        var success = await _ttsClient.CloneVoiceAsync(voiceId, refText, audioBytes, fileName, cancellationToken);
-
-        return success
-            ? Result<bool>.Success(true)
-            : Result<bool>.Failure("TTS server failed to clone voice", (int)ApiStatusCode.HB50001);
+        try
+        {
+            var success = await _ttsClient.CloneVoiceAsync(voiceId, refText, audioBytes, fileName, cancellationToken);
+            return success
+                ? Result<bool>.Success(true)
+                : Result<bool>.Failure("TTS server failed to clone voice", (int)ApiStatusCode.HB50001);
+        }
+        catch (Exception ex)
+        {
+            return Result<bool>.Failure(ex.Message, (int)ApiStatusCode.HB40001);
+        }
     }
 
 
@@ -197,11 +203,11 @@ public class VieneuTextToSpeechService : ITextToSpeechService
             return Result<bool>.Failure($"TTS returned invalid duration ({(response.DurationSeconds.HasValue ? response.DurationSeconds.Value : 0)}s)", (int)ApiStatusCode.HB50001);
 
         var compactLength = CountNonWhitespaceChars(sourceText);
-        if (compactLength >= 40)
+        if (compactLength >= 20)
         {
-            // TEMP: relaxed threshold to allow short audio for testing
-            var minimumDuration = (int)Math.Ceiling(compactLength / 25d);
-            if (response.DurationSeconds.Value < minimumDuration)
+            // Note: Keep in sync with AudioService.cs
+            var minimumDuration = (int)Math.Floor(compactLength / 35d);
+            if (minimumDuration > 2 && response.DurationSeconds.Value < minimumDuration)
                 return Result<bool>.Failure(
                     $"TTS returned suspiciously short duration ({response.DurationSeconds.Value}s for {compactLength} chars)",
                     (int)ApiStatusCode.HB50001);

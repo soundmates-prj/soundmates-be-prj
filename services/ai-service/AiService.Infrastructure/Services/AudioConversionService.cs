@@ -4,15 +4,9 @@ using System.Text;
 using Microsoft.Extensions.Logging;
 using NAudio.Wave;
 
-namespace AiService.Infrastructure.Services;
+using AiService.Application.Interfaces;
 
-public interface IAudioConversionService
-{
-    Task<(bool IsSuccess, byte[]? Mp3Bytes, string? ErrorMessage)> ConvertToMp3Async(
-        byte[] inputBytes,
-        string inputExtension,
-        CancellationToken cancellationToken = default);
-}
+namespace AiService.Infrastructure.Services;
 
 public sealed class AudioConversionService : IAudioConversionService
 {
@@ -93,40 +87,94 @@ public sealed class AudioConversionService : IAudioConversionService
     {
         try
         {
-            // -y: overwrite output without asking
-            // -codec:a libmp3lame: use LAME MP3 encoder
-            // -q:a 2: quality level (0-9, lower = better quality, 2 ≈ 192-256kbps)
             var args = $"-y -i \"{inputPath}\" -codec:a libmp3lame -q:a 2 \"{outputPath}\"";
-
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = "ffmpeg",
-                Arguments = args,
-                UseShellExecute = false,
-                RedirectStandardError = true,
-                RedirectStandardOutput = true,
-                CreateNoWindow = true
-            };
-
-            using var process = Process.Start(startInfo);
-            if (process is null)
-                return (false, "Could not start FFmpeg process");
-
-            await process.WaitForExitAsync(cancellationToken);
-
-            if (process.ExitCode == 0 && File.Exists(outputPath))
-                return (true, null);
-
-            var error = await process.StandardError.ReadToEndAsync(cancellationToken);
-            return (false, string.IsNullOrWhiteSpace(error) ? $"FFmpeg exited with code {process.ExitCode}" : error.Trim());
-        }
-        catch (FileNotFoundException)
-        {
-            return (false, "FFmpeg not found in PATH. Install FFmpeg to enable MP3 conversion.");
+            return await RunFFmpegProcessAsync(args, cancellationToken);
         }
         catch (Exception ex)
         {
             return (false, ex.Message);
         }
+    }
+
+    public async Task<(bool IsSuccess, byte[]? MixedBytes, string? ErrorMessage)> MixWithBackgroundMusicAsync(
+        byte[] speechBytes,
+        string speechExtension,
+        string bgmUrlOrPath,
+        CancellationToken cancellationToken = default)
+    {
+        var tempSpeech = Path.Combine(Path.GetTempPath(), $"tts_speech_{Guid.NewGuid():N}{speechExtension}");
+        var tempBgm = Path.Combine(Path.GetTempPath(), $"tts_bgm_{Guid.NewGuid():N}.mp3");
+        var tempOut = Path.Combine(Path.GetTempPath(), $"tts_mixed_{Guid.NewGuid():N}.mp3");
+
+        try
+        {
+            await File.WriteAllBytesAsync(tempSpeech, speechBytes, cancellationToken);
+
+            // Fetch BGM if it's a URL, otherwise assume local file
+            if (bgmUrlOrPath.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                bgmUrlOrPath.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                using var http = new System.Net.Http.HttpClient();
+                var bgmBytes = await http.GetByteArrayAsync(bgmUrlOrPath, cancellationToken);
+                await File.WriteAllBytesAsync(tempBgm, bgmBytes, cancellationToken);
+            }
+            else
+            {
+                if (!File.Exists(bgmUrlOrPath))
+                    return (false, null, $"Background music file not found: {bgmUrlOrPath}");
+                File.Copy(bgmUrlOrPath, tempBgm);
+            }
+
+            // FFmpeg Ducking Mix:
+            // [1:a]volume=0.2[bgm]: lowers BGM volume
+            // amix=inputs=2:duration=first: mixes speech and lowered BGM, duration matches the speech length
+            var filter = "\"[1:a]volume=0.3[bgm];[0:a][bgm]amix=inputs=2:duration=first:dropout_transition=2:weights=1 0.4[out]\"";
+            var args = $"-y -i \"{tempSpeech}\" -i \"{tempBgm}\" -filter_complex {filter} -map \"[out]\" -codec:a libmp3lame -q:a 2 \"{tempOut}\"";
+
+            var ffmpegResult = await RunFFmpegProcessAsync(args, cancellationToken);
+            if (ffmpegResult.Success && File.Exists(tempOut))
+            {
+                var mixedBytes = await File.ReadAllBytesAsync(tempOut, cancellationToken);
+                return (true, mixedBytes, null);
+            }
+
+            return (false, null, ffmpegResult.ErrorMessage ?? "FFmpeg mixing failed silently");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Background music mixing failed");
+            return (false, null, ex.Message);
+        }
+        finally
+        {
+            try { if (File.Exists(tempSpeech)) File.Delete(tempSpeech); } catch { }
+            try { if (File.Exists(tempBgm)) File.Delete(tempBgm); } catch { }
+            try { if (File.Exists(tempOut)) File.Delete(tempOut); } catch { }
+        }
+    }
+
+    private async Task<(bool Success, string? ErrorMessage)> RunFFmpegProcessAsync(string args, CancellationToken cancellationToken)
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "ffmpeg",
+            Arguments = args,
+            UseShellExecute = false,
+            RedirectStandardError = true,
+            RedirectStandardOutput = true,
+            CreateNoWindow = true
+        };
+
+        using var process = Process.Start(startInfo);
+        if (process is null)
+            return (false, "Could not start FFmpeg process");
+
+        await process.WaitForExitAsync(cancellationToken);
+
+        if (process.ExitCode == 0)
+            return (true, null);
+
+        var error = await process.StandardError.ReadToEndAsync(cancellationToken);
+        return (false, string.IsNullOrWhiteSpace(error) ? $"FFmpeg exited with code {process.ExitCode}" : error.Trim());
     }
 }

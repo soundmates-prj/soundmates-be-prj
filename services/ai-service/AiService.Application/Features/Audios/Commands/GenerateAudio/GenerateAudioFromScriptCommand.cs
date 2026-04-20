@@ -8,5 +8,6 @@ public record GenerateAudioFromScriptCommand(
     Guid ScriptId,
     string VoiceCode,
     decimal? Speed,
-    decimal? Pitch) : ICommand<ScriptAudio>;
+    decimal? Pitch,
+    string? BgmUrl) : ICommand<ScriptAudio>;
 

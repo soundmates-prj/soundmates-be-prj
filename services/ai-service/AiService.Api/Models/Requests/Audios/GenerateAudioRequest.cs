@@ -11,5 +11,8 @@ public class GenerateAudioRequest
     public decimal? Speed { get; set; }
 
     public decimal? Pitch { get; set; }
+
+    // Optional BGM to duck and mix (URL or pre-defined local path)
+    public string? BgmUrl { get; set; }
 }
 
