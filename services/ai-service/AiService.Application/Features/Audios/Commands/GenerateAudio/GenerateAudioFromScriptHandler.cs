@@ -21,7 +21,8 @@ public class GenerateAudioFromScriptHandler : ICommandHandler<GenerateAudioFromS
                 ScriptId: command.ScriptId,
                 VoiceCode: command.VoiceCode,
                 Speed: command.Speed,
-                Pitch: command.Pitch),
+                Pitch: command.Pitch,
+                BgmUrl: command.BgmUrl),
             cancellationToken);
 }
 

@@ -56,7 +56,8 @@ public class PodcastPipelineService : IPodcastPipelineService
                 ScriptId: script.ScriptId,
                 VoiceCode: request.VoiceCode,
                 Speed: request.Speed,
-                Pitch: request.Pitch
+                Pitch: request.Pitch,
+                BgmUrl: null
             ), ct);
 
         if (!audioResult.IsSuccess)

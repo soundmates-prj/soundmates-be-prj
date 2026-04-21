@@ -38,7 +38,7 @@ public class AudiosController : ControllerBase
             return Unauthorized(ApiResponse<string>.Error(ApiStatusCode.HB40101, "Invalid token"));
 
         var result = await _commands.Send<GenerateAudioFromScriptCommand, Domain.Entities.ScriptAudio>(
-            new GenerateAudioFromScriptCommand(userId, scriptId, request.VoiceCode, request.Speed, request.Pitch),
+            new GenerateAudioFromScriptCommand(userId, scriptId, request.VoiceCode, request.Speed, request.Pitch, request.BgmUrl),
             cancellationToken);
 
         return result.IsSuccess

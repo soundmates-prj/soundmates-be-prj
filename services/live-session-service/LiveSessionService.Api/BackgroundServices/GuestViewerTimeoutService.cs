@@ -109,15 +109,19 @@ public sealed class GuestViewerTimeoutService : BackgroundService
         var affectedSessions = expiredGuests.Select(x => x.LiveSessionId).Distinct();
         foreach (var sessionId in affectedSessions)
         {
-            var currentListeners = (await dbContext.SessionListeners
-                .Where(x => x.LiveSessionId == sessionId && x.IsConnected)
-                .Select(x => new { x.UserId, x.AnonymousIdentifier, x.Id })
-                .ToListAsync(cancellationToken))
-                .Select(x => x.UserId.HasValue
-                    ? $"u:{x.UserId.Value}"
-                    : $"a:{x.AnonymousIdentifier ?? x.Id.ToString()}")
+            var hostUserId = await dbContext.LiveSessions
+                .Where(s => s.Id == sessionId)
+                .Select(s => s.HostUserId)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            var currentListeners = await dbContext.SessionListeners
+                .Where(x => x.LiveSessionId == sessionId 
+                         && x.IsConnected
+                         && x.UserId.HasValue
+                         && x.UserId.Value != hostUserId)
+                .Select(x => x.UserId)
                 .Distinct()
-                .Count();
+                .CountAsync(cancellationToken);
 
             await hubContext.Clients
                 .Group($"live-session-{sessionId}")

@@ -183,13 +183,27 @@ public class VieNeuTtsClient : ITtsClient
 
         using var response = await _http.PostAsync(uri, content, cancellationToken);
         
+        var responseString = await response.Content.ReadAsStringAsync(cancellationToken);
+        
         if (!response.IsSuccessStatusCode)
         {
-            var error = await response.Content.ReadAsStringAsync(cancellationToken);
-            // I'll need to fix the logger or use a different one if logger is not defined
-            // Looking at the constructor, there is no logger, so I'll skip logging or use Console
-            Console.WriteLine($"VieNeuTTS clone_voice failed: {response.StatusCode} {error}");
+            Console.WriteLine($"VieNeuTTS clone_voice failed: {response.StatusCode} {responseString}");
             return false;
+        }
+
+        try
+        {
+            using var jsonDoc = System.Text.Json.JsonDocument.Parse(responseString);
+            var root = jsonDoc.RootElement;
+            if (root.TryGetProperty("status", out var statusProp) && statusProp.GetString() == "error")
+            {
+                var message = root.TryGetProperty("message", out var msgProp) ? msgProp.GetString() : "Unknown error from TTS server.";
+                throw new InvalidOperationException(message);
+            }
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            // If it's not JSON, ignore and assume success
         }
 
         return true;
