@@ -17,11 +17,15 @@ public class StationPlaylist
     public PlaylistType Type { get; set; }
     
     public PlaylistSource Source { get; set; }
+
+    public SongPlaybackOrder SongPlaybackOrder { get; set; } = SongPlaybackOrder.Sequential;
     
     public int PlaylistOrder { get; set; }
     
     public bool IsEnabled { get; set; } = true;
-    
+
+    public string? Description  { get; set; }
+
     public bool IncludeInRequests { get; set; }
     
     public bool IncludeInOnDemand { get; set; }

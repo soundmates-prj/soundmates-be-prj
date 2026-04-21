@@ -52,9 +52,10 @@ public sealed class GetPlaylistsByStationHandler : IQueryHandler<GetPlaylistsByS
                 Id = p.Id,
                 StationId = p.AzuraCastStationId,
                 PlaylistName = p.PlaylistName,
-                Description = null,
+                Description = p.Description,
                 IsAutoPlay = p.Type == Domain.Enums.PlaylistType.Default,
                 IncludeInRequests = p.IncludeInRequests,
+                SongPlaybackOrder = p.SongPlaybackOrder.ToString(),
                 TotalTracks = p.Media?.Count ?? 0,
                 TotalDuration = p.Media?.Sum(m => m.DurationSeconds) ?? 0,
                 CreatedAt = p.CreatedAt

@@ -139,6 +139,7 @@ public sealed class AzuraCastClient : IAzuraCastClient
             {
                 Id = p.Id,
                 Name = p.Name ?? "Unnamed",
+                Description = p.Description,
                 Type = p.Type,
                 Source = p.Source,
                 Order = p.Order,
@@ -247,16 +248,19 @@ public sealed class AzuraCastClient : IAzuraCastClient
     public async Task<AzuraCastPlaylistData?> CreatePlaylistAsync(
         int stationId,
         string name,
+        string? description,
         bool isAutoPlay,
         bool includeInRequests,
+        string songPlaybackOrder,
         CancellationToken cancellationToken = default)
     {
         var body = new
         {
             name,
+            description,
             type = "default",
             source = "songs",
-            order = isAutoPlay ? "shuffle" : "sequential",
+            order = NormalizePlaylistOrder(songPlaybackOrder),
             is_enabled = true,
             include_in_requests = includeInRequests,
             include_in_on_demand = false,
@@ -276,25 +280,33 @@ public sealed class AzuraCastClient : IAzuraCastClient
             "Created AzuraCast playlist '{Name}' (id: {Id}) for station {StationId}",
             result.Name, result.Id, stationId);
 
-        return new AzuraCastPlaylistData { Id = result.Id, Name = result.Name ?? name };
+        return new AzuraCastPlaylistData
+        {
+            Id = result.Id,
+            Name = result.Name ?? name,
+            Description = result.Description ?? description
+        };
     }
 
     public async Task<AzuraCastPlaylistData?> UpdatePlaylistAsync(
         int stationId,
         int playlistId,
         string name,
+        string? description,
         bool isAutoPlay,
         bool includeInRequests,
         bool includeInOnDemand,
         bool isEnabled,
+        string songPlaybackOrder,
         CancellationToken cancellationToken = default)
     {
         var body = new
         {
             name,
+            description,
             type = "default",
             source = "songs",
-            order = isAutoPlay ? "shuffle" : "sequential",
+            order = NormalizePlaylistOrder(songPlaybackOrder),
             is_enabled = isEnabled,
             include_in_requests = includeInRequests,
             include_in_on_demand = includeInOnDemand
@@ -314,7 +326,12 @@ public sealed class AzuraCastClient : IAzuraCastClient
             "Updated AzuraCast playlist '{Name}' (id: {Id}) for station {StationId}",
             result.Name, result.Id, stationId);
 
-        return new AzuraCastPlaylistData { Id = result.Id, Name = result.Name ?? name };
+        return new AzuraCastPlaylistData
+        {
+            Id = result.Id,
+            Name = result.Name ?? name,
+            Description = result.Description ?? description
+        };
     }
 
     public async Task DeletePlaylistAsync(
@@ -667,6 +684,19 @@ public sealed class AzuraCastClient : IAzuraCastClient
                        ?? response.Content.Headers.ContentDisposition?.FileName;
 
         return (bytes, contentType, fileName);
+    }
+
+    private static string NormalizePlaylistOrder(string? songPlaybackOrder)
+    {
+        return songPlaybackOrder?.Trim().ToLowerInvariant() switch
+        {
+            "shuffled" => "shuffle",
+            "shuffle" => "shuffle",
+            "random" => "random",
+            "sequential" => "sequential",
+            "sequence" => "sequential",
+            _ => "sequential"
+        };
     }
 
     // ---------------------------------------------------------------------------
