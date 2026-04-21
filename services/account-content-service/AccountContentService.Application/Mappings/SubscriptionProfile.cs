@@ -23,7 +23,9 @@ namespace AccountContentService.Application.Mappings
                 .ForMember(dest => dest.TtsMinuteLimit,
                     opt => opt.MapFrom(src => src.Plan != null ? src.Plan.TtsMinuteLimit : 0))
                 .ForMember(dest => dest.PodcastRequestLimit,
-                    opt => opt.MapFrom(src => src.Plan != null ? src.Plan.PodcastRequestLimit : 0));
+                    opt => opt.MapFrom(src => src.Plan != null ? src.Plan.PodcastRequestLimit : 0))
+                .ForMember(dest => dest.RequestLimit,
+                    opt => opt.MapFrom(src => src.Plan != null ? src.Plan.RequestLimit : 0));
             CreateMap<CreatePlanCommand, SubscriptionPlan>();
             CreateMap<CreateSubscriptionCommand, Subscription>();
             CreateMap<UpdatePlanCommand, SubscriptionPlan>()

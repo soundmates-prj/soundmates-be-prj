@@ -501,11 +501,14 @@ public class LiveSessionController : ControllerBase
                 (int)ErrorCode.Unauthorized));
         }
 
+        var userToken = Request.Headers.Authorization.ToString() ?? string.Empty;
+
         var command = new CreateSongRequestCommand(
             id,
             request.MediaFileId,
             requestedByUserId,
-            request.Message);
+            request.Message,
+            userToken);
 
         var result = await _commands.Send<CreateSongRequestCommand, SongRequestResult>(command, ct);
 
@@ -609,6 +612,37 @@ public class LiveSessionController : ControllerBase
                 ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
                 _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
             };
+        }
+
+        return Ok(result.ToApiResponse());
+    }
+
+    /// <summary>
+    /// Get the current user's song request limit and usage for the day
+    /// </summary>
+    [HttpGet("song-requests/my-limits")]
+    [ProducesResponseType(typeof(ApiResponse<Application.Features.SongRequests.Queries.GetMySongRequestLimits.MySongRequestLimitsResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    public async Task<IActionResult> GetMySongRequestLimits(CancellationToken ct)
+    {
+        if (!TryGetCurrentUserId(out var currentUserId))
+        {
+            return Unauthorized(ApiResponse<object>.FailureResponse(
+                "Invalid or missing user token",
+                (int)ErrorCode.Unauthorized));
+        }
+
+        var userToken = Request.Headers.Authorization.ToString() ?? string.Empty;
+
+        var query = new Application.Features.SongRequests.Queries.GetMySongRequestLimits.GetMySongRequestLimitsQuery(
+            currentUserId,
+            userToken);
+
+        var result = await _queries.Send<Application.Features.SongRequests.Queries.GetMySongRequestLimits.GetMySongRequestLimitsQuery, Application.Features.SongRequests.Queries.GetMySongRequestLimits.MySongRequestLimitsResult>(query, ct);
+
+        if (!result.IsSuccess)
+        {
+            return StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse());
         }
 
         return Ok(result.ToApiResponse());

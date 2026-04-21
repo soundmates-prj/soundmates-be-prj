@@ -146,6 +146,15 @@ public static class DependencyInjection
         });
         services.AddScoped<IAzuraCastPodcastService, AzuraCastPodcastService>();
 
+        // Internal Services
+        // The URL should point to the internal Docker container name and port used by account-content-service
+        var accountContentBaseUrl = Environment.GetEnvironmentVariable("ACCOUNT_CONTENT_URL") ?? "http://account-content-service:8080/";
+        services.AddHttpClient<IAccountContentClient, AccountContentServiceClient>(client =>
+        {
+            client.BaseAddress = new Uri(accountContentBaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+
         // Messaging - RabbitMQ
         services.AddSingleton<IMessageBusPublisher, RabbitMqPublisher>();
         services.AddHostedService<OutboxPublisherBackgroundService>();

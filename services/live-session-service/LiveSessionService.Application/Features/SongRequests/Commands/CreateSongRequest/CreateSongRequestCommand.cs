@@ -7,4 +7,5 @@ public sealed record CreateSongRequestCommand(
     Guid LiveSessionId,
     Guid MediaFileId,
     Guid RequestedByUserId,
-    string? Message) : ICommand<SongRequestResult>;
+    string? Message,
+    string UserToken = "") : ICommand<SongRequestResult>;

@@ -1,4 +1,4 @@
-﻿using AccountContentService.Domain.Entities;
+using AccountContentService.Domain.Entities;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -65,5 +65,7 @@ namespace AccountContentService.Application.DTOs
         /// So request podcast moi ngay
         /// </summary>
         public int PodcastRequestLimit { get; set; }
+
+        public int RequestLimit { get; set; }
     }
 }

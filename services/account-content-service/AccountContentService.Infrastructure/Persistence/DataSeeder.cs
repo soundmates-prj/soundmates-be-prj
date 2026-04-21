@@ -247,19 +247,25 @@ public static class DataSeeder
         // This handles the case where VoiceModelLimit/TtsMinuteLimit/PodcastRequestLimit defaulted to 0
         // because the columns were added after the plan rows were already inserted.
         var premiumDb = await context.SubscriptionPlans.FirstOrDefaultAsync(p => p.PlanName == "Premium");
-        if (premiumDb != null && premiumDb.VoiceModelLimit == 0 && premiumDb.TtsMinuteLimit == 0)
+        if (premiumDb != null)
         {
-            premiumDb.VoiceModelLimit = 1;
-            premiumDb.TtsMinuteLimit = 30;
-            premiumDb.PodcastRequestLimit = 2;
+            premiumDb.Price = 159000;
+            premiumDb.RequestLimit = 15;
+            premiumDb.VoiceModelLimit = 3;
+            premiumDb.TtsMinuteLimit = 120;
+            premiumDb.PodcastRequestLimit = 5;
+            premiumDb.Description = "Trải nghiệm cao cấp nhất, không giới hạn AI giọng đọc, 120 phút TTS/tháng, ưu tiên cao nhất, yêu cầu nhạc 15 lần/ngày.";
         }
 
         var eliteDb = await context.SubscriptionPlans.FirstOrDefaultAsync(p => p.PlanName == "Elite");
-        if (eliteDb != null && eliteDb.VoiceModelLimit == 0 && eliteDb.TtsMinuteLimit == 0)
+        if (eliteDb != null)
         {
-            eliteDb.VoiceModelLimit = 3;
-            eliteDb.TtsMinuteLimit = 120;
-            eliteDb.PodcastRequestLimit = 5;
+            eliteDb.Price = 59000;
+            eliteDb.RequestLimit = 5;
+            eliteDb.VoiceModelLimit = 0;
+            eliteDb.TtsMinuteLimit = 0;
+            eliteDb.PodcastRequestLimit = 2;
+            eliteDb.Description = "Trải nghiệm nghe nhạc chất lượng cao, yêu cầu nhạc 5 lần/ngày. Không hỗ trợ Voice Clone.";
         }
 
         await context.SaveChangesAsync();
@@ -273,7 +279,7 @@ public static class DataSeeder
             PlanName = "Free",
             Price = 0,
             DurationDays = 30,
-            RequestLimit = 5,
+            RequestLimit = 0,
             VoiceModelLimit = 0,
             TtsMinuteLimit = 0,
             PodcastRequestLimit = 0,
@@ -287,13 +293,13 @@ public static class DataSeeder
         {
             Id = Guid.NewGuid(),
             PlanName = "Premium",
-            Price = 59000, // VND
+            Price = 159000, // VND
             DurationDays = 30,
-            RequestLimit = 20,
-            VoiceModelLimit = 1,
-            TtsMinuteLimit = 30,
-            PodcastRequestLimit = 2,
-            Description = "Nâng cấp giới hạn và mở khóa AI giọng đọc., giới hạn 30 phút TTS/tháng.",
+            RequestLimit = 15,
+            VoiceModelLimit = 3,
+            TtsMinuteLimit = 120,
+            PodcastRequestLimit = 5,
+            Description = "Trải nghiệm cao cấp nhất, không giới hạn AI giọng đọc, 120 phút TTS/tháng, ưu tiên cao nhất, yêu cầu nhạc 15 lần/ngày.",
             IsActive = true,
             CreatedAt = now,
             UpdatedAt = now
@@ -303,13 +309,13 @@ public static class DataSeeder
         {
             Id = Guid.NewGuid(),
             PlanName = "Elite",
-            Price = 159000, // VND
+            Price = 59000, // VND
             DurationDays = 30,
-            RequestLimit = 15,
-            VoiceModelLimit = 3,
-            TtsMinuteLimit = 120,
-            PodcastRequestLimit = 5,
-            Description = "Trải nghiệm không giới hạn, tạo nhiều giọng nói AI, 120 phút TTS/tháng, ưu tiên cao nhất.",
+            RequestLimit = 5,
+            VoiceModelLimit = 0,
+            TtsMinuteLimit = 0,
+            PodcastRequestLimit = 2,
+            Description = "Trải nghiệm nghe nhạc chất lượng cao, yêu cầu nhạc 5 lần/ngày. Không hỗ trợ Voice Clone.",
             IsActive = true,
             CreatedAt = now,
             UpdatedAt = now

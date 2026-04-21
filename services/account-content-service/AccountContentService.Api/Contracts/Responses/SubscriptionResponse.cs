@@ -1,4 +1,4 @@
-﻿namespace AccountContentService.Api.Contracts.Responses
+namespace AccountContentService.Api.Contracts.Responses
 {
     public class SubscriptionPlanResponse
     {
@@ -70,5 +70,7 @@
         /// So request podcast moi ngay
         /// </summary>
         public int PodcastRequestLimit { get; set; }
+
+        public int RequestLimit { get; set; }
     }
 }

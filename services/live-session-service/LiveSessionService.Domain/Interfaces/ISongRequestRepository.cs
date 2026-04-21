@@ -12,4 +12,5 @@ public interface ISongRequestRepository
         CancellationToken cancellationToken = default);
     Task AddAsync(SongRequest songRequest, CancellationToken cancellationToken = default);
     Task UpdateAsync(SongRequest songRequest, CancellationToken cancellationToken = default);
+    Task<int> CountRequestsByUserTodayAsync(Guid userId, CancellationToken cancellationToken = default);
 }
