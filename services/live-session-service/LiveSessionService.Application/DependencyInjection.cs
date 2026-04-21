@@ -80,6 +80,7 @@ using LiveSessionService.Application.Features.Results.SongRequests;
 using LiveSessionService.Application.Features.Results.Stations;
 using LiveSessionService.Application.Features.SongRequests.Commands.CreateSongRequest;
 using LiveSessionService.Application.Features.SongRequests.Commands.ReviewSongRequest;
+using LiveSessionService.Application.Features.SongRequests.Queries.GetMySongRequestLimits;
 using LiveSessionService.Application.Features.SongRequests.Queries.GetSongRequestsBySession;
 using LiveSessionService.Application.Features.Stations.Commands.CreateStation;
 using LiveSessionService.Application.Features.Stations.Commands.SyncStations;
@@ -201,6 +202,7 @@ public static class DependencyInjection
 
         // Register SongRequest Query Handlers
         services.AddScoped<IQueryHandler<GetSongRequestsBySessionQuery, List<SongRequestResult>>, GetSongRequestsBySessionHandler>();
+        services.AddScoped<IQueryHandler<GetMySongRequestLimitsQuery, MySongRequestLimitsResult>, GetMySongRequestLimitsQueryHandler>();
 
         // Register PodcastRequest Command Handlers
         services.AddScoped<ICommandHandler<CreatePodcastRequestCommand, PodcastRequestResult>, CreatePodcastRequestHandler>();

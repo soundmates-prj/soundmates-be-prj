@@ -55,4 +55,12 @@ public sealed class SongRequestRepository : ISongRequestRepository
         _context.SongRequests.Update(songRequest);
         await _context.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task<int> CountRequestsByUserTodayAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var today = DateTime.UtcNow.Date;
+        return await _context.SongRequests
+            .Where(x => x.RequestedByUserId == userId && x.RequestedAt >= today)
+            .CountAsync(cancellationToken);
+    }
 }

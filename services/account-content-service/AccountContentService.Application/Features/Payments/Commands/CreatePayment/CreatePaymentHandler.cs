@@ -1,4 +1,4 @@
-﻿using AccountContentService.Application.Exceptions;
+using AccountContentService.Application.Exceptions;
 using AccountContentService.Application.Interfaces.Repositories;
 using AccountContentService.Application.Interfaces.Services;
 using AccountContentService.Domain.Entities;
@@ -31,8 +31,17 @@ namespace AccountContentService.Application.Features.Payments.Commands.CreatePay
             var subscription = await _subscriptionRepo.GetPlanByIdAsync(request.TargetId, cancellationToken);
 
             if (existing != null)
-                throw new SubscriptionAlreadyExistsException(
-                    $"Bạn đã có gói \"{existing.Plan?.PlanName}\" đang hoạt động đến {existing.EndDate:dd/MM/yyyy}. Không thể mua thêm gói mới.");
+            {
+                if (subscription != null && subscription.Price > (existing.Plan?.Price ?? 0))
+                {
+                    // Allow upgrade
+                }
+                else
+                {
+                    throw new SubscriptionAlreadyExistsException(
+                        $"Bạn đã có gói \"{existing.Plan?.PlanName}\" đang hoạt động đến {existing.EndDate:dd/MM/yyyy}. Không thể mua thêm gói thấp hơn hoặc tương đương.");
+                }
+            }
             if (subscription == null)
                 throw new SubscriptionPlanNotFoundException(
                     $"Gói đăng ký (ID: {request.TargetId}) không tồn tại hoặc đã bị vô hiệu hóa.");
