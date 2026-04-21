@@ -6,7 +6,9 @@ namespace LiveSessionService.Application.Features.Playlists.Commands.UpdatePlayl
 public sealed record UpdatePlaylistCommand(
     Guid PlaylistId,
     string? PlaylistName,
+    string? Description,
     bool? IsAutoPlay,
     bool? IncludeInRequests,
     bool? IncludeInOnDemand,
-    bool? IsEnabled) : ICommand<PlaylistResult>;
+    bool? IsEnabled,
+    string? SongPlaybackOrder) : ICommand<PlaylistResult>;

@@ -199,6 +199,9 @@ public sealed class SyncPlaylistsHandler : ICommandHandler<SyncPlaylistsCommand,
                             // Validate and sanitize input
                             var playlistName = _validationService.SanitizeString(
                                 azuraPlaylist.Name, 200, "Unknown Playlist");
+                            var playlistDescription = string.IsNullOrWhiteSpace(azuraPlaylist.Description)
+                                ? null
+                                : _validationService.SanitizeString(azuraPlaylist.Description, 1000);
 
                             StationPlaylist playlist;
 
@@ -222,6 +225,12 @@ public sealed class SyncPlaylistsHandler : ICommandHandler<SyncPlaylistsCommand,
                                 if (existingPlaylist.PlaylistName != playlistName)
                                 {
                                     existingPlaylist.PlaylistName = playlistName;
+                                    hasChanges = true;
+                                }
+
+                                if (existingPlaylist.Description != playlistDescription)
+                                {
+                                    existingPlaylist.Description = playlistDescription;
                                     hasChanges = true;
                                 }
 
@@ -251,6 +260,15 @@ public sealed class SyncPlaylistsHandler : ICommandHandler<SyncPlaylistsCommand,
                                     hasChanges = true;
                                 }
 
+                                var newSongPlaybackOrder = MapSongPlaybackOrder(azuraPlaylist.Order);
+                                if (existingPlaylist.SongPlaybackOrder != newSongPlaybackOrder)
+                                {
+                                    existingPlaylist.SongPlaybackOrder = newSongPlaybackOrder;
+                                    hasChanges = true;
+                                }
+
+                                existingPlaylist.PlaylistOrder = MapPlaylistOrder(azuraPlaylist.Order);
+
                                 existingPlaylist.LastSyncedAt = _dateTimeProvider.UtcNow;
                                 await _playlistRepository.UpdateAsync(existingPlaylist, cts.Token);
                                 playlist = existingPlaylist;
@@ -272,8 +290,10 @@ public sealed class SyncPlaylistsHandler : ICommandHandler<SyncPlaylistsCommand,
                                     AzuraCastStationId = station.Id,
                                     ExternalPlaylistId = azuraPlaylist.Id,
                                     PlaylistName = playlistName,
+                                    Description = playlistDescription,
                                     Type = MapPlaylistType(azuraPlaylist.Type),
                                     Source = MapPlaylistSource(azuraPlaylist.Source),
+                                    SongPlaybackOrder = MapSongPlaybackOrder(azuraPlaylist.Order),
                                     PlaylistOrder = MapPlaylistOrder(azuraPlaylist.Order),
                                     IsEnabled = azuraPlaylist.IsEnabled,
                                     IncludeInRequests = azuraPlaylist.IncludeInRequests,
@@ -399,9 +419,10 @@ public sealed class SyncPlaylistsHandler : ICommandHandler<SyncPlaylistsCommand,
                                 Id = playlist.Id,
                                 StationId = playlist.AzuraCastStationId,
                                 PlaylistName = playlist.PlaylistName,
-                                Description = null,
+                                Description = playlist.Description,
                                 IsAutoPlay = playlist.Type == Domain.Enums.PlaylistType.Default,
                                 IncludeInRequests = playlist.IncludeInRequests,
+                                SongPlaybackOrder = playlist.SongPlaybackOrder.ToString(),
                                 TotalTracks = playlistMedias.Count,
                                 TotalDuration = totalDuration,
                                 CreatedAt = playlist.CreatedAt
@@ -514,6 +535,17 @@ public sealed class SyncPlaylistsHandler : ICommandHandler<SyncPlaylistsCommand,
             "songs" => Domain.Enums.PlaylistSource.Songs,
             "remote_url" => Domain.Enums.PlaylistSource.RemoteUrl,
             _ => Domain.Enums.PlaylistSource.Songs
+        };
+    }
+
+    private Domain.Enums.SongPlaybackOrder MapSongPlaybackOrder(string? order)
+    {
+        return order?.ToLowerInvariant() switch
+        {
+            "shuffle" => Domain.Enums.SongPlaybackOrder.Shuffled,
+            "random" => Domain.Enums.SongPlaybackOrder.Random,
+            "sequential" => Domain.Enums.SongPlaybackOrder.Sequential,
+            _ => Domain.Enums.SongPlaybackOrder.Sequential
         };
     }
 

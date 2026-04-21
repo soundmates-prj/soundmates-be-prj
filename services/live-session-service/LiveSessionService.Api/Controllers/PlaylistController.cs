@@ -64,7 +64,8 @@ public class PlaylistController : ControllerBase
                 request.PlaylistName,
                 request.Description,
                 request.IsAutoPlay,
-                request.IncludeInRequests),
+                request.IncludeInRequests,
+                request.SongPlaybackOrder),
             ct);
 
         if (!result.IsSuccess)
@@ -242,10 +243,12 @@ public class PlaylistController : ControllerBase
             new UpdatePlaylistCommand(
                 playlistId,
                 request.PlaylistName,
+                request.Description,
                 request.IsAutoPlay,
                 request.IncludeInRequests,
                 request.IncludeInOnDemand,
-                request.IsEnabled),
+                request.IsEnabled,
+                request.SongPlaybackOrder),
             ct);
 
         if (!result.IsSuccess)

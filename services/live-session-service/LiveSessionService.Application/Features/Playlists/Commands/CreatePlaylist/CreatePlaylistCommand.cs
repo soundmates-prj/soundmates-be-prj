@@ -11,4 +11,5 @@ public sealed record CreatePlaylistCommand(
     string PlaylistName,
     string? Description,
     bool IsAutoPlay,
-    bool IncludeInRequests) : ICommand<PlaylistResult>;
+    bool IncludeInRequests,
+    string SongPlaybackOrder) : ICommand<PlaylistResult>;

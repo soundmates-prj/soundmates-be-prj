@@ -21,6 +21,7 @@ public sealed class CreatePlaylistHandler
 
     public CreatePlaylistHandler(
         IAzuraCastStationRepository stationRepo,
+
         IStationPlaylistRepository playlistRepo,
         IAzuraCastClient azuraCast,
         IDateTimeProvider dateTime,
@@ -41,12 +42,21 @@ public sealed class CreatePlaylistHandler
         if (station == null)
             return Result<PlaylistResult>.Failure("Station not found", ErrorCode.NotFound);
 
+        if (!TryParseSongPlaybackOrder(command.SongPlaybackOrder, out var songPlaybackOrder, out var azuraOrder))
+        {
+            return Result<PlaylistResult>.Failure(
+                "SongPlaybackOrder is invalid. Allowed values: Sequential, Shuffled, Random",
+                ErrorCode.BadRequest);
+        }
+
         // 1. Create playlist in AzuraCast
         var azPlaylist = await _azuraCast.CreatePlaylistAsync(
             station.ExternalStationId,
             command.PlaylistName,
+            command.Description,
             command.IsAutoPlay,
             command.IncludeInRequests,
+            azuraOrder,
             cancellationToken);
 
         if (azPlaylist == null)
@@ -56,18 +66,20 @@ public sealed class CreatePlaylistHandler
         // 2. Save to local DB
         var playlist = new StationPlaylist
         {
-            Id                  = Guid.NewGuid(),
-            AzuraCastStationId  = station.Id,
-            ExternalPlaylistId  = azPlaylist.Id,
-            PlaylistName        = command.PlaylistName,
-            Type                = PlaylistType.Default,
-            Source              = PlaylistSource.Songs,
-            IsEnabled           = true,
-            IncludeInRequests   = command.IncludeInRequests,
-            IncludeInOnDemand   = false,
-            Weight              = 3,
-            CreatedAt           = _dateTime.UtcNow,
-            LastSyncedAt        = _dateTime.UtcNow
+            Id = Guid.NewGuid(),
+            AzuraCastStationId = station.Id,
+            ExternalPlaylistId = azPlaylist.Id,
+            PlaylistName = command.PlaylistName,
+            Description = string.IsNullOrWhiteSpace(command.Description) ? null : command.Description.Trim(),
+            Type = PlaylistType.Default,
+            Source = PlaylistSource.Songs,
+            SongPlaybackOrder = songPlaybackOrder,
+            IsEnabled = true,
+            IncludeInRequests = command.IncludeInRequests,
+            IncludeInOnDemand = false,
+            Weight = 3,
+            CreatedAt = _dateTime.UtcNow,
+            LastSyncedAt = _dateTime.UtcNow
         };
 
         await _playlistRepo.AddAsync(playlist, cancellationToken);
@@ -78,15 +90,46 @@ public sealed class CreatePlaylistHandler
 
         return Result<PlaylistResult>.Success(new PlaylistResult
         {
-            Id           = playlist.Id,
-            StationId    = station.Id,
+            Id = playlist.Id,
+            StationId = station.Id,
             PlaylistName = playlist.PlaylistName,
-            Description  = command.Description,
-            IsAutoPlay   = command.IsAutoPlay,
+            Description = playlist.Description,
+            IsAutoPlay = command.IsAutoPlay,
             IncludeInRequests = playlist.IncludeInRequests,
-            TotalTracks  = 0,
+            SongPlaybackOrder = playlist.SongPlaybackOrder.ToString(),
+            TotalTracks = 0,
             TotalDuration = 0,
-            CreatedAt    = playlist.CreatedAt
+            CreatedAt = playlist.CreatedAt
         });
+    }
+
+    private static bool TryParseSongPlaybackOrder(
+        string? value,
+        out SongPlaybackOrder songPlaybackOrder,
+        out string azuraOrder)
+    {
+        switch (value?.Trim().ToLowerInvariant())
+        {
+            case "shuffled":
+            case "shuffle":
+                songPlaybackOrder = SongPlaybackOrder.Shuffled;
+                azuraOrder = "shuffle";
+                return true;
+            case "random":
+                songPlaybackOrder = SongPlaybackOrder.Random;
+                azuraOrder = "random";
+                return true;
+            case "sequential":
+            case "sequence":
+            case null:
+            case "":
+                songPlaybackOrder = SongPlaybackOrder.Sequential;
+                azuraOrder = "sequential";
+                return true;
+            default:
+                songPlaybackOrder = SongPlaybackOrder.Sequential;
+                azuraOrder = "sequential";
+                return false;
+        }
     }
 }

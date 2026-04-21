@@ -3,6 +3,7 @@ using System;
 using LiveSessionService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LiveSessionService.Infrastructure.Migrations
 {
     [DbContext(typeof(LiveSessionDbContext))]
-    partial class LiveSessionDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260421045944_AddSongPlaybackOrderToStationPlaylist")]
+    partial class AddSongPlaybackOrderToStationPlaylist
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1134,9 +1137,6 @@ namespace LiveSessionService.Infrastructure.Migrations
 
                     b.Property<Guid?>("DeletedBy")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("text");
 
                     b.Property<int>("ExternalPlaylistId")
                         .HasColumnType("integer");

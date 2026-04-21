@@ -36,8 +36,10 @@ public interface IAzuraCastClient
     Task<AzuraCastPlaylistData?> CreatePlaylistAsync(
         int stationId,
         string name,
+        string? description,
         bool isAutoPlay,
         bool includeInRequests,
+        string songPlaybackOrder,
         CancellationToken cancellationToken = default);
 
     /// <summary>Updates a playlist in AzuraCast for the given station</summary>
@@ -45,10 +47,12 @@ public interface IAzuraCastClient
         int stationId,
         int playlistId,
         string name,
+        string? description,
         bool isAutoPlay,
         bool includeInRequests,
         bool includeInOnDemand,
         bool isEnabled,
+        string songPlaybackOrder,
         CancellationToken cancellationToken = default);
 
     /// <summary>Deletes a playlist in AzuraCast for the given station</summary>

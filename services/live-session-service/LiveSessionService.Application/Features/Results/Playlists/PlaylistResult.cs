@@ -11,6 +11,7 @@ public sealed class PlaylistResult
     public string? Description { get; init; }
     public bool IsAutoPlay { get; init; }
     public bool IncludeInRequests { get; init; }
+    public string SongPlaybackOrder { get; init; } = "Sequential";
     public int TotalTracks { get; init; }
     public int TotalDuration { get; init; }
     public DateTime CreatedAt { get; init; }
