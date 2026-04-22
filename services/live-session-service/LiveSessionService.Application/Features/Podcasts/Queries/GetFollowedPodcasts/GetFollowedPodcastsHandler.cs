@@ -25,7 +25,7 @@ public sealed class GetFollowedPodcastsHandler : IQueryHandler<GetFollowedPodcas
                 Id = x.Id,
                 Title = x.Title,
                 Description = x.Description,
-                Author = x.Author,
+                Author = string.IsNullOrWhiteSpace(x.Author) ? null : System.Text.Json.JsonSerializer.Deserialize<object>(x.Author),
                 Status = x.Status.ToString(),
                 Type = x.Type,
                 Banner = x.Banner,

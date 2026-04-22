@@ -26,7 +26,7 @@ public sealed class GetPodcastHandler : IQueryHandler<GetPodcastQuery, PodcastRe
             Id = podcast.Id,
             Title = podcast.Title,
             Description = podcast.Description,
-            Author = podcast.Author,
+            Author = string.IsNullOrWhiteSpace(podcast.Author) ? null : System.Text.Json.JsonSerializer.Deserialize<object>(podcast.Author),
             Status = podcast.Status.ToString(),
             Type = podcast.Type,
             Banner = podcast.Banner,

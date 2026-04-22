@@ -5,7 +5,7 @@ public sealed class PodcastResult
     public Guid Id { get; init; }
     public string Title { get; init; } = null!;
     public string? Description { get; init; }
-    public string? Author { get; init; }
+    public object? Author { get; init; }
     public string Status { get; init; } = null!;
     public string? Type { get; init; }
     public string? Banner { get; init; }

@@ -38,6 +38,11 @@ using LiveSessionService.Application.Features.PodcastRequests.Commands.ReviewPod
 using LiveSessionService.Application.Features.PodcastRequests.Queries.GetMyPodcastRequests;
 using LiveSessionService.Application.Features.PodcastRequests.Queries.GetPodcastRequestById;
 using LiveSessionService.Application.Features.PodcastRequests.Queries.GetPodcastRequests;
+using LiveSessionService.Application.Features.PodcastEpisodeRequests.Commands.CreatePodcastEpisodeRequest;
+using LiveSessionService.Application.Features.PodcastEpisodeRequests.Commands.ReviewPodcastEpisodeRequest;
+using LiveSessionService.Application.Features.PodcastEpisodeRequests.Queries.GetPodcastEpisodeRequests;
+using LiveSessionService.Application.Features.PodcastEpisodeRequests.Queries.GetMyPodcastEpisodeRequests;
+using LiveSessionService.Application.Features.PodcastEpisodeRequests.Queries.GetPodcastEpisodeRequestById;
 using LiveSessionService.Application.Features.Results.PodcastRequests;
 using LiveSessionService.Application.Features.Playlists.Commands.AddMediaToPlaylist;
 using LiveSessionService.Application.Features.Playlists.Commands.AddTracksToUserPlaylist;
@@ -70,6 +75,7 @@ using LiveSessionService.Application.Features.Podcasts.Queries.GetPodcastEpisode
 using LiveSessionService.Application.Features.Podcasts.Queries.GetPodcastEpisodes;
 using LiveSessionService.Application.Features.Podcasts.Queries.GetPodcasts;
 using LiveSessionService.Application.Features.Podcasts.Queries.GetFollowedPodcasts;
+using LiveSessionService.Application.Features.Podcasts.Queries.GetMyPodcasts;
 using LiveSessionService.Application.Features.Results;
 using LiveSessionService.Application.Features.Results.LiveSessions;
 using LiveSessionService.Application.Features.Results.Music;
@@ -195,6 +201,7 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<GetPodcastsQuery, List<PodcastResult>>, GetPodcastsHandler>();
         services.AddScoped<IQueryHandler<GetPodcastEpisodesQuery, List<PodcastEpisodeResult>>, GetPodcastEpisodesHandler>();
         services.AddScoped<IQueryHandler<GetPodcastEpisodeByIdQuery, PodcastEpisodeResult>, GetPodcastEpisodeByIdHandler>();
+        services.AddScoped<IQueryHandler<GetMyPodcastsQuery, List<PodcastResult>>, GetMyPodcastsHandler>();
 
         // Register SongRequest Command Handlers
         services.AddScoped<ICommandHandler<CreateSongRequestCommand, SongRequestResult>, CreateSongRequestHandler>();
@@ -213,6 +220,15 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<GetPodcastRequestsQuery, List<PodcastRequestResult>>, GetPodcastRequestsHandler>();
         services.AddScoped<IQueryHandler<GetMyPodcastRequestsQuery, List<PodcastRequestResult>>, GetMyPodcastRequestsHandler>();
         services.AddScoped<IQueryHandler<GetPodcastRequestByIdQuery, PodcastRequestResult>, GetPodcastRequestByIdHandler>();
+
+        // Register PodcastEpisodeRequest Command Handlers
+        services.AddScoped<ICommandHandler<CreatePodcastEpisodeRequestCommand, PodcastEpisodeRequestResult>, CreatePodcastEpisodeRequestHandler>();
+        services.AddScoped<ICommandHandler<ReviewPodcastEpisodeRequestCommand, PodcastEpisodeRequestResult>, ReviewPodcastEpisodeRequestHandler>();
+
+        // Register PodcastEpisodeRequest Query Handlers
+        services.AddScoped<IQueryHandler<GetPodcastEpisodeRequestsQuery, List<PodcastEpisodeRequestResult>>, GetPodcastEpisodeRequestsHandler>();
+        services.AddScoped<IQueryHandler<GetMyPodcastEpisodeRequestsQuery, List<PodcastEpisodeRequestResult>>, GetMyPodcastEpisodeRequestsHandler>();
+        services.AddScoped<IQueryHandler<GetPodcastEpisodeRequestByIdQuery, PodcastEpisodeRequestResult>, GetPodcastEpisodeRequestByIdHandler>();
 
         // Register Sync Services
         services.AddScoped<LiveSessionService.Application.Services.IInputValidationService, LiveSessionService.Application.Services.InputValidationService>();

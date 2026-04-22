@@ -101,6 +101,7 @@ public static class DependencyInjection
         services.AddScoped<IPodcastRepository, PodcastRepository>();
         services.AddScoped<IUserSavedPodcastRepository, UserSavedPodcastRepository>();
         services.AddScoped<IPodcastRequestRepository, PodcastRequestRepository>();
+        services.AddScoped<IPodcastEpisodeRequestRepository, PodcastEpisodeRequestRepository>();
         services.AddScoped<IOutboxRepository, OutboxRepository>();
 
         // Cloudinary media storage

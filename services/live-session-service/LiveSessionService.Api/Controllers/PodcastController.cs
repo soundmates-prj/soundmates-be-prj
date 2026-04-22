@@ -13,6 +13,7 @@ using LiveSessionService.Application.Features.Podcasts.Queries.GetPodcast;
 using LiveSessionService.Application.Features.Podcasts.Queries.GetPodcastEpisodeById;
 using LiveSessionService.Application.Features.Podcasts.Queries.GetPodcastEpisodes;
 using LiveSessionService.Application.Features.Podcasts.Queries.GetPodcasts;
+using LiveSessionService.Application.Features.Podcasts.Queries.GetMyPodcasts;
 using LiveSessionService.Application.Features.Results.Podcasts;
 using LiveSessionService.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
@@ -221,7 +222,7 @@ public class PodcastController : ControllerBase
             id,
             podcast.Title,
             podcast.Description,
-            podcast.Author,
+            podcast.Author?.ToString(),
             podcast.Type,
             podcast.Banner,
             resolvedStatus.ToString());
@@ -313,9 +314,35 @@ public class PodcastController : ControllerBase
     }
 
     /// <summary>
+    /// Retrieves a list of podcasts created by the current user
+    /// </summary>
+    [HttpGet("my")]
+    [ProducesResponseType(typeof(ApiResponse<List<PodcastResult>>), 200)]
+    public async Task<IActionResult> GetMyPodcasts([FromQuery] string? status, CancellationToken ct)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized(ApiResponse<object>.FailureResponse(
+                "Invalid or missing user token",
+                (int)ErrorCode.Unauthorized));
+        }
+
+        var query = new GetMyPodcastsQuery(userId, status);
+        var result = await _queries.Send<GetMyPodcastsQuery, List<PodcastResult>>(query, ct);
+
+        if (!result.IsSuccess)
+        {
+            return StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse());
+        }
+
+        return Ok(ApiResponse<List<PodcastResult>>.SuccessResponse(result.Data!, $"Retrieved {result.Data!.Count} podcast(s)"));
+    }
+
+    /// <summary>
     /// Creates a new episode for a specific podcast
     /// </summary>
     [HttpPost("{podcastId:guid}/episodes")]
+    [Authorize(Roles = "STAFF,ADMIN")]
     [Consumes("multipart/form-data")]
     [ProducesResponseType(typeof(ApiResponse<PodcastEpisodeResult>), 201)]
     [ProducesResponseType(typeof(ApiResponse<object>), 400)]

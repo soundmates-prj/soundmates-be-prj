@@ -5,18 +5,18 @@ using LiveSessionService.Application.Features.Results.Podcasts;
 using LiveSessionService.Domain.Enums;
 using LiveSessionService.Domain.Interfaces;
 
-namespace LiveSessionService.Application.Features.Podcasts.Queries.GetPodcasts;
+namespace LiveSessionService.Application.Features.Podcasts.Queries.GetMyPodcasts;
 
-public sealed class GetPodcastsHandler : IQueryHandler<GetPodcastsQuery, List<PodcastResult>>
+public sealed class GetMyPodcastsHandler : IQueryHandler<GetMyPodcastsQuery, List<PodcastResult>>
 {
     private readonly IPodcastRepository _podcastRepository;
 
-    public GetPodcastsHandler(IPodcastRepository podcastRepository)
+    public GetMyPodcastsHandler(IPodcastRepository podcastRepository)
     {
         _podcastRepository = podcastRepository;
     }
 
-    public async Task<Result<List<PodcastResult>>> Handle(GetPodcastsQuery query, CancellationToken cancellationToken)
+    public async Task<Result<List<PodcastResult>>> Handle(GetMyPodcastsQuery query, CancellationToken cancellationToken)
     {
         PodcastStatus? status = null;
 
@@ -28,7 +28,7 @@ public sealed class GetPodcastsHandler : IQueryHandler<GetPodcastsQuery, List<Po
             status = parsedStatus;
         }
 
-        var podcasts = await _podcastRepository.GetAllAsync(query.CreatedBy, status, cancellationToken);
+        var podcasts = await _podcastRepository.GetAllAsync(query.UserId, status, cancellationToken);
 
         var result = podcasts.Select(x => new PodcastResult
         {

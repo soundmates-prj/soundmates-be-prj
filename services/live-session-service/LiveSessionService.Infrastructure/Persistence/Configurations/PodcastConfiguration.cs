@@ -47,8 +47,10 @@ public sealed class PodcastConfiguration : IEntityTypeConfiguration<Podcast>
             .HasColumnName("created_at")
             .IsRequired();
 
-        builder.Property(x => x.UpdatedAt)
-            .HasColumnName("updated_at");
+        builder.Property(e => e.UpdatedAt).HasColumnType("timestamp without time zone").HasColumnName("updated_at");
+
+        builder.Property(e => e.Price).HasColumnName("price").HasColumnType("decimal(18,2)");
+        builder.Property(e => e.IsPaid).HasColumnName("is_paid").IsRequired();
 
         builder.Property(x => x.CreatedBy)
             .HasColumnName("created_by")

@@ -31,14 +31,14 @@ public sealed class LiveSessionNotifier : ILiveSessionNotifier
     public async Task NotifyPodcastRequestCreated(PodcastRequestResult request, CancellationToken cancellationToken = default)
     {
         await _hubContext.Clients
-            .Group($"live-session-{request.LiveSessionId}")
+            .Group($"user-{request.RequestedByUserId}")
             .SendAsync("PodcastRequestCreated", request, cancellationToken);
     }
 
     public async Task NotifyPodcastRequestReviewed(PodcastRequestResult request, CancellationToken cancellationToken = default)
     {
         await _hubContext.Clients
-            .Group($"live-session-{request.LiveSessionId}")
+            .Group($"user-{request.RequestedByUserId}")
             .SendAsync("PodcastRequestReviewed", request, cancellationToken);
     }
 }

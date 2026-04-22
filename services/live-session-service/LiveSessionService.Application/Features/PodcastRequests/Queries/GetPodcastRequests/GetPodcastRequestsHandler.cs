@@ -25,37 +25,37 @@ public sealed class GetPodcastRequestsHandler
             status = parsedStatus;
         }
 
-        var results = await _repository.GetAllAsync(query.LiveSessionId, status, cancellationToken);
+        var results = await _repository.GetAllAsync(status, cancellationToken);
+
+        // Apply search filter in memory
+        if (!string.IsNullOrWhiteSpace(query.SearchQuery))
+        {
+            var q = query.SearchQuery.ToLowerInvariant();
+            results = results.Where(r =>
+                r.Title.ToLowerInvariant().Contains(q) ||
+                (r.AuthorInfo?.ToLowerInvariant().Contains(q) ?? false) ||
+                (r.EpisodeTitle?.ToLowerInvariant().Contains(q) ?? false))
+                .ToList();
+        }
 
         var mapped = results.Select(r => new PodcastRequestResult
         {
             Id = r.Id,
-            LiveSessionId = r.LiveSessionId,
             RequestedByUserId = r.RequestedByUserId,
+            AuthorInfo = string.IsNullOrWhiteSpace(r.AuthorInfo) ? null : System.Text.Json.JsonSerializer.Deserialize<object>(r.AuthorInfo),
             Title = r.Title,
+            EpisodeTitle = r.EpisodeTitle,
             Description = r.Description,
-            ScriptText = r.ScriptText,
+            BannerUrl = r.BannerUrl,
             AudioUrl = r.AudioUrl,
-            DurationSeconds = r.DurationSeconds,
-            VoiceCode = r.VoiceCode,
-            VoiceDisplayName = r.VoiceDisplayName,
-            AzuraCastMediaId = r.AzuraCastMediaId,
+            Price = r.Price,
+            IsPaid = r.IsPaid,
             Status = r.Status.ToString(),
             ReviewedByUserId = r.ReviewedByUserId,
             ReviewedAt = r.ReviewedAt,
             RejectReason = r.RejectReason,
             RequestedAt = r.RequestedAt
         }).ToList();
-
-        // Apply search filter in memory (for username search - would need join in real query)
-        if (!string.IsNullOrWhiteSpace(query.SearchQuery))
-        {
-            var q = query.SearchQuery.ToLowerInvariant();
-            mapped = mapped.Where(r =>
-                r.Title.ToLowerInvariant().Contains(q) ||
-                (r.VoiceDisplayName?.ToLowerInvariant().Contains(q) ?? false))
-                .ToList();
-        }
 
         return Result<List<PodcastRequestResult>>.Success(mapped);
     }

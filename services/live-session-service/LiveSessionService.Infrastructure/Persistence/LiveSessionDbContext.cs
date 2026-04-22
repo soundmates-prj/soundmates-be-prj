@@ -85,6 +85,7 @@ public class LiveSessionDbContext : DbContext
     public DbSet<PodcastEpisode> PodcastEpisodes => Set<PodcastEpisode>();
     public DbSet<UserSavedPodcast> UserSavedPodcasts => Set<UserSavedPodcast>();
     public DbSet<PodcastRequest> PodcastRequests => Set<PodcastRequest>();
+    public DbSet<PodcastEpisodeRequest> PodcastEpisodeRequests => Set<PodcastEpisodeRequest>();
     public DbSet<StationMediaFile> StationMediaFiles => Set<StationMediaFile>();
     public DbSet<SyncAuditLog> SyncAuditLogs => Set<SyncAuditLog>();
 

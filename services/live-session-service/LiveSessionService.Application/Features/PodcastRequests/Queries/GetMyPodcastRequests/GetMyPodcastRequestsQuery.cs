@@ -5,5 +5,4 @@ namespace LiveSessionService.Application.Features.PodcastRequests.Queries.GetMyP
 
 public sealed record GetMyPodcastRequestsQuery(
     Guid UserId,
-    Guid? LiveSessionId = null,
     string? Status = null) : IQuery<List<Application.Features.Results.PodcastRequests.PodcastRequestResult>>;
