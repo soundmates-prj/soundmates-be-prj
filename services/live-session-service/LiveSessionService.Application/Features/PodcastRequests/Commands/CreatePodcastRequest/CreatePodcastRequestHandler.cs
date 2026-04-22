@@ -14,18 +14,15 @@ public sealed class CreatePodcastRequestHandler
     : ICommandHandler<CreatePodcastRequestCommand, PodcastRequestResult>
 {
     private readonly IPodcastRequestRepository _repository;
-    private readonly ILiveSessionRepository _sessionRepository;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<CreatePodcastRequestHandler> _logger;
 
     public CreatePodcastRequestHandler(
         IPodcastRequestRepository repository,
-        ILiveSessionRepository sessionRepository,
         IDateTimeProvider dateTimeProvider,
         ILogger<CreatePodcastRequestHandler> logger)
     {
         _repository = repository;
-        _sessionRepository = sessionRepository;
         _dateTimeProvider = dateTimeProvider;
         _logger = logger;
     }
@@ -34,35 +31,20 @@ public sealed class CreatePodcastRequestHandler
         CreatePodcastRequestCommand command,
         CancellationToken cancellationToken)
     {
-        var session = await _sessionRepository.GetByIdWithStationAsync(command.LiveSessionId, cancellationToken);
-        if (session == null)
-        {
-            return Result<PodcastRequestResult>.Failure(
-                "Live session not found",
-                ErrorCode.NotFound);
-        }
-
-        if (session.Status != SessionStatus.Live && session.Status != SessionStatus.Paused)
-        {
-            return Result<PodcastRequestResult>.Failure(
-                "Live session is not active",
-                ErrorCode.BadRequest);
-        }
-
         var now = _dateTimeProvider.UtcNow;
 
         var podcastRequest = new Domain.Entities.PodcastRequest
         {
             Id = Guid.NewGuid(),
-            LiveSessionId = command.LiveSessionId,
             RequestedByUserId = command.RequestedByUserId,
+            AuthorInfo = command.AuthorInfo,
             Title = command.Title.Trim(),
+            EpisodeTitle = command.EpisodeTitle.Trim(),
             Description = command.Description?.Trim(),
-            ScriptText = command.ScriptText,
+            BannerUrl = command.BannerUrl?.Trim(),
             AudioUrl = command.AudioUrl.Trim(),
-            DurationSeconds = command.DurationSeconds,
-            VoiceCode = command.VoiceCode.Trim(),
-            VoiceDisplayName = command.VoiceDisplayName?.Trim(),
+            Price = command.Price,
+            IsPaid = command.IsPaid,
             Status = PodcastRequestStatus.Pending,
             RequestedAt = now
         };
@@ -70,28 +52,26 @@ public sealed class CreatePodcastRequestHandler
         await _repository.AddAsync(podcastRequest, cancellationToken);
 
         _logger.LogInformation(
-            "PodcastRequest {Id} created for session {SessionId} by user {UserId}",
-            podcastRequest.Id, command.LiveSessionId, command.RequestedByUserId);
+            "PodcastRequest {Id} created for series '{Title}' by user {UserId}",
+            podcastRequest.Id, podcastRequest.Title, command.RequestedByUserId);
 
         return Result<PodcastRequestResult>.Success(new PodcastRequestResult
         {
             Id = podcastRequest.Id,
-            LiveSessionId = podcastRequest.LiveSessionId,
             RequestedByUserId = podcastRequest.RequestedByUserId,
+            AuthorInfo = string.IsNullOrWhiteSpace(podcastRequest.AuthorInfo) ? null : System.Text.Json.JsonSerializer.Deserialize<object>(podcastRequest.AuthorInfo),
             Title = podcastRequest.Title,
+            EpisodeTitle = podcastRequest.EpisodeTitle,
             Description = podcastRequest.Description,
-            ScriptText = podcastRequest.ScriptText,
+            BannerUrl = podcastRequest.BannerUrl,
             AudioUrl = podcastRequest.AudioUrl,
-            DurationSeconds = podcastRequest.DurationSeconds,
-            VoiceCode = podcastRequest.VoiceCode,
-            VoiceDisplayName = podcastRequest.VoiceDisplayName,
-            AzuraCastMediaId = podcastRequest.AzuraCastMediaId,
+            Price = podcastRequest.Price,
+            IsPaid = podcastRequest.IsPaid,
             Status = podcastRequest.Status.ToString(),
             ReviewedByUserId = podcastRequest.ReviewedByUserId,
             ReviewedAt = podcastRequest.ReviewedAt,
             RejectReason = podcastRequest.RejectReason,
-            RequestedAt = podcastRequest.RequestedAt,
-            SessionName = session.SessionName
+            RequestedAt = podcastRequest.RequestedAt
         });
     }
 }

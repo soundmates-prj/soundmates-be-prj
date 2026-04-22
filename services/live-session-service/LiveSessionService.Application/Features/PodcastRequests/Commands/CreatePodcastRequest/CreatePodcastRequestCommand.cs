@@ -4,11 +4,11 @@ namespace LiveSessionService.Application.Features.PodcastRequests.Commands.Creat
 
 public sealed record CreatePodcastRequestCommand(
     Guid RequestedByUserId,
-    Guid LiveSessionId,
+    string? AuthorInfo,
     string Title,
+    string EpisodeTitle,
     string? Description,
-    string ScriptText,
+    string? BannerUrl,
     string AudioUrl,
-    int DurationSeconds,
-    string VoiceCode,
-    string? VoiceDisplayName) : ICommand<Application.Features.Results.PodcastRequests.PodcastRequestResult>;
+    decimal Price,
+    bool IsPaid) : ICommand<Application.Features.Results.PodcastRequests.PodcastRequestResult>;

@@ -21,22 +21,21 @@ public sealed class GetMyPodcastRequestsHandler
         var status = !string.IsNullOrWhiteSpace(query.Status) &&
             Enum.TryParse<PodcastRequestStatus>(query.Status, true, out var s) ? s : (PodcastRequestStatus?)null;
 
-        var results = await _repository.GetAllAsync(query.LiveSessionId, status, cancellationToken);
+        var results = await _repository.GetAllAsync(status, cancellationToken);
         results = results.Where(r => r.RequestedByUserId == query.UserId).ToList();
 
         var mapped = results.Select(r => new PodcastRequestResult
         {
             Id = r.Id,
-            LiveSessionId = r.LiveSessionId,
             RequestedByUserId = r.RequestedByUserId,
+            AuthorInfo = string.IsNullOrWhiteSpace(r.AuthorInfo) ? null : System.Text.Json.JsonSerializer.Deserialize<object>(r.AuthorInfo),
             Title = r.Title,
+            EpisodeTitle = r.EpisodeTitle,
             Description = r.Description,
-            ScriptText = r.ScriptText,
+            BannerUrl = r.BannerUrl,
             AudioUrl = r.AudioUrl,
-            DurationSeconds = r.DurationSeconds,
-            VoiceCode = r.VoiceCode,
-            VoiceDisplayName = r.VoiceDisplayName,
-            AzuraCastMediaId = r.AzuraCastMediaId,
+            Price = r.Price,
+            IsPaid = r.IsPaid,
             Status = r.Status.ToString(),
             ReviewedByUserId = r.ReviewedByUserId,
             ReviewedAt = r.ReviewedAt,

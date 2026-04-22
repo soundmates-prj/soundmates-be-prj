@@ -25,15 +25,18 @@ public sealed class PodcastRequestController : ControllerBase
     private readonly ICommandDispatcher _commands;
     private readonly IQueryDispatcher _queries;
     private readonly ILiveSessionNotifier _notifier;
+    private readonly IAccountContentClient _accountClient;
 
     public PodcastRequestController(
         ICommandDispatcher commands,
         IQueryDispatcher queries,
-        ILiveSessionNotifier notifier)
+        ILiveSessionNotifier notifier,
+        IAccountContentClient accountClient)
     {
         _commands = commands;
         _queries = queries;
         _notifier = notifier;
+        _accountClient = accountClient;
     }
 
     /// <summary>
@@ -61,16 +64,41 @@ public sealed class PodcastRequestController : ControllerBase
                 (int)ErrorCode.Unauthorized));
         }
 
+        var authHeader = Request.Headers.Authorization.ToString();
+        var userToken = authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) 
+            ? authHeader.Substring("Bearer ".Length).Trim() 
+            : "";
+
+        var sub = await _accountClient.GetMySubscriptionFullAsync(userToken, ct);
+        if (sub == null || !sub.PlanName.Contains("Premium", StringComparison.OrdinalIgnoreCase) || sub.Status.ToLower() != "active")
+        {
+            return StatusCode(403, ApiResponse<object>.FailureResponse("Chỉ thành viên gói Premium mới được gửi request podcast.", (int)ErrorCode.Forbidden));
+        }
+
+        var authorName = User.FindFirst("name")?.Value 
+            ?? User.FindFirst("preferred_username")?.Value 
+            ?? "SoundMates Member";
+        var authorAvatar = User.FindFirst("picture")?.Value;
+        var authorEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value;
+        
+        var authorInfoStr = System.Text.Json.JsonSerializer.Serialize(new {
+            Name = authorName,
+            Avatar = authorAvatar,
+            Email = authorEmail,
+            Plan = sub.PlanName,
+            UserId = userId.Value
+        });
+
         var command = new CreatePodcastRequestCommand(
             RequestedByUserId: userId.Value,
-            LiveSessionId: request.LiveSessionId,
+            AuthorInfo: authorInfoStr,
             Title: request.Title,
+            EpisodeTitle: request.EpisodeTitle,
             Description: request.Description,
-            ScriptText: request.ScriptText,
+            BannerUrl: request.BannerUrl,
             AudioUrl: request.AudioUrl,
-            DurationSeconds: request.DurationSeconds,
-            VoiceCode: request.VoiceCode,
-            VoiceDisplayName: request.VoiceDisplayName);
+            Price: request.Price,
+            IsPaid: request.IsPaid);
 
         var result = await _commands.Send<CreatePodcastRequestCommand, PodcastRequestResult>(command, ct);
 
@@ -94,18 +122,17 @@ public sealed class PodcastRequestController : ControllerBase
     }
 
     /// <summary>
-    /// Get all podcast requests (Staff/Admin). Supports filtering by session and status.
+    /// Get all podcast requests (Staff/Admin). Supports filtering by status.
     /// </summary>
     [HttpGet]
     [Authorize(Roles = "STAFF,ADMIN")]
     [ProducesResponseType(typeof(ApiResponse<List<PodcastRequestResult>>), 200)]
     public async Task<IActionResult> GetAll(
-        [FromQuery] Guid? sessionId,
         [FromQuery] string? status,
         [FromQuery] string? search,
         CancellationToken ct)
     {
-        var query = new GetPodcastRequestsQuery(sessionId, status, search);
+        var query = new GetPodcastRequestsQuery(status, search);
         var result = await _queries.Send<GetPodcastRequestsQuery, List<PodcastRequestResult>>(query, ct);
 
         if (!result.IsSuccess)
@@ -122,7 +149,6 @@ public sealed class PodcastRequestController : ControllerBase
     [HttpGet("my")]
     [ProducesResponseType(typeof(ApiResponse<List<PodcastRequestResult>>), 200)]
     public async Task<IActionResult> GetMine(
-        [FromQuery] Guid? sessionId,
         [FromQuery] string? status,
         CancellationToken ct)
     {
@@ -130,7 +156,7 @@ public sealed class PodcastRequestController : ControllerBase
         if (userId == null)
             return Unauthorized(ApiResponse<object>.FailureResponse("Invalid token", (int)ErrorCode.Unauthorized));
 
-        var query = new GetMyPodcastRequestsQuery(userId.Value, sessionId, status);
+        var query = new GetMyPodcastRequestsQuery(userId.Value, status);
         var result = await _queries.Send<GetMyPodcastRequestsQuery, List<PodcastRequestResult>>(query, ct);
 
         return result.IsSuccess

@@ -4,6 +4,7 @@ using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Features.PodcastRequests.Commands.ReviewPodcastRequest;
 using LiveSessionService.Application.Features.Results;
 using LiveSessionService.Application.Features.Results.PodcastRequests;
+using LiveSessionService.Domain.Entities;
 using LiveSessionService.Domain.Enums;
 using LiveSessionService.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
@@ -14,21 +15,18 @@ public sealed class ReviewPodcastRequestHandler
     : ICommandHandler<ReviewPodcastRequestCommand, PodcastRequestResult>
 {
     private readonly IPodcastRequestRepository _repository;
-    private readonly ILiveSessionRepository _sessionRepository;
-    private readonly IAzuraCastPodcastService _azuraCastPodcastService;
+    private readonly IPodcastRepository _podcastRepository;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<ReviewPodcastRequestHandler> _logger;
 
     public ReviewPodcastRequestHandler(
         IPodcastRequestRepository repository,
-        ILiveSessionRepository sessionRepository,
-        IAzuraCastPodcastService azuraCastPodcastService,
+        IPodcastRepository podcastRepository,
         IDateTimeProvider dateTimeProvider,
         ILogger<ReviewPodcastRequestHandler> logger)
     {
         _repository = repository;
-        _sessionRepository = sessionRepository;
-        _azuraCastPodcastService = azuraCastPodcastService;
+        _podcastRepository = podcastRepository;
         _dateTimeProvider = dateTimeProvider;
         _logger = logger;
     }
@@ -37,7 +35,7 @@ public sealed class ReviewPodcastRequestHandler
         ReviewPodcastRequestCommand command,
         CancellationToken cancellationToken)
     {
-        var podcastRequest = await _repository.GetByIdWithSessionAsync(command.PodcastRequestId, cancellationToken);
+        var podcastRequest = await _repository.GetByIdAsync(command.PodcastRequestId, cancellationToken);
         if (podcastRequest == null)
         {
             return Result<PodcastRequestResult>.Failure(
@@ -54,48 +52,48 @@ public sealed class ReviewPodcastRequestHandler
 
         if (command.IsApproved)
         {
-            // Validate session has station
-            var session = podcastRequest.LiveSession;
-            if (session == null || session.AzuraCastStationId == null)
-            {
-                return Result<PodcastRequestResult>.Failure(
-                    "Live session is not linked to a station",
-                    ErrorCode.BadRequest);
-            }
-
-            var station = session.AzuraCastStation;
-            if (station == null)
-            {
-                return Result<PodcastRequestResult>.Failure(
-                    "AzuraCast station not found",
-                    ErrorCode.BadRequest);
-            }
-
             _logger.LogInformation(
-                "Approving podcast request {Id}, uploading audio to AzuraCast station {StationId}",
-                podcastRequest.Id, station.ExternalStationId);
+                "Approving podcast request {Id}, creating new Podcast and Episode records.",
+                podcastRequest.Id);
 
-            // Download audio from ai-service URL, convert, and upload to AzuraCast
-            var uploadResult = await _azuraCastPodcastService.UploadAndQueuePodcastAsync(
-                station.ExternalStationId,
-                podcastRequest.AudioUrl,
-                podcastRequest.Title,
-                cancellationToken);
+            var now = _dateTimeProvider.UtcNow;
 
-            if (!uploadResult.IsSuccess)
+            var newPodcast = new Podcast
             {
-                _logger.LogError("Failed to upload podcast to AzuraCast: {Error}", uploadResult.ErrorMessage);
-                return Result<PodcastRequestResult>.Failure(
-                    uploadResult.ErrorMessage ?? "Failed to upload podcast to AzuraCast",
-                    ErrorCode.InternalServerError);
-            }
+                Id = Guid.NewGuid(),
+                Title = podcastRequest.Title,
+                Description = podcastRequest.Description,
+                Author = podcastRequest.AuthorInfo,
+                Status = PodcastStatus.Published,
+                Banner = podcastRequest.BannerUrl,
+                Price = podcastRequest.Price,
+                IsPaid = podcastRequest.IsPaid,
+                CreatedAt = now,
+                CreatedBy = podcastRequest.RequestedByUserId
+            };
 
-            podcastRequest.AzuraCastMediaId = uploadResult.MediaId;
+            await _podcastRepository.AddAsync(newPodcast, cancellationToken);
+
+            var newEpisode = new PodcastEpisode
+            {
+                Id = Guid.NewGuid(),
+                PodcastId = newPodcast.Id,
+                Title = podcastRequest.EpisodeTitle,
+                AudioUrl = podcastRequest.AudioUrl,
+                Description = podcastRequest.Description,
+                ThumbnailUrl = podcastRequest.BannerUrl,
+                EpisodeNumber = 1,
+                PublishDate = now,
+                Duration = 0
+            };
+
+            await _podcastRepository.AddEpisodeAsync(newEpisode, cancellationToken);
+
             podcastRequest.Status = PodcastRequestStatus.Approved;
 
             _logger.LogInformation(
-                "Podcast request {Id} approved and uploaded to AzuraCast (mediaId: {MediaId})",
-                podcastRequest.Id, uploadResult.MediaId);
+                "Podcast request {Id} approved. Podcast created: {PodcastId}, Episode created: {EpisodeId}",
+                podcastRequest.Id, newPodcast.Id, newEpisode.Id);
         }
         else
         {
@@ -122,16 +120,15 @@ public sealed class ReviewPodcastRequestHandler
         return Result<PodcastRequestResult>.Success(new PodcastRequestResult
         {
             Id = podcastRequest.Id,
-            LiveSessionId = podcastRequest.LiveSessionId,
             RequestedByUserId = podcastRequest.RequestedByUserId,
+            AuthorInfo = string.IsNullOrWhiteSpace(podcastRequest.AuthorInfo) ? null : System.Text.Json.JsonSerializer.Deserialize<object>(podcastRequest.AuthorInfo),
             Title = podcastRequest.Title,
+            EpisodeTitle = podcastRequest.EpisodeTitle,
             Description = podcastRequest.Description,
-            ScriptText = podcastRequest.ScriptText,
+            BannerUrl = podcastRequest.BannerUrl,
             AudioUrl = podcastRequest.AudioUrl,
-            DurationSeconds = podcastRequest.DurationSeconds,
-            VoiceCode = podcastRequest.VoiceCode,
-            VoiceDisplayName = podcastRequest.VoiceDisplayName,
-            AzuraCastMediaId = podcastRequest.AzuraCastMediaId,
+            Price = podcastRequest.Price,
+            IsPaid = podcastRequest.IsPaid,
             Status = podcastRequest.Status.ToString(),
             ReviewedByUserId = podcastRequest.ReviewedByUserId,
             ReviewedAt = podcastRequest.ReviewedAt,

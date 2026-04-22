@@ -1,4 +1,4 @@
-﻿using LiveSessionService.Domain.Enums;
+using LiveSessionService.Domain.Enums;
 
 namespace LiveSessionService.Domain.Entities
 {
@@ -23,6 +23,10 @@ namespace LiveSessionService.Domain.Entities
         public DateTime? UpdatedAt { get; set; }
 
         public Guid CreatedBy { get; set; }
+
+        public decimal Price { get; set; }
+
+        public bool IsPaid { get; set; }
 
         public virtual ICollection<PodcastEpisode> Episodes { get; set; } = new List<PodcastEpisode>();
 
