@@ -157,6 +157,11 @@ public class PayOSService : IPaymentProvider
         }
     }
 
+    public Task<bool> ExecutePayoutAsync(Guid payoutId, decimal amount, string bankId, string accountNumber, string accountName, string description)
+    {
+        throw new NotSupportedException("PayOS payout is disabled in this implementation.");
+    }
+
     private string GenerateSignature(int orderCode, int amount, string description, string returnUrl, string cancelUrl)
     {
         // PayOS signature: raw values (no URL encoding), keys sorted alphabetically.

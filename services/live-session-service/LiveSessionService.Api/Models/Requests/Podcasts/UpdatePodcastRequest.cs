@@ -20,4 +20,8 @@ public sealed class UpdatePodcastRequest
     public string? Banner { get; set; }
 
     public string? Status { get; set; }
+
+    public decimal? Price { get; set; }
+
+    public bool? IsPaid { get; set; }
 }

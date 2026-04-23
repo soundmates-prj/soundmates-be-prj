@@ -84,6 +84,30 @@ namespace AccountContentService.Api.Controllers
         }
 
         /// <summary>
+        /// TEST ENDPOINT: Automatically creates a VNPay payment for a specific podcast and redirects to it.
+        /// Useful for quick testing without frontend.
+        /// </summary>
+        [AllowAnonymous]
+        [HttpGet("test-purchase-podcast/{podcastId}")]
+        public async Task<IActionResult> TestPurchasePodcast(Guid podcastId)
+        {
+            var command = new CreatePaymentCommand
+            {
+                TargetId = podcastId,
+                TargetType = "podcast",
+                TotalAmount = 50000, // Dummy amount, VNPay callback will use real podcast price via ILiveSessionApiClient later if needed
+                Method = "vnpay",
+                ReturnUrl = ResolveDefaultReturnUrl("vnpay"),
+                IpAddress = RequestContext.GetIpAddress(HttpContext),
+                UserId = Guid.NewGuid() // Dummy user for testing
+            };
+
+            var url = await _mediator.Send(command);
+
+            return Redirect(url);
+        }
+
+        /// <summary>
         /// Handles VNPay callback after user completes payment.
         /// </summary>
         /// <remarks>

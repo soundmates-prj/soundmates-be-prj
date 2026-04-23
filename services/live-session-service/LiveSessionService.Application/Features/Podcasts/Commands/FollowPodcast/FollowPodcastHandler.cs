@@ -47,6 +47,8 @@ public sealed class FollowPodcastHandler : ICommandHandler<FollowPodcastCommand,
         return Result<PodcastResult>.Success(new PodcastResult
         {
             Id = podcast.Id,
+            Price = podcast.Price,
+            IsPaid = podcast.IsPaid,
             Title = podcast.Title,
             Description = podcast.Description,
             Author = string.IsNullOrWhiteSpace(podcast.Author) ? null : System.Text.Json.JsonSerializer.Deserialize<object>(podcast.Author),

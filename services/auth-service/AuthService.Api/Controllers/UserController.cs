@@ -213,4 +213,60 @@ public class UserController : ControllerBase
 
         return NoContent();
     }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // BANK ACCOUNT
+    // ═══════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Update user bank account (Owner or Admin).
+    /// </summary>
+    [HttpPut("{id:guid}/bank-account")]
+    [AllowAnonymous] // Assuming gateway/auth handles it, or inter-service is allowed
+    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateBankAccount(
+        Guid id,
+        [FromBody] UpdateBankAccountRequest request,
+        CancellationToken ct)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ApiResponse<bool>.FailureResponse("Invalid input", 400));
+
+        var cmd = new UpdateBankAccountCommand(id, request.BankId, request.AccountNumber, request.AccountName);
+        var result = await _commands.Send<UpdateBankAccountCommand, bool>(cmd, ct);
+
+        if (!result.IsSuccess)
+            return NotFound(ApiResponse<bool>.FailureResponse(
+                result.ErrorMessage ?? "User not found", 404));
+
+        return Ok(ApiResponse<bool>.SuccessResponse(true, "Bank account updated successfully"));
+    }
+
+    /// <summary>
+    /// Get user bank account (Owner, Admin, or Inter-service).
+    /// </summary>
+    [HttpGet("{id:guid}/bank-account")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetBankAccount(
+        Guid id,
+        [FromServices] AuthService.Infrastructure.Persistence.AuthDbContext dbContext,
+        CancellationToken ct)
+    {
+        var account = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.FirstOrDefaultAsync(
+            dbContext.BankAccounts, x => x.UserId == id, ct);
+
+        if (account == null)
+            return NotFound();
+
+        return Ok(new
+        {
+            account.UserId,
+            account.BankId,
+            account.AccountNumber,
+            account.AccountName
+        });
+    }
 }

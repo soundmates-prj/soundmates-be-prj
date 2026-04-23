@@ -25,6 +25,9 @@ public sealed class UpdatePodcastHandler : ICommandHandler<UpdatePodcastCommand,
         if (podcast == null)
             return Result<PodcastResult>.Failure("Podcast not found", ErrorCode.NotFound);
 
+        if (!command.IsAdmin && podcast.CreatedBy != command.UserId)
+            return Result<PodcastResult>.Failure("You do not have permission to update this podcast", ErrorCode.Forbidden);
+
         var hasChanges = false;
 
         if (!string.IsNullOrWhiteSpace(command.Status))
@@ -69,15 +72,29 @@ public sealed class UpdatePodcastHandler : ICommandHandler<UpdatePodcastCommand,
             hasChanges = true;
         }
 
+        if (command.Price.HasValue && podcast.Price != command.Price.Value)
+        {
+            podcast.Price = command.Price.Value;
+            hasChanges = true;
+        }
+
+        if (command.IsPaid.HasValue && podcast.IsPaid != command.IsPaid.Value)
+        {
+            podcast.IsPaid = command.IsPaid.Value;
+            hasChanges = true;
+        }
+
         if (hasChanges)
         {
-            podcast.UpdatedAt = _dateTimeProvider.UtcNow;
+            podcast.UpdatedAt = DateTime.SpecifyKind(_dateTimeProvider.UtcNow, DateTimeKind.Unspecified);
             await _podcastRepository.UpdateAsync(podcast, cancellationToken);
         }
 
         return Result<PodcastResult>.Success(new PodcastResult
         {
             Id = podcast.Id,
+            Price = podcast.Price,
+            IsPaid = podcast.IsPaid,
             Title = podcast.Title,
             Description = podcast.Description,
             Author = string.IsNullOrWhiteSpace(podcast.Author) ? null : System.Text.Json.JsonSerializer.Deserialize<object>(podcast.Author),

@@ -38,6 +38,7 @@ public static class DependencyInjection
         services.AddScoped<ISpotifyTokenRepository, SpotifyTokenRepository>();
         services.AddScoped<IOtpRepository, OtpRepository>();
         services.AddScoped<IOutboxRepository, OutboxRepository>();
+        services.AddScoped<IBankAccountRepository, AuthService.Infrastructure.Persistence.Repositories.BankAccountRepository>();
 
         // Dual-write: sync favourites to MongoDB read-side (auth-query-service)
         services.AddSingleton<IFavouriteSyncRepository, FavouriteSyncRepository>();

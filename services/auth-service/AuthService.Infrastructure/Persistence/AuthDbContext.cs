@@ -34,6 +34,7 @@ namespace AuthService.Infrastructure.Persistence
         public virtual DbSet<UserFavourite> UserFavourites { get; set; }
         public virtual DbSet<SpotifyItem> SpotifyItems { get; set; }
         public virtual DbSet<SpotifyToken> SpotifyTokens { get; set; }
+        public virtual DbSet<BankAccount> BankAccounts { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             if (!optionsBuilder.IsConfigured)
@@ -468,6 +469,51 @@ namespace AuthService.Infrastructure.Persistence
                     .HasForeignKey<SpotifyToken>(d => d.UserId)
                     .OnDelete(DeleteBehavior.Cascade)
                     .HasConstraintName("spotify_tokens_user_id_fkey");
+            });
+
+            modelBuilder.Entity<BankAccount>(entity =>
+            {
+                entity.HasKey(e => e.Id).HasName("bank_accounts_pkey");
+                entity.ToTable("bank_accounts");
+
+                entity.HasIndex(e => e.UserId, "bank_accounts_user_id_key").IsUnique();
+
+                entity.Property(e => e.Id)
+                    .HasDefaultValueSql("uuid_generate_v4()")
+                    .HasColumnName("id");
+
+                entity.Property(e => e.UserId)
+                    .HasColumnName("user_id");
+
+                entity.Property(e => e.BankId)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasColumnName("bank_id");
+
+                entity.Property(e => e.AccountNumber)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasColumnName("account_number");
+
+                entity.Property(e => e.AccountName)
+                    .IsRequired()
+                    .HasMaxLength(255)
+                    .HasColumnName("account_name");
+
+                entity.Property(e => e.CreatedAt)
+                    .HasDefaultValueSql("now() at time zone 'utc'")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("created_at");
+
+                entity.Property(e => e.UpdatedAt)
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("updated_at");
+
+                entity.HasOne(d => d.User)
+                    .WithOne(p => p.BankAccount)
+                    .HasForeignKey<BankAccount>(d => d.UserId)
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .HasConstraintName("bank_accounts_user_id_fkey");
             });
 
             OnModelCreatingPartial(modelBuilder);

@@ -15,6 +15,8 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
         private readonly IPaymentTransactionRepository _transactionRepo;
         private readonly ISubscriptionRepository _subscriptionRepo;
         private readonly IPaymentService _paymentService;
+        private readonly IPendingPayoutRepository _pendingPayoutRepo;
+        private readonly ILiveSessionApiClient _liveSessionApiClient;
         private readonly IMapper _mapper;   
 
         public VNPayCallbackHandler(
@@ -22,12 +24,16 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
             IPaymentTransactionRepository transactionRepo,
             ISubscriptionRepository subscriptionRepo,
             IPaymentService paymentService,
+            IPendingPayoutRepository pendingPayoutRepo,
+            ILiveSessionApiClient liveSessionApiClient,
             IMapper mapper)
         {
             _paymentRepo = paymentRepo;
             _transactionRepo = transactionRepo;
             _subscriptionRepo = subscriptionRepo;
             _paymentService = paymentService;
+            _pendingPayoutRepo = pendingPayoutRepo;
+            _liveSessionApiClient = liveSessionApiClient;
             _mapper = mapper;
         }
 
@@ -93,30 +99,52 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
 
             await _paymentRepo.UpdateAsync(payment);
 
-            // 🔥 7. Create / renew Subscription
+            // 🔥 7. Process TargetType (Podcast Payout or Subscription)
             if (isSuccess)
             {
-                // Expire any existing active subscription first (handles plan upgrade / renewal)
-                var existingSub = await _subscriptionRepo.GetActiveByUserIdAsync(payment.UserId, cancellationToken);
-                if (existingSub != null)
+                if (payment.TargetType.Equals("podcast", StringComparison.OrdinalIgnoreCase))
                 {
-                    existingSub.Status = SubscriptionStatus.Expired.ToString();
-                    existingSub.EndDate = DateTime.UtcNow;
-                    await _subscriptionRepo.UpdateAsync(existingSub);
+                    var podcast = await _liveSessionApiClient.GetPodcastAsync(payment.TargetId, cancellationToken);
+                    if (podcast != null)
+                    {
+                        var pendingPayout = new PendingPayout
+                        {
+                            Id = Guid.NewGuid(),
+                            PaymentId = payment.Id,
+                            TargetUserId = podcast.CreatedBy,
+                            Amount = podcast.Price, // Fee handled elsewhere or kept by system
+                            Status = "pending",
+                            ScheduledAt = DateTime.UtcNow.AddMinutes(5),
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
+                        };
+                        await _pendingPayoutRepo.AddAsync(pendingPayout);
+                    }
                 }
-
-                var subscription = new Subscription
+                else
                 {
-                    Id = Guid.NewGuid(),
-                    UserId = payment.UserId,
-                    PlanId = payment.TargetId,
-                    StartDate = DateTime.UtcNow,
-                    EndDate = DateTime.UtcNow.AddMonths(1),
-                    SubscribeAt = DateTime.UtcNow,
-                    Status = SubscriptionStatus.Active.ToString(),
-                };
+                    // Expire any existing active subscription first (handles plan upgrade / renewal)
+                    var existingSub = await _subscriptionRepo.GetActiveByUserIdAsync(payment.UserId, cancellationToken);
+                    if (existingSub != null)
+                    {
+                        existingSub.Status = SubscriptionStatus.Expired.ToString();
+                        existingSub.EndDate = DateTime.UtcNow;
+                        await _subscriptionRepo.UpdateAsync(existingSub);
+                    }
 
-                await _subscriptionRepo.AddAsync(subscription);
+                    var subscription = new Subscription
+                    {
+                        Id = Guid.NewGuid(),
+                        UserId = payment.UserId,
+                        PlanId = payment.TargetId,
+                        StartDate = DateTime.UtcNow,
+                        EndDate = DateTime.UtcNow.AddMonths(1),
+                        SubscribeAt = DateTime.UtcNow,
+                        Status = SubscriptionStatus.Active.ToString(),
+                    };
+
+                    await _subscriptionRepo.AddAsync(subscription);
+                }
             }
 
             var respose = _mapper.Map<TransactionDto>(transaction);

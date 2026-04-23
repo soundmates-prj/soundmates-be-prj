@@ -50,7 +50,11 @@ public class PodcastEpisodeRequestController : ControllerBase
                 (int)ErrorCode.Unauthorized));
         }
 
-        var authorName = User.FindFirst("name")?.Value ?? "SoundMates Member";
+        var authorName = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value 
+            ?? User.FindFirst("unique_name")?.Value
+            ?? User.FindFirst("name")?.Value 
+            ?? User.FindFirst("preferred_username")?.Value 
+            ?? "SoundMates Member";
         var authorAvatar = User.FindFirst("picture")?.Value;
         var authorEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value;
 
