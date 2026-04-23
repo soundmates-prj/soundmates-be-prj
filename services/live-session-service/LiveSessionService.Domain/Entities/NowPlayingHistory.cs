@@ -18,8 +18,8 @@ public partial class NowPlayingHistory
     
     public string? SongArtUrl { get; set; }
     
-    public string? Lyrics { get; set; }
-    
+    //public string? Lyrics { get; set; }
+
     public int DurationSeconds { get; set; }
     
     public DateTime PlayedAt { get; set; }

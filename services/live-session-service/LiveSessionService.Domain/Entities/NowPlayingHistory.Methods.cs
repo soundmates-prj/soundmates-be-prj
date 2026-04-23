@@ -65,7 +65,7 @@ public partial class NowPlayingHistory
             SongArtist = songArtist?.Trim(),
             SongAlbum = songAlbum?.Trim(),
             SongArtUrl = songArtUrl?.Trim(),
-            Lyrics = lyrics,
+            //Lyrics = lyrics,
             DurationSeconds = durationSeconds,
             PlayedAt = playedAt,
             ListenerCount = listenerCount,
