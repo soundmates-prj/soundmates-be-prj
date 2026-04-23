@@ -42,6 +42,16 @@ public sealed class NowPlayingHistoryRepository : INowPlayingHistoryRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<List<NowPlayingHistory>> GetAllBySessionIdAsync(
+        Guid sessionId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.NowPlayingHistory
+            .Where(x => x.LiveSessionId == sessionId)
+            .OrderBy(x => x.PlayedAt)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task AddAsync(NowPlayingHistory history, CancellationToken cancellationToken = default)
     {
         await _context.NowPlayingHistory.AddAsync(history, cancellationToken);
