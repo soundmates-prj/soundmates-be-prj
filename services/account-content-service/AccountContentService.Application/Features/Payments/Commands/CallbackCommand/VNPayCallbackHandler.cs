@@ -17,6 +17,7 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
         private readonly IPaymentService _paymentService;
         private readonly IPendingPayoutRepository _pendingPayoutRepo;
         private readonly ILiveSessionApiClient _liveSessionApiClient;
+        private readonly IAuthApiClient _authApiClient;
         private readonly IMapper _mapper;   
 
         public VNPayCallbackHandler(
@@ -26,6 +27,7 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
             IPaymentService paymentService,
             IPendingPayoutRepository pendingPayoutRepo,
             ILiveSessionApiClient liveSessionApiClient,
+            IAuthApiClient authApiClient,
             IMapper mapper)
         {
             _paymentRepo = paymentRepo;
@@ -34,6 +36,7 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
             _paymentService = paymentService;
             _pendingPayoutRepo = pendingPayoutRepo;
             _liveSessionApiClient = liveSessionApiClient;
+            _authApiClient = authApiClient;
             _mapper = mapper;
         }
 
@@ -107,14 +110,20 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
                     var podcast = await _liveSessionApiClient.GetPodcastAsync(payment.TargetId, cancellationToken);
                     if (podcast != null)
                     {
+                        var bankAccount = await _authApiClient.GetUserBankAccountAsync(podcast.CreatedBy, cancellationToken);
+
                         var pendingPayout = new PendingPayout
                         {
                             Id = Guid.NewGuid(),
                             PaymentId = payment.Id,
                             TargetUserId = podcast.CreatedBy,
                             Amount = podcast.Price, // Fee handled elsewhere or kept by system
-                            Status = "pending",
-                            ScheduledAt = DateTime.UtcNow.AddMinutes(5),
+                            BankId = bankAccount?.BankId,
+                            AccountNumber = bankAccount?.AccountNumber,
+                            AccountName = bankAccount?.AccountName,
+                            Status = bankAccount != null ? "pending" : "failed_no_bank",
+                            ErrorMessage = bankAccount == null ? "User has no bank account configured." : null,
+                            ScheduledAt = DateTime.UtcNow,
                             CreatedAt = DateTime.UtcNow,
                             UpdatedAt = DateTime.UtcNow
                         };

@@ -27,7 +27,7 @@ public class AuthApiClient : IAuthApiClient
     {
         try
         {
-            var response = await _httpClient.GetAsync($"/api/users/{userId}/bank-account", cancellationToken);
+            var response = await _httpClient.GetAsync($"/api/v1/users/{userId}/bank-account", cancellationToken);
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<BankAccountDto>(cancellationToken: cancellationToken);

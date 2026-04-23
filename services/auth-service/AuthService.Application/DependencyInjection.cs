@@ -40,6 +40,7 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<CreateUserFavouriteCommand, Guid>, CreateUserFavouriteHandler>();
         services.AddScoped<ICommandHandler<UpdateUserFavouriteCommand, bool>, UpdateUserFavouriteHandler>();
         services.AddScoped<ICommandHandler<DeleteUserFavouriteCommand, bool>, DeleteUserFavouriteHandler>();
+        services.AddScoped<ICommandHandler<UpdateBankAccountCommand, bool>, UpdateBankAccountHandler>();
         services.AddScoped<ICommandHandler<CreateSpotifyItemCommand, Guid>, CreateSpotifyItemHandler>();
         services.AddScoped<ICommandHandler<DeleteSpotifyItemCommand, bool>, DeleteSpotifyItemHandler>();
         services.AddScoped<ICommandHandler<GetSpotifyLoginUrlCommand, string>, GetSpotifyLoginUrlHandler>();

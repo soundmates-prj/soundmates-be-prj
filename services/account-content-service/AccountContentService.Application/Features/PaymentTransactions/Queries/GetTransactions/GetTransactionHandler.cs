@@ -1,4 +1,4 @@
-﻿using AccountContentService.Application.Common.Pagination;
+using AccountContentService.Application.Common.Pagination;
 using AccountContentService.Application.DTOs;
 using AccountContentService.Application.Exceptions;
 using AccountContentService.Application.Interfaces.Repositories;
@@ -38,6 +38,10 @@ namespace AccountContentService.Application.Features.PaymentTransactions.Queries
 
             var dto = _mapper.Map<TransactionDto>(result);
 
+            // Populate TargetType/TargetId from Payment
+            dto.TargetType = result.Payment?.TargetType ?? string.Empty;
+            dto.TargetId = result.Payment?.TargetId;
+
             // Populate userProfile from local read-model (IUserProfileCache)
             dto.userProfile = await PopulateUserProfileAsync(result, dto, cancellationToken);
 
@@ -50,10 +54,13 @@ namespace AccountContentService.Application.Features.PaymentTransactions.Queries
 
             var items = _mapper.Map<IEnumerable<TransactionDto>>(result.Items).ToList();
 
-            // Populate userProfile for each transaction
+            // Populate userProfile and TargetType/TargetId for each transaction
             foreach (var (item, idx) in items.Select((x, i) => (x, i)))
             {
-                item.userProfile = await PopulateUserProfileAsync(result.Items.ElementAt(idx), item, cancellationToken);
+                var raw = result.Items.ElementAt(idx);
+                item.TargetType = raw.Payment?.TargetType ?? string.Empty;
+                item.TargetId = raw.Payment?.TargetId;
+                item.userProfile = await PopulateUserProfileAsync(raw, item, cancellationToken);
             }
 
             return new PaginationResult<TransactionDto>
@@ -72,10 +79,13 @@ namespace AccountContentService.Application.Features.PaymentTransactions.Queries
 
             var items = _mapper.Map<IEnumerable<TransactionDto>>(result.Items).ToList();
 
-            // Populate userProfile for each transaction
+            // Populate userProfile and TargetType/TargetId for each transaction
             foreach (var (item, idx) in items.Select((x, i) => (x, i)))
             {
-                item.userProfile = await PopulateUserProfileAsync(result.Items.ElementAt(idx), item, cancellationToken);
+                var raw = result.Items.ElementAt(idx);
+                item.TargetType = raw.Payment?.TargetType ?? string.Empty;
+                item.TargetId = raw.Payment?.TargetId;
+                item.userProfile = await PopulateUserProfileAsync(raw, item, cancellationToken);
             }
 
             return new PaginationResult<TransactionDto>

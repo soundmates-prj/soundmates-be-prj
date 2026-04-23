@@ -99,12 +99,52 @@ namespace AccountContentService.Api.Controllers
                 Method = "vnpay",
                 ReturnUrl = ResolveDefaultReturnUrl("vnpay"),
                 IpAddress = RequestContext.GetIpAddress(HttpContext),
-                UserId = Guid.NewGuid() // Dummy user for testing
+                UserId = UserContext.GetUserId(HttpContext) != Guid.Empty ? UserContext.GetUserId(HttpContext) : Guid.NewGuid()
             };
 
             var url = await _mediator.Send(command);
 
-            return Redirect(url);
+            return Ok(new { paymentUrl = url });
+        }
+
+        /// <summary>
+        /// TEST ENDPOINT: Automatically triggers a 10,000 VND payout to the specified user immediately.
+        /// Useful for testing the Payout Background Service.
+        /// </summary>
+        [AllowAnonymous]
+        [HttpPost("test-trigger-payout/{targetUserId}")]
+        public async Task<IActionResult> TestTriggerPayout(
+            Guid targetUserId,
+            [FromServices] AccountContentService.Application.Interfaces.Services.IAuthApiClient authApiClient,
+            [FromServices] AccountContentService.Application.Interfaces.Repositories.IPendingPayoutRepository pendingPayoutRepo)
+        {
+            var bankAccount = await authApiClient.GetUserBankAccountAsync(targetUserId, HttpContext.RequestAborted);
+            
+            var pendingPayout = new AccountContentService.Domain.Entities.PendingPayout
+            {
+                Id = Guid.NewGuid(),
+                PaymentId = Guid.NewGuid(),
+                TargetUserId = targetUserId,
+                Amount = 10000,
+                BankId = bankAccount?.BankId,
+                AccountNumber = bankAccount?.AccountNumber,
+                AccountName = bankAccount?.AccountName,
+                Status = bankAccount != null ? "pending" : "failed_no_bank",
+                ErrorMessage = bankAccount == null ? "User has no bank account configured." : null,
+                ScheduledAt = DateTime.UtcNow, // Immediate execution
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            
+            await pendingPayoutRepo.AddAsync(pendingPayout);
+            
+            return Ok(new 
+            { 
+                success = true, 
+                message = "Test payout created and scheduled immediately. Check the background service logs.", 
+                payoutId = pendingPayout.Id,
+                status = pendingPayout.Status
+            });
         }
 
         /// <summary>

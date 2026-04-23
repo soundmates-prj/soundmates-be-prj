@@ -45,7 +45,6 @@ public class PayoutBackgroundService : BackgroundService
     {
         using var scope = _serviceProvider.CreateScope();
         var pendingPayoutRepo = scope.ServiceProvider.GetRequiredService<IPendingPayoutRepository>();
-        var paymentGateway = scope.ServiceProvider.GetRequiredService<IPaymentGateway>();
 
         var now = DateTime.UtcNow;
         var duePayouts = await pendingPayoutRepo.GetPendingPayoutsAsync(now, cancellationToken);
@@ -60,32 +59,24 @@ public class PayoutBackgroundService : BackgroundService
         {
             if (cancellationToken.IsCancellationRequested) break;
 
-            _logger.LogInformation("Processing payout {Id} for amount {Amount}", payout.Id, payout.Amount);
+            _logger.LogInformation("Processing mock payout {Id} for amount {Amount} to {AccountName} ({BankId})", payout.Id, payout.Amount, payout.AccountName, payout.BankId);
 
-            // Execute the payout using the IPaymentGateway
-            // Uses "sepay" provider as defined in IPaymentGateway
-            var success = await paymentGateway.ExecutePayoutAsync(
-                payoutId: payout.Id,
-                amount: payout.Amount,
-                bankId: payout.BankId,
-                accountNumber: payout.AccountNumber,
-                accountName: payout.AccountName,
-                description: $"Payout for Soundmates member {payout.TargetUserId}",
-                provider: "sepay" // Use SePay for payouts
-            );
-
-            if (success)
+            try
             {
+                // MOCK PAYOUT LOGIC
+                // We simulate an outbound bank transfer delay
+                await Task.Delay(1000, cancellationToken);
+
                 payout.Status = "completed";
                 payout.ExecutedAt = DateTime.UtcNow;
-                _logger.LogInformation("Payout {Id} completed successfully.", payout.Id);
+                _logger.LogInformation("Mock Payout {Id} completed successfully.", payout.Id);
             }
-            else
+            catch (Exception ex)
             {
                 payout.Status = "failed";
-                payout.ErrorMessage = "Payment gateway rejected the payout request.";
+                payout.ErrorMessage = ex.Message;
                 payout.UpdatedAt = DateTime.UtcNow;
-                _logger.LogWarning("Payout {Id} failed.", payout.Id);
+                _logger.LogWarning(ex, "Mock Payout {Id} failed.", payout.Id);
             }
 
             await pendingPayoutRepo.UpdateAsync(payout);

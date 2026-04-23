@@ -51,12 +51,10 @@ public static class InfrastructureServiceCollectionExtensions
         // Payment configs
         services.Configure<VNPayConfig>(configuration.GetSection("VNPay"));
         services.Configure<PayOSConfig>(configuration.GetSection("PayOS"));
-        services.Configure<SePayConfig>(configuration.GetSection("SePay"));
 
         // Payment providers
         services.AddScoped<IPaymentProvider, VNPayService>();
         services.AddScoped<IPaymentProvider, PayOSService>();
-        services.AddScoped<IPaymentProvider, SePayService>();
         services.AddScoped<IPaymentGateway, PaymentGatewayFactory>();
 
         // Application services

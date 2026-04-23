@@ -117,7 +117,7 @@ public sealed class PayOSWebhookHandler : IRequestHandler<PayOSWebhookCommand, b
                         AccountName = bankAccount?.AccountName,
                         Status = bankAccount != null ? "pending" : "failed_no_bank",
                         ErrorMessage = bankAccount == null ? "User has no bank account configured." : null,
-                        ScheduledAt = DateTime.UtcNow.AddMinutes(5),
+                        ScheduledAt = DateTime.UtcNow,
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow
                     };
