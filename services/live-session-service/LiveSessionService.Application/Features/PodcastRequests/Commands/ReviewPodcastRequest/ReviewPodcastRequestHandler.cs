@@ -74,26 +74,11 @@ public sealed class ReviewPodcastRequestHandler
 
             await _podcastRepository.AddAsync(newPodcast, cancellationToken);
 
-            var newEpisode = new PodcastEpisode
-            {
-                Id = Guid.NewGuid(),
-                PodcastId = newPodcast.Id,
-                Title = podcastRequest.EpisodeTitle,
-                AudioUrl = podcastRequest.AudioUrl,
-                Description = podcastRequest.Description,
-                ThumbnailUrl = podcastRequest.BannerUrl,
-                EpisodeNumber = 1,
-                PublishDate = now,
-                Duration = 0
-            };
-
-            await _podcastRepository.AddEpisodeAsync(newEpisode, cancellationToken);
-
             podcastRequest.Status = PodcastRequestStatus.Approved;
 
             _logger.LogInformation(
-                "Podcast request {Id} approved. Podcast created: {PodcastId}, Episode created: {EpisodeId}",
-                podcastRequest.Id, newPodcast.Id, newEpisode.Id);
+                "Podcast request {Id} approved. Podcast created: {PodcastId}",
+                podcastRequest.Id, newPodcast.Id);
         }
         else
         {
@@ -123,10 +108,9 @@ public sealed class ReviewPodcastRequestHandler
             RequestedByUserId = podcastRequest.RequestedByUserId,
             AuthorInfo = string.IsNullOrWhiteSpace(podcastRequest.AuthorInfo) ? null : System.Text.Json.JsonSerializer.Deserialize<object>(podcastRequest.AuthorInfo),
             Title = podcastRequest.Title,
-            EpisodeTitle = podcastRequest.EpisodeTitle,
+            Type = podcastRequest.Type,
             Description = podcastRequest.Description,
             BannerUrl = podcastRequest.BannerUrl,
-            AudioUrl = podcastRequest.AudioUrl,
             Price = podcastRequest.Price,
             IsPaid = podcastRequest.IsPaid,
             Status = podcastRequest.Status.ToString(),

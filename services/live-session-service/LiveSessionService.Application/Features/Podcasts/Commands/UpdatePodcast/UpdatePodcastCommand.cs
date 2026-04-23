@@ -10,4 +10,8 @@ public sealed record UpdatePodcastCommand(
     string? Author,
     string? Type,
     string? Banner,
-    string? Status) : ICommand<PodcastResult>;
+    string? Status,
+    decimal? Price,
+    bool? IsPaid,
+    Guid UserId,
+    bool IsAdmin) : ICommand<PodcastResult>;

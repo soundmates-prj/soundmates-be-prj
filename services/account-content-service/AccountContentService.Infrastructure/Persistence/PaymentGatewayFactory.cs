@@ -1,4 +1,4 @@
-﻿using AccountContentService.Application.Features.Payments.Commands.CreatePayment;
+using AccountContentService.Application.Features.Payments.Commands.CreatePayment;
 using AccountContentService.Application.Interfaces.Services;
 using System;
 using System.Collections.Generic;
@@ -24,5 +24,16 @@ namespace AccountContentService.Infrastructure.Persistence
 
             return await provider.CreatePaymentUrlAsync(orderId, request);
         }
+
+        public async Task<bool> ExecutePayoutAsync(Guid payoutId, decimal amount, string bankId, string accountNumber, string accountName, string description, string providerName = "sepay")
+        {
+            var provider = _providers.FirstOrDefault(p => p.Name.ToLower() == providerName.ToLower());
+
+            if (provider == null)
+                throw new Exception($"Payment provider '{providerName}' not supported for payouts.");
+
+            return await provider.ExecutePayoutAsync(payoutId, amount, bankId, accountNumber, accountName, description);
+        }
+
     }
 }

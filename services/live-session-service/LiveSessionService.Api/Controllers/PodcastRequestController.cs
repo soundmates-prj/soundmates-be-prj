@@ -75,7 +75,9 @@ public sealed class PodcastRequestController : ControllerBase
             return StatusCode(403, ApiResponse<object>.FailureResponse("Chỉ thành viên gói Premium mới được gửi request podcast.", (int)ErrorCode.Forbidden));
         }
 
-        var authorName = User.FindFirst("name")?.Value 
+        var authorName = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value 
+            ?? User.FindFirst("unique_name")?.Value
+            ?? User.FindFirst("name")?.Value 
             ?? User.FindFirst("preferred_username")?.Value 
             ?? "SoundMates Member";
         var authorAvatar = User.FindFirst("picture")?.Value;
@@ -93,10 +95,9 @@ public sealed class PodcastRequestController : ControllerBase
             RequestedByUserId: userId.Value,
             AuthorInfo: authorInfoStr,
             Title: request.Title,
-            EpisodeTitle: request.EpisodeTitle,
+            Type: request.Type,
             Description: request.Description,
             BannerUrl: request.BannerUrl,
-            AudioUrl: request.AudioUrl,
             Price: request.Price,
             IsPaid: request.IsPaid);
 

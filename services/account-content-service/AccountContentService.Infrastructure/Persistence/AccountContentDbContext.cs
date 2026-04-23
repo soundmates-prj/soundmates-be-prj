@@ -78,6 +78,7 @@ public class AccountContentDbContext : DbContext
     public DbSet<UserProfileReadModel> UserProfileReadModels => Set<UserProfileReadModel>();
 
     public DbSet<UserVoiceModel> UserVoiceModels => Set<UserVoiceModel>();
+    public DbSet<PendingPayout> PendingPayouts => Set<PendingPayout>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -85,6 +86,7 @@ public class AccountContentDbContext : DbContext
         modelBuilder.ApplyConfiguration(new UserProfileReadModelConfiguration());
         modelBuilder.ApplyConfiguration(new SubscriptionPlanConfiguration());
         modelBuilder.ApplyConfiguration(new UserVoiceModelConfiguration());
+        modelBuilder.ApplyConfiguration(new PendingPayoutConfiguration());
 
         base.OnModelCreating(modelBuilder);
     }

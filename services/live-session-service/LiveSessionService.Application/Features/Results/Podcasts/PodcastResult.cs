@@ -12,6 +12,8 @@ public sealed class PodcastResult
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
     public Guid CreatedBy { get; init; }
+    public decimal Price { get; init; }
+    public bool IsPaid { get; init; }
     public int EpisodeCount { get; init; }
     public List<PodcastEpisodeResult> AllEpisodes { get; init; } = [];
 }

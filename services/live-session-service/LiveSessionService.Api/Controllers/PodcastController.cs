@@ -160,6 +160,9 @@ public class PodcastController : ControllerBase
                 (int)ErrorCode.BadRequest));
         }
 
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        var isAdmin = User.IsInRole("STAFF") || User.IsInRole("ADMIN");
+
         var command = new UpdatePodcastCommand(
             id,
             request.Title,
@@ -167,7 +170,11 @@ public class PodcastController : ControllerBase
             request.Author,
             request.Type,
             request.Banner,
-            request.Status);
+            request.Status,
+            request.Price,
+            request.IsPaid,
+            userId != null ? Guid.Parse(userId) : Guid.Empty,
+            isAdmin);
 
         var result = await _commands.Send<UpdatePodcastCommand, PodcastResult>(command, ct);
 
@@ -218,6 +225,9 @@ public class PodcastController : ControllerBase
         }
 
         var podcast = existing.Data!;
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        var isAdmin = User.IsInRole("STAFF") || User.IsInRole("ADMIN");
+
         var command = new UpdatePodcastCommand(
             id,
             podcast.Title,
@@ -225,7 +235,11 @@ public class PodcastController : ControllerBase
             podcast.Author?.ToString(),
             podcast.Type,
             podcast.Banner,
-            resolvedStatus.ToString());
+            resolvedStatus.ToString(),
+            podcast.Price,
+            podcast.IsPaid,
+            userId != null ? Guid.Parse(userId) : Guid.Empty,
+            isAdmin);
 
         var result = await _commands.Send<UpdatePodcastCommand, PodcastResult>(command, ct);
 

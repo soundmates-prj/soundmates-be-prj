@@ -74,4 +74,6 @@ public partial class User
     public virtual ICollection<UserFavourite> UserFavourites { get; set; } = new List<UserFavourite>();
 
     public virtual SpotifyToken? SpotifyToken { get; set; }
+
+    public virtual BankAccount? BankAccount { get; set; }
 }

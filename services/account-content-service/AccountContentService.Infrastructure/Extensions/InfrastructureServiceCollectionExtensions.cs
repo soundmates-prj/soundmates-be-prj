@@ -33,6 +33,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<ISystemSettingReposiotry, SystemSettingReposiotry>();
         services.AddScoped<IThemeRepository, ThemeRepository>();
+        services.AddScoped<IPendingPayoutRepository, PendingPayoutRepository>();
 
         // EDA — User Profile Read Model (local projection via RabbitMQ events)
         services.AddScoped<IUserProfileReadModelRepository, UserProfileReadModelRepository>();
@@ -43,6 +44,9 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddHostedService<UserEventConsumerHostedService>();
         services.AddScoped<NotificationEventConsumer>();
         services.AddHostedService<NotificationEventConsumerHostedService>();
+
+        // Background jobs
+        services.AddHostedService<AccountContentService.Infrastructure.BackgroundJobs.PayoutBackgroundService>();
 
         // Payment configs
         services.Configure<VNPayConfig>(configuration.GetSection("VNPay"));
@@ -56,6 +60,9 @@ public static class InfrastructureServiceCollectionExtensions
         // Application services
         services.AddScoped<IPaymentService, PaymentService>();
         services.AddSingleton<IEncryptionService, EncryptionService>();
+
+        services.AddHttpClient<ILiveSessionApiClient, LiveSessionApiClient>();
+        services.AddHttpClient<IAuthApiClient, AuthApiClient>();
 
         // AzuraCast validator (uses named HttpClient)
         services.AddHttpClient<IAzuraCastValidator, AzuraCastValidator>(client =>

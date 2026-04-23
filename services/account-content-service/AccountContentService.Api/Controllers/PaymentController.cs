@@ -84,6 +84,70 @@ namespace AccountContentService.Api.Controllers
         }
 
         /// <summary>
+        /// TEST ENDPOINT: Automatically creates a VNPay payment for a specific podcast and redirects to it.
+        /// Useful for quick testing without frontend.
+        /// </summary>
+        [AllowAnonymous]
+        [HttpGet("test-purchase-podcast/{podcastId}")]
+        public async Task<IActionResult> TestPurchasePodcast(Guid podcastId)
+        {
+            var command = new CreatePaymentCommand
+            {
+                TargetId = podcastId,
+                TargetType = "podcast",
+                TotalAmount = 50000, // Dummy amount, VNPay callback will use real podcast price via ILiveSessionApiClient later if needed
+                Method = "vnpay",
+                ReturnUrl = ResolveDefaultReturnUrl("vnpay"),
+                IpAddress = RequestContext.GetIpAddress(HttpContext),
+                UserId = UserContext.GetUserId(HttpContext) != Guid.Empty ? UserContext.GetUserId(HttpContext) : Guid.NewGuid()
+            };
+
+            var url = await _mediator.Send(command);
+
+            return Ok(new { paymentUrl = url });
+        }
+
+        /// <summary>
+        /// TEST ENDPOINT: Automatically triggers a 10,000 VND payout to the specified user immediately.
+        /// Useful for testing the Payout Background Service.
+        /// </summary>
+        [AllowAnonymous]
+        [HttpPost("test-trigger-payout/{targetUserId}")]
+        public async Task<IActionResult> TestTriggerPayout(
+            Guid targetUserId,
+            [FromServices] AccountContentService.Application.Interfaces.Services.IAuthApiClient authApiClient,
+            [FromServices] AccountContentService.Application.Interfaces.Repositories.IPendingPayoutRepository pendingPayoutRepo)
+        {
+            var bankAccount = await authApiClient.GetUserBankAccountAsync(targetUserId, HttpContext.RequestAborted);
+            
+            var pendingPayout = new AccountContentService.Domain.Entities.PendingPayout
+            {
+                Id = Guid.NewGuid(),
+                PaymentId = Guid.NewGuid(),
+                TargetUserId = targetUserId,
+                Amount = 10000,
+                BankId = bankAccount?.BankId,
+                AccountNumber = bankAccount?.AccountNumber,
+                AccountName = bankAccount?.AccountName,
+                Status = bankAccount != null ? "pending" : "failed_no_bank",
+                ErrorMessage = bankAccount == null ? "User has no bank account configured." : null,
+                ScheduledAt = DateTime.UtcNow, // Immediate execution
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            
+            await pendingPayoutRepo.AddAsync(pendingPayout);
+            
+            return Ok(new 
+            { 
+                success = true, 
+                message = "Test payout created and scheduled immediately. Check the background service logs.", 
+                payoutId = pendingPayout.Id,
+                status = pendingPayout.Status
+            });
+        }
+
+        /// <summary>
         /// Handles VNPay callback after user completes payment.
         /// </summary>
         /// <remarks>

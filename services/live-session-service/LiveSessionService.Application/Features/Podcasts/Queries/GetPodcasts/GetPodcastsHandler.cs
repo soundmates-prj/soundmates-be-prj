@@ -33,6 +33,8 @@ public sealed class GetPodcastsHandler : IQueryHandler<GetPodcastsQuery, List<Po
         var result = podcasts.Select(x => new PodcastResult
         {
             Id = x.Id,
+                Price = x.Price,
+                IsPaid = x.IsPaid,
             Title = x.Title,
             Description = x.Description,
             Author = string.IsNullOrWhiteSpace(x.Author) ? null : System.Text.Json.JsonSerializer.Deserialize<object>(x.Author),

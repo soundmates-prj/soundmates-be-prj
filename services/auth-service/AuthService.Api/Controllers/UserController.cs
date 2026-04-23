@@ -213,4 +213,99 @@ public class UserController : ControllerBase
 
         return NoContent();
     }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // BANK ACCOUNT
+    // ═══════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Update user bank account (Owner).
+    /// </summary>
+    [HttpPut("bank-account")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateBankAccount(
+        [FromBody] UpdateBankAccountRequest request,
+        CancellationToken ct)
+    {
+        var userIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                        ?? User.FindFirst("sub")?.Value;
+
+        if (!Guid.TryParse(userIdString, out var userId))
+            return Unauthorized(ApiResponse<bool>.FailureResponse("User ID not found in token", 401));
+
+        if (!ModelState.IsValid)
+            return BadRequest(ApiResponse<bool>.FailureResponse("Invalid input", 400));
+
+        var cmd = new UpdateBankAccountCommand(userId, request.BankId, request.AccountNumber, request.AccountName);
+        var result = await _commands.Send<UpdateBankAccountCommand, bool>(cmd, ct);
+
+        if (!result.IsSuccess)
+            return NotFound(ApiResponse<bool>.FailureResponse(
+                result.ErrorMessage ?? "User not found", 404));
+
+        return Ok(ApiResponse<bool>.SuccessResponse(true, "Bank account updated successfully"));
+    }
+
+    /// <summary>
+    /// Get user bank account (Owner, Admin, or Inter-service).
+    /// </summary>
+    [HttpGet("{id:guid}/bank-account")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetBankAccount(
+        Guid id,
+        [FromServices] AuthService.Infrastructure.Persistence.AuthDbContext dbContext,
+        CancellationToken ct)
+    {
+        var account = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.FirstOrDefaultAsync(
+            dbContext.BankAccounts, x => x.UserId == id, ct);
+
+        if (account == null)
+            return NotFound();
+
+        return Ok(new
+        {
+            account.UserId,
+            account.BankId,
+            account.AccountNumber,
+            account.AccountName
+        });
+    }
+
+    /// <summary>
+    /// Get current user's bank account (Owner).
+    /// </summary>
+    [HttpGet("bank-account")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetMyBankAccount(
+        [FromServices] AuthService.Infrastructure.Persistence.AuthDbContext dbContext,
+        CancellationToken ct)
+    {
+        var userIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                        ?? User.FindFirst("sub")?.Value;
+
+        if (!Guid.TryParse(userIdString, out var userId))
+            return Unauthorized(ApiResponse<object>.FailureResponse("User ID not found in token", 401));
+
+        var account = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.FirstOrDefaultAsync(
+            dbContext.BankAccounts, x => x.UserId == userId, ct);
+
+        if (account == null)
+            return NotFound(ApiResponse<object>.FailureResponse("Bank account not found", 404));
+
+        return Ok(ApiResponse<object>.SuccessResponse(new
+        {
+            account.UserId,
+            account.BankId,
+            account.AccountNumber,
+            account.AccountName
+        }));
+    }
 }

@@ -26,10 +26,10 @@ public class VNPayService : IPaymentProvider
         vnpay.AddRequestData("vnp_Command", "pay");
         vnpay.AddRequestData("vnp_TmnCode", _config.TmnCode);
         vnpay.AddRequestData("vnp_Amount", ((int)(request.TotalAmount * 100)).ToString());
-        vnpay.AddRequestData("vnp_CreateDate", DateTime.UtcNow.ToString("yyyyMMddHHmmss"));
+        vnpay.AddRequestData("vnp_CreateDate", DateTime.UtcNow.AddHours(7).ToString("yyyyMMddHHmmss"));
         vnpay.AddRequestData("vnp_CurrCode", "VND");
 
-        vnpay.AddRequestData("vnp_IpAddr", request.IpAddress);
+        vnpay.AddRequestData("vnp_IpAddr", string.IsNullOrEmpty(request.IpAddress) ? "127.0.0.1" : request.IpAddress);
 
         vnpay.AddRequestData("vnp_OrderInfo", $"{request.TargetType}_{request.TargetId}");
         vnpay.AddRequestData("vnp_OrderType", "other");
@@ -42,5 +42,10 @@ public class VNPayService : IPaymentProvider
         var url = vnpay.CreateRequestUrl(baseUrl, _config.HashSecret);
 
         return Task.FromResult(url);
+    }
+
+    public Task<bool> ExecutePayoutAsync(Guid payoutId, decimal amount, string bankId, string accountNumber, string accountName, string description)
+    {
+        throw new NotSupportedException("VNPay integration does not support payouts yet.");
     }
 }

@@ -154,7 +154,7 @@ namespace LiveSessionService.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ListenerStatistics", (string)null);
+                    b.ToTable("ListenerStatistics");
                 });
 
             modelBuilder.Entity("LiveSessionService.Domain.Entities.LiveSession", b =>
@@ -408,9 +408,6 @@ namespace LiveSessionService.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("live_session_id");
 
-                    b.Property<string>("Lyrics")
-                        .HasColumnType("text");
-
                     b.Property<DateTime>("PlayedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("played_at");
@@ -555,7 +552,7 @@ namespace LiveSessionService.Infrastructure.Migrations
 
                     b.HasIndex("StationPlaylistId");
 
-                    b.ToTable("PlaylistMedias", (string)null);
+                    b.ToTable("PlaylistMedias");
                 });
 
             modelBuilder.Entity("LiveSessionService.Domain.Entities.Podcast", b =>
@@ -740,12 +737,6 @@ namespace LiveSessionService.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<string>("AudioUrl")
-                        .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)")
-                        .HasColumnName("audio_url");
-
                     b.Property<string>("AuthorInfo")
                         .HasColumnType("text")
                         .HasColumnName("author_info");
@@ -759,12 +750,6 @@ namespace LiveSessionService.Infrastructure.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)")
                         .HasColumnName("description");
-
-                    b.Property<string>("EpisodeTitle")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("episode_title");
 
                     b.Property<bool>("IsPaid")
                         .HasColumnType("boolean")
@@ -806,6 +791,12 @@ namespace LiveSessionService.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)")
                         .HasColumnName("title");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("type");
 
                     b.HasKey("Id");
 
@@ -849,7 +840,7 @@ namespace LiveSessionService.Infrastructure.Migrations
 
                     b.HasIndex("LiveSessionId");
 
-                    b.ToTable("SessionActivities", (string)null);
+                    b.ToTable("SessionActivities");
                 });
 
             modelBuilder.Entity("LiveSessionService.Domain.Entities.SessionListener", b =>
@@ -901,7 +892,7 @@ namespace LiveSessionService.Infrastructure.Migrations
 
                     b.HasIndex("LiveSessionId");
 
-                    b.ToTable("SessionListeners", (string)null);
+                    b.ToTable("SessionListeners");
                 });
 
             modelBuilder.Entity("LiveSessionService.Domain.Entities.SessionParticipant", b =>
@@ -941,7 +932,7 @@ namespace LiveSessionService.Infrastructure.Migrations
 
                     b.HasIndex("LiveSessionId");
 
-                    b.ToTable("SessionParticipants", (string)null);
+                    b.ToTable("SessionParticipants");
                 });
 
             modelBuilder.Entity("LiveSessionService.Domain.Entities.SessionSchedule", b =>
@@ -1165,7 +1156,7 @@ namespace LiveSessionService.Infrastructure.Migrations
 
                     b.HasIndex("AzuraCastStationId");
 
-                    b.ToTable("StationMounts", (string)null);
+                    b.ToTable("StationMounts");
                 });
 
             modelBuilder.Entity("LiveSessionService.Domain.Entities.StationPlaylist", b =>
@@ -1233,7 +1224,7 @@ namespace LiveSessionService.Infrastructure.Migrations
 
                     b.HasIndex("AzuraCastStationId");
 
-                    b.ToTable("StationPlaylists", (string)null);
+                    b.ToTable("StationPlaylists");
                 });
 
             modelBuilder.Entity("LiveSessionService.Domain.Entities.SyncAuditLog", b =>

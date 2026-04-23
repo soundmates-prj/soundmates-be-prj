@@ -1,4 +1,4 @@
-﻿namespace AccountContentService.Api.Contracts.Responses
+namespace AccountContentService.Api.Contracts.Responses
 {
     public class TransactionResponse
     {
@@ -17,6 +17,10 @@
         public string TransactionStatus { get; set; }
 
         public DateTime CreatedAt { get; set; }
+
+        // What was purchased
+        public string TargetType { get; set; } = string.Empty;
+        public Guid? TargetId { get; set; }
 
         public UserProfileResponse userProfile { get; set; } = null!;
 
