@@ -10,10 +10,9 @@ public class PodcastRequest
     // New fields
     public string? AuthorInfo { get; set; }
     public string Title { get; set; } = null!; // Podcast Series Title
-    public string EpisodeTitle { get; set; } = null!; // First Episode Title
+    public string Type { get; set; } = null!;
     public string? Description { get; set; }
     public string? BannerUrl { get; set; }
-    public string AudioUrl { get; set; } = null!; // Episode Audio
     public decimal Price { get; set; }
     public bool IsPaid { get; set; }
     public PodcastRequestStatus Status { get; set; }

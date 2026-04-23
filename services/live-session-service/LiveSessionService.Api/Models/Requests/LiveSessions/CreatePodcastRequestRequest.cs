@@ -8,17 +8,14 @@ public sealed class CreatePodcastRequestRequest
     [StringLength(500, ErrorMessage = "Title cannot exceed 500 characters")]
     public string Title { get; set; } = null!;
 
-    [Required(ErrorMessage = "Episode Title is required")]
-    [StringLength(500, ErrorMessage = "Episode Title cannot exceed 500 characters")]
-    public string EpisodeTitle { get; set; } = null!;
+    [Required(ErrorMessage = "Type is required")]
+    [StringLength(50, ErrorMessage = "Type cannot exceed 50 characters")]
+    public string Type { get; set; } = null!;
 
     [StringLength(2000, ErrorMessage = "Description cannot exceed 2000 characters")]
     public string? Description { get; set; }
 
     public string? BannerUrl { get; set; }
-
-    [Required(ErrorMessage = "Audio URL is required")]
-    public string AudioUrl { get; set; } = null!;
 
     public decimal Price { get; set; }
 

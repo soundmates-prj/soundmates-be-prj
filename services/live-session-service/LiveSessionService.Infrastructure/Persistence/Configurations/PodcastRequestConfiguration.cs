@@ -18,10 +18,9 @@ public sealed class PodcastRequestConfiguration : IEntityTypeConfiguration<Podca
         
         builder.Property(r => r.AuthorInfo).HasColumnName("author_info");
         builder.Property(r => r.Title).HasColumnName("title").HasMaxLength(500).IsRequired();
-        builder.Property(r => r.EpisodeTitle).HasColumnName("episode_title").HasMaxLength(500).IsRequired();
+        builder.Property(r => r.Type).HasColumnName("type").HasMaxLength(50).IsRequired();
         builder.Property(r => r.Description).HasColumnName("description").HasMaxLength(2000);
         builder.Property(r => r.BannerUrl).HasColumnName("banner_url").HasMaxLength(2000);
-        builder.Property(r => r.AudioUrl).HasColumnName("audio_url").HasMaxLength(2000).IsRequired();
         builder.Property(r => r.Price).HasColumnName("price").HasColumnType("decimal(18,2)");
         builder.Property(r => r.IsPaid).HasColumnName("is_paid").IsRequired();
 

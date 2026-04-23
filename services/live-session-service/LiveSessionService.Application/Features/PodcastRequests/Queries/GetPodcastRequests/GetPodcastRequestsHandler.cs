@@ -34,7 +34,7 @@ public sealed class GetPodcastRequestsHandler
             results = results.Where(r =>
                 r.Title.ToLowerInvariant().Contains(q) ||
                 (r.AuthorInfo?.ToLowerInvariant().Contains(q) ?? false) ||
-                (r.EpisodeTitle?.ToLowerInvariant().Contains(q) ?? false))
+                r.Type.ToLowerInvariant().Contains(q))
                 .ToList();
         }
 
@@ -44,10 +44,9 @@ public sealed class GetPodcastRequestsHandler
             RequestedByUserId = r.RequestedByUserId,
             AuthorInfo = string.IsNullOrWhiteSpace(r.AuthorInfo) ? null : System.Text.Json.JsonSerializer.Deserialize<object>(r.AuthorInfo),
             Title = r.Title,
-            EpisodeTitle = r.EpisodeTitle,
+            Type = r.Type,
             Description = r.Description,
             BannerUrl = r.BannerUrl,
-            AudioUrl = r.AudioUrl,
             Price = r.Price,
             IsPaid = r.IsPaid,
             Status = r.Status.ToString(),
