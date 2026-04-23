@@ -95,10 +95,9 @@ public sealed class PodcastRequestController : ControllerBase
             RequestedByUserId: userId.Value,
             AuthorInfo: authorInfoStr,
             Title: request.Title,
-            EpisodeTitle: request.EpisodeTitle,
+            Type: request.Type,
             Description: request.Description,
             BannerUrl: request.BannerUrl,
-            AudioUrl: request.AudioUrl,
             Price: request.Price,
             IsPaid: request.IsPaid);
 

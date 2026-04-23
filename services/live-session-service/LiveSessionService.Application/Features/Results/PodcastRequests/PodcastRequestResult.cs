@@ -6,10 +6,9 @@ public sealed class PodcastRequestResult
     public Guid RequestedByUserId { get; init; }
     public object? AuthorInfo { get; init; }
     public string Title { get; init; } = null!;
-    public string EpisodeTitle { get; init; } = null!;
+    public string Type { get; init; } = null!;
     public string? Description { get; init; }
     public string? BannerUrl { get; init; }
-    public string AudioUrl { get; init; } = null!;
     public decimal Price { get; init; }
     public bool IsPaid { get; init; }
     public string Status { get; init; } = null!;
