@@ -20,4 +20,7 @@ public interface ILiveSessionRepository
     Task<int> GetActiveSessionCountAsync(CancellationToken cancellationToken = default);
     Task<StaffDashboardOverview> GetStaffDashboardOverviewAsync(int days, CancellationToken cancellationToken = default);
     Task EndSessionCleanupAsync(Guid sessionId, DateTime endedAt, CancellationToken cancellationToken = default);
+    Task<HostDashboardOverview> GetHostDashboardOverviewAsync(Guid hostUserId, int days, CancellationToken cancellationToken = default);
+    Task<HostAnalyticsOverview> GetHostAnalyticsOverviewAsync(Guid hostUserId, int days, CancellationToken cancellationToken = default);
+    Task<List<LiveSessionChat>> GetSessionChatsAsync(Guid sessionId, CancellationToken cancellationToken = default);
 }

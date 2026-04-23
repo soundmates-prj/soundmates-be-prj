@@ -166,4 +166,330 @@ public sealed class LiveSessionRepository : ILiveSessionRepository
             await _context.SaveChangesAsync(cancellationToken);
         }
     }
+    public async Task<HostDashboardOverview> GetHostDashboardOverviewAsync(Guid hostUserId, int days, CancellationToken cancellationToken = default)
+    {
+        var normalizedDays = days <= 0 ? 7 : Math.Min(days, 90);
+        var utcToday = DateTime.UtcNow.Date;
+        var fromDate = utcToday.AddDays(-(normalizedDays - 1));
+
+        // Get all sessions of the host
+        var hostSessions = await _context.LiveSessions
+            .AsNoTracking()
+            .Where(x => x.HostUserId == hostUserId)
+            .ToListAsync(cancellationToken);
+
+        var hostSessionIds = hostSessions.Select(x => x.Id).ToList();
+
+        // 1. Total Sessions
+        var totalSessions = hostSessions.Count;
+
+        // 2. Total Listeners & Chart Data
+        var listenerRows = new List<SessionListener>();
+        if (hostSessionIds.Any())
+        {
+            listenerRows = await _context.SessionListeners
+                .AsNoTracking()
+                .Where(x => hostSessionIds.Contains(x.LiveSessionId) && x.ConnectedAt >= fromDate)
+                .Select(x => new { x.Id, x.LiveSessionId, x.ConnectedAt, x.UserId, x.AnonymousIdentifier })
+                .ToListAsync(cancellationToken)
+                .ContinueWith(t => t.Result.Select(x => new SessionListener 
+                { 
+                    Id = x.Id, 
+                    LiveSessionId = x.LiveSessionId, 
+                    ConnectedAt = x.ConnectedAt, 
+                    UserId = x.UserId, 
+                    AnonymousIdentifier = x.AnonymousIdentifier 
+                }).ToList(), cancellationToken);
+        }
+
+        string ToListenerKey(Guid id, Guid? userId, string? anonymousIdentifier)
+        {
+            if (userId.HasValue) return $"u:{userId.Value}";
+            if (!string.IsNullOrWhiteSpace(anonymousIdentifier)) return $"a:{anonymousIdentifier}";
+            return $"g:{id}";
+        }
+
+        var uniqueListeners = listenerRows
+            .Select(x => ToListenerKey(x.Id, x.UserId, x.AnonymousIdentifier))
+            .Distinct()
+            .Count();
+
+        var totalListeners = uniqueListeners;
+
+        var chartData = Enumerable.Range(0, normalizedDays)
+            .Select(offset => fromDate.AddDays(offset))
+            .Select(day =>
+            {
+                var sessionsThatDay = hostSessions.Count(x => x.StartedAt.HasValue && x.StartedAt.Value.Date == day);
+                var uniqueListenersThatDay = listenerRows
+                    .Where(x => x.ConnectedAt.Date == day)
+                    .Select(x => ToListenerKey(x.Id, x.UserId, x.AnonymousIdentifier))
+                    .Distinct()
+                    .Count();
+
+                return new DailyHostStatMetric
+                {
+                    Date = day,
+                    SessionsCount = sessionsThatDay,
+                    ListenersCount = uniqueListenersThatDay
+                };
+            })
+            .ToList();
+
+        // 3. Pending Music Requests
+        var pendingMusicRequests = 0;
+        if (hostSessionIds.Any())
+        {
+            pendingMusicRequests = await _context.SongRequests
+                .CountAsync(x => hostSessionIds.Contains(x.LiveSessionId) && x.Status == Domain.Enums.SongRequestStatus.Pending, cancellationToken);
+        }
+
+        // 4. Ended Sessions Analysis
+        var endedSessions = hostSessions
+            .Where(x => x.Status == Domain.Enums.SessionStatus.Ended)
+            .OrderByDescending(x => x.EndedAt)
+            .Take(10) // Limit to last 10 ended sessions for performance
+            .ToList();
+
+        var endedSessionIds = endedSessions.Select(x => x.Id).ToList();
+        var musicRequestsBySession = new Dictionary<Guid, int>();
+        
+        if (endedSessionIds.Any())
+        {
+            musicRequestsBySession = await _context.SongRequests
+                .Where(x => endedSessionIds.Contains(x.LiveSessionId))
+                .GroupBy(x => x.LiveSessionId)
+                .Select(g => new { SessionId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.SessionId, x => x.Count, cancellationToken);
+        }
+
+        var endedSessionsAnalysis = endedSessions.Select(s => 
+        {
+            var durationSpan = s.EndedAt.HasValue && s.StartedAt.HasValue 
+                ? s.EndedAt.Value - s.StartedAt.Value 
+                : TimeSpan.Zero;
+            
+            var sessionUniqueListeners = listenerRows
+                .Where(x => x.LiveSessionId == s.Id)
+                .Select(x => ToListenerKey(x.Id, x.UserId, x.AnonymousIdentifier))
+                .Distinct()
+                .Count();
+
+            return new EndedSessionAnalysis
+            {
+                SessionId = s.Id,
+                SessionName = s.SessionName,
+                EndedAt = s.EndedAt,
+                TotalDurationMinutes = durationSpan.TotalMinutes,
+                TotalListeners = sessionUniqueListeners,
+                MusicRequestsCount = musicRequestsBySession.ContainsKey(s.Id) ? musicRequestsBySession[s.Id] : 0
+            };
+        }).ToList();
+
+        // 5. Recent Music Requests
+        var recentMusicRequests = new List<SongRequest>();
+        if (hostSessionIds.Any())
+        {
+            recentMusicRequests = await _context.SongRequests
+                .Include(x => x.MediaFile)
+                .Where(x => hostSessionIds.Contains(x.LiveSessionId))
+                .OrderByDescending(x => x.RequestedAt)
+                .Take(5)
+                .ToListAsync(cancellationToken);
+        }
+
+        return new HostDashboardOverview
+        {
+            TotalSessions = totalSessions,
+            TotalListeners = totalListeners,
+            PendingMusicRequests = pendingMusicRequests,
+            ChartData = chartData,
+            RecentMusicRequests = recentMusicRequests,
+            EndedSessionsAnalysis = endedSessionsAnalysis
+        };
+    }
+
+    public async Task<HostAnalyticsOverview> GetHostAnalyticsOverviewAsync(Guid hostUserId, int days, CancellationToken cancellationToken = default)
+    {
+        var normalizedDays = days <= 0 ? 7 : Math.Min(days, 90);
+        var utcToday = DateTime.UtcNow.Date;
+        var fromDate = utcToday.AddDays(-(normalizedDays - 1));
+
+        // Get all sessions of the host
+        var hostSessions = await _context.LiveSessions
+            .AsNoTracking()
+            .Where(x => x.HostUserId == hostUserId)
+            .ToListAsync(cancellationToken);
+
+        var hostSessionIds = hostSessions.Select(x => x.Id).ToList();
+
+        // Total Sessions
+        var totalSessions = hostSessions.Count;
+
+        // Fetch Listener records
+        var listenerRows = new List<SessionListener>();
+        if (hostSessionIds.Any())
+        {
+            listenerRows = await _context.SessionListeners
+                .AsNoTracking()
+                .Where(x => hostSessionIds.Contains(x.LiveSessionId) && x.ConnectedAt >= fromDate)
+                .Select(x => new { x.Id, x.LiveSessionId, x.ConnectedAt, x.UserId, x.AnonymousIdentifier })
+                .ToListAsync(cancellationToken)
+                .ContinueWith(t => t.Result.Select(x => new SessionListener 
+                { 
+                    Id = x.Id, 
+                    LiveSessionId = x.LiveSessionId, 
+                    ConnectedAt = x.ConnectedAt, 
+                    UserId = x.UserId, 
+                    AnonymousIdentifier = x.AnonymousIdentifier 
+                }).ToList(), cancellationToken);
+        }
+
+        string ToListenerKey(Guid id, Guid? userId, string? anonymousIdentifier)
+        {
+            if (userId.HasValue) return $"u:{userId.Value}";
+            if (!string.IsNullOrWhiteSpace(anonymousIdentifier)) return $"a:{anonymousIdentifier}";
+            return $"g:{id}";
+        }
+
+        var uniqueListeners = listenerRows
+            .Select(x => ToListenerKey(x.Id, x.UserId, x.AnonymousIdentifier))
+            .Distinct()
+            .Count();
+
+        var peakListeners = hostSessionIds.Any() && listenerRows.Any() 
+            ? hostSessionIds.Max(sId => listenerRows
+                .Where(x => x.LiveSessionId == sId)
+                .Select(x => ToListenerKey(x.Id, x.UserId, x.AnonymousIdentifier))
+                .Distinct()
+                .Count()) 
+            : 0;
+
+        // Fetch Song requests
+        var songRequests = new List<SongRequest>();
+        if (hostSessionIds.Any())
+        {
+            songRequests = await _context.SongRequests
+                .Include(x => x.MediaFile)
+                .AsNoTracking()
+                .Where(x => hostSessionIds.Contains(x.LiveSessionId) && x.RequestedAt >= fromDate)
+                .ToListAsync(cancellationToken);
+        }
+
+        var totalMusicRequests = songRequests.Count;
+
+        // Fetch Chat messages
+        var chatMessages = new List<LiveSessionChat>();
+        if (hostSessionIds.Any())
+        {
+            chatMessages = await _context.LiveSessionChats
+                .AsNoTracking()
+                .Where(x => hostSessionIds.Contains(x.LiveSessionId) && x.CreatedAt >= fromDate)
+                .ToListAsync(cancellationToken);
+        }
+
+        // Daily Chart Data
+        var chartData = Enumerable.Range(0, normalizedDays)
+            .Select(offset => fromDate.AddDays(offset))
+            .Select(day =>
+            {
+                var uniqueListenersThatDay = listenerRows
+                    .Where(x => x.ConnectedAt.Date == day)
+                    .Select(x => ToListenerKey(x.Id, x.UserId, x.AnonymousIdentifier))
+                    .Distinct()
+                    .Count();
+
+                var requestsThatDay = songRequests.Count(x => x.RequestedAt.Date == day);
+                var chatsThatDay = chatMessages.Count(x => x.CreatedAt.Date == day);
+
+                return new DailyHostAnalyticsMetric
+                {
+                    Date = day,
+                    ListenersCount = uniqueListenersThatDay,
+                    RequestsCount = requestsThatDay,
+                    ChatCount = chatsThatDay
+                };
+            })
+            .ToList();
+
+        // Top requested songs
+        var topRequestedSongs = songRequests
+            .GroupBy(x => x.MediaFileId)
+            .Select(g => new
+            {
+                Count = g.Count(),
+                Song = g.First().MediaFile
+            })
+            .OrderByDescending(x => x.Count)
+            .Take(5)
+            .Select((x, index) => new TopSongRequestMetric
+            {
+                Rank = index + 1,
+                Title = x.Song.Title ?? "Unknown Title",
+                Artist = x.Song.Artist,
+                Count = x.Count
+            })
+            .ToList();
+
+        // Ended Sessions Analysis
+        var endedSessions = hostSessions
+            .Where(x => x.Status == Domain.Enums.SessionStatus.Ended)
+            .OrderByDescending(x => x.EndedAt)
+            .Take(10) // Limit to last 10 ended sessions for performance
+            .ToList();
+
+        var endedSessionIds = endedSessions.Select(x => x.Id).ToList();
+        var musicRequestsBySession = new Dictionary<Guid, int>();
+        
+        if (endedSessionIds.Any())
+        {
+            musicRequestsBySession = songRequests
+                .Where(x => endedSessionIds.Contains(x.LiveSessionId))
+                .GroupBy(x => x.LiveSessionId)
+                .ToDictionary(g => g.Key, g => g.Count());
+        }
+
+        var endedSessionsAnalysis = endedSessions.Select(s => 
+        {
+            var durationSpan = s.EndedAt.HasValue && s.StartedAt.HasValue 
+                ? s.EndedAt.Value - s.StartedAt.Value 
+                : TimeSpan.Zero;
+            
+            var sessionUniqueListeners = listenerRows
+                .Where(x => x.LiveSessionId == s.Id)
+                .Select(x => ToListenerKey(x.Id, x.UserId, x.AnonymousIdentifier))
+                .Distinct()
+                .Count();
+
+            return new EndedSessionAnalysis
+            {
+                SessionId = s.Id,
+                SessionName = s.SessionName,
+                EndedAt = s.EndedAt,
+                TotalDurationMinutes = durationSpan.TotalMinutes,
+                TotalListeners = sessionUniqueListeners,
+                MusicRequestsCount = musicRequestsBySession.ContainsKey(s.Id) ? musicRequestsBySession[s.Id] : 0
+            };
+        }).ToList();
+
+        return new HostAnalyticsOverview
+        {
+            TotalListeners = uniqueListeners,
+            TotalSessions = totalSessions,
+            PeakListeners = peakListeners,
+            TotalMusicRequests = totalMusicRequests,
+            ChartData = chartData,
+            TopRequestedSongs = topRequestedSongs,
+            EndedSessionsAnalysis = endedSessionsAnalysis
+        };
+    }
+
+    public async Task<List<LiveSessionChat>> GetSessionChatsAsync(Guid sessionId, CancellationToken cancellationToken = default)
+    {
+        return await _context.LiveSessionChats
+            .AsNoTracking()
+            .Where(x => x.LiveSessionId == sessionId)
+            .OrderBy(x => x.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
 }
