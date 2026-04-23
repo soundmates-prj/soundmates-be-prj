@@ -17,7 +17,11 @@ using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSessio
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetSessionSchedules;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetScheduleById;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetStaffDashboardOverview;
+using LiveSessionService.Application.Features.LiveSessions.Queries.GetHostDashboardOverview;
+using LiveSessionService.Application.Features.LiveSessions.Queries.GetHostAnalyticsOverview;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSessionQueue;
+using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSessionQueue;
+using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSessionChats;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSessionStatistics;
 using LiveSessionService.Application.Features.LiveSessions.Commands.RestartBroadcast;
 using LiveSessionService.Application.Features.LiveSessions.Commands.SkipTrack;
@@ -175,8 +179,11 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<GetScheduleByIdQuery, SessionScheduleResult>, GetScheduleByIdHandler>();
         services.AddScoped<IQueryHandler<SearchSchedulesQuery, SearchSchedulesResult>, SearchSchedulesQueryHandler>();
         services.AddScoped<IQueryHandler<GetStaffDashboardOverviewQuery, StaffDashboardOverviewResult>, GetStaffDashboardOverviewHandler>();
+        services.AddScoped<IQueryHandler<GetHostDashboardOverviewQuery, HostDashboardOverviewResult>, GetHostDashboardOverviewHandler>();
+        services.AddScoped<IQueryHandler<GetHostAnalyticsOverviewQuery, HostAnalyticsOverviewResult>, GetHostAnalyticsOverviewHandler>();
         services.AddScoped<IQueryHandler<GetActiveLiveSessionsQuery, List<LiveSessionResult>>, GetActiveLiveSessionsHandler>();
         services.AddScoped<IQueryHandler<GetLiveSessionStatisticsQuery, LiveSessionStatisticsResult>, GetLiveSessionStatisticsHandler>();
+        services.AddScoped<IQueryHandler<GetLiveSessionChatsQuery, List<LiveSessionChatResult>>, GetLiveSessionChatsHandler>();
 
         // Register Playlist Query Handlers
         services.AddScoped<IQueryHandler<GetPlaylistsByStationQuery, List<PlaylistResult>>, GetPlaylistsByStationHandler>();

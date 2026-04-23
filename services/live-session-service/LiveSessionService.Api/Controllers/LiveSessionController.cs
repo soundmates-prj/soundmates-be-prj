@@ -18,12 +18,14 @@ using LiveSessionService.Application.Features.Results.LiveSessions;
 using LiveSessionService.Application.Features.Results.NowPlaying;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSessionNowPlaying;
 using LiveSessionService.Application.Features.Results.SongRequests;
+using LiveSessionService.Application.Features.LiveSessions.Queries.GetHostAnalyticsOverview;
 using LiveSessionService.Application.Features.SongRequests.Commands.CreateSongRequest;
 using LiveSessionService.Application.Features.SongRequests.Commands.ReviewSongRequest;
 using LiveSessionService.Application.Features.SongRequests.Queries.GetSongRequestsBySession;
 using LiveSessionService.Application.Features.LiveSessions.Commands.RestartBroadcast;
 using LiveSessionService.Application.Features.LiveSessions.Commands.SkipTrack;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSessionQueue;
+using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSessionChats;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -128,6 +130,67 @@ public class LiveSessionController : ControllerBase
     }
 
     /// <summary>
+    /// Get host dashboard overview metrics
+    /// </summary>
+    [HttpGet("dashboard/host")]
+    [Authorize]
+    [ProducesResponseType(typeof(ApiResponse<HostDashboardOverviewResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    public async Task<IActionResult> GetHostDashboardOverview(
+        [FromQuery] int days = 7,
+        CancellationToken ct = default)
+    {
+        if (!TryGetCurrentUserId(out var currentUserId))
+        {
+            return Unauthorized(ApiResponse<object>.FailureResponse(
+                "Invalid or missing user token",
+                (int)ErrorCode.Unauthorized));
+        }
+
+        var query = new Application.Features.LiveSessions.Queries.GetHostDashboardOverview.GetHostDashboardOverviewQuery(currentUserId, days);
+        var result = await _queries.Send<Application.Features.LiveSessions.Queries.GetHostDashboardOverview.GetHostDashboardOverviewQuery, HostDashboardOverviewResult>(query, ct);
+
+        if (!result.IsSuccess)
+        {
+            return StatusCode(
+                (int)(result.ErrorCode ?? ErrorCode.InternalServerError),
+                result.ToApiResponse());
+        }
+
+        return Ok(ApiResponse<HostDashboardOverviewResult>.SuccessResponse(
+            result.Data!,
+            "Host dashboard overview retrieved"));
+    }
+
+
+    /// <summary>
+    /// Get analytics overview data for the host
+    /// </summary>
+    [HttpGet("analytics/host")]
+    [Authorize]
+    [ProducesResponseType(typeof(ApiResponse<HostAnalyticsOverviewResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    public async Task<IActionResult> GetHostAnalyticsOverview([FromQuery] int days = 7, CancellationToken ct = default)
+    {
+        if (!TryGetCurrentUserId(out var currentUserId))
+        {
+            return Unauthorized(ApiResponse<object>.FailureResponse(
+                "Invalid or missing user token",
+                (int)ErrorCode.Unauthorized));
+        }
+
+        var query = new GetHostAnalyticsOverviewQuery(currentUserId, days);
+        var result = await _queries.Send<GetHostAnalyticsOverviewQuery, HostAnalyticsOverviewResult>(query, ct);
+
+        if (!result.IsSuccess)
+        {
+            return StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse());
+        }
+
+        return Ok(ApiResponse<HostAnalyticsOverviewResult>.SuccessResponse(result.Data!, "Host analytics retrieved"));
+    }
+
+    /// <summary>
     /// Get a specific live session by ID
     /// </summary>
     [HttpGet("{id:guid}")]
@@ -149,6 +212,25 @@ public class LiveSessionController : ControllerBase
         }
 
         return Ok(ApiResponse<LiveSessionResult>.SuccessResponse(result.Data!, "Success"));
+    }
+
+    /// <summary>
+    /// Get chat history of a specific live session
+    /// </summary>
+    [HttpGet("{id:guid}/chats")]
+    [Authorize]
+    [ProducesResponseType(typeof(ApiResponse<List<LiveSessionChatResult>>), 200)]
+    public async Task<IActionResult> GetChats(Guid id, CancellationToken ct)
+    {
+        var result = await _queries.Send<GetLiveSessionChatsQuery, List<LiveSessionChatResult>>(
+            new GetLiveSessionChatsQuery(id), ct);
+
+        if (!result.IsSuccess)
+        {
+            return StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse());
+        }
+
+        return Ok(ApiResponse<List<LiveSessionChatResult>>.SuccessResponse(result.Data!, "Live session chats retrieved successfully"));
     }
 
     /// <summary>
