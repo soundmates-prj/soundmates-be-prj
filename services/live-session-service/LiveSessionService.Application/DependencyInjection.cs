@@ -18,6 +18,7 @@ using LiveSessionService.Application.Features.LiveSessions.Queries.GetSessionSch
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetScheduleById;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetStaffDashboardOverview;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSessionQueue;
+using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSessionStatistics;
 using LiveSessionService.Application.Features.LiveSessions.Commands.RestartBroadcast;
 using LiveSessionService.Application.Features.LiveSessions.Commands.SkipTrack;
 using LiveSessionService.Application.Features.LiveSessions.Queries.SearchSchedules;
@@ -168,6 +169,7 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<SearchSchedulesQuery, SearchSchedulesResult>, SearchSchedulesQueryHandler>();
         services.AddScoped<IQueryHandler<GetStaffDashboardOverviewQuery, StaffDashboardOverviewResult>, GetStaffDashboardOverviewHandler>();
         services.AddScoped<IQueryHandler<GetActiveLiveSessionsQuery, List<LiveSessionResult>>, GetActiveLiveSessionsHandler>();
+        services.AddScoped<IQueryHandler<GetLiveSessionStatisticsQuery, LiveSessionStatisticsResult>, GetLiveSessionStatisticsHandler>();
 
         // Register Playlist Query Handlers
         services.AddScoped<IQueryHandler<GetPlaylistsByStationQuery, List<PlaylistResult>>, GetPlaylistsByStationHandler>();
