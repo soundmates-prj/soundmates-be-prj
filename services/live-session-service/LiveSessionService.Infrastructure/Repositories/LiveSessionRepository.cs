@@ -26,6 +26,7 @@ public sealed class LiveSessionRepository : ILiveSessionRepository
         return await _context.LiveSessions
             .Include(x => x.AzuraCastStation)
             .Include(x => x.Listeners)
+            .Include(x => x.Chats)
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
     }
 

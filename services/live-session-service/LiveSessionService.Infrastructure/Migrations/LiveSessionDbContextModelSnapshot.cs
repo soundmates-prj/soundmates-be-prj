@@ -154,7 +154,7 @@ namespace LiveSessionService.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ListenerStatistics");
+                    b.ToTable("ListenerStatistics", (string)null);
                 });
 
             modelBuilder.Entity("LiveSessionService.Domain.Entities.LiveSession", b =>
@@ -555,7 +555,7 @@ namespace LiveSessionService.Infrastructure.Migrations
 
                     b.HasIndex("StationPlaylistId");
 
-                    b.ToTable("PlaylistMedias");
+                    b.ToTable("PlaylistMedias", (string)null);
                 });
 
             modelBuilder.Entity("LiveSessionService.Domain.Entities.Podcast", b =>
@@ -849,7 +849,7 @@ namespace LiveSessionService.Infrastructure.Migrations
 
                     b.HasIndex("LiveSessionId");
 
-                    b.ToTable("SessionActivities");
+                    b.ToTable("SessionActivities", (string)null);
                 });
 
             modelBuilder.Entity("LiveSessionService.Domain.Entities.SessionListener", b =>
@@ -901,7 +901,7 @@ namespace LiveSessionService.Infrastructure.Migrations
 
                     b.HasIndex("LiveSessionId");
 
-                    b.ToTable("SessionListeners");
+                    b.ToTable("SessionListeners", (string)null);
                 });
 
             modelBuilder.Entity("LiveSessionService.Domain.Entities.SessionParticipant", b =>
@@ -941,7 +941,7 @@ namespace LiveSessionService.Infrastructure.Migrations
 
                     b.HasIndex("LiveSessionId");
 
-                    b.ToTable("SessionParticipants");
+                    b.ToTable("SessionParticipants", (string)null);
                 });
 
             modelBuilder.Entity("LiveSessionService.Domain.Entities.SessionSchedule", b =>
@@ -1165,7 +1165,7 @@ namespace LiveSessionService.Infrastructure.Migrations
 
                     b.HasIndex("AzuraCastStationId");
 
-                    b.ToTable("StationMounts");
+                    b.ToTable("StationMounts", (string)null);
                 });
 
             modelBuilder.Entity("LiveSessionService.Domain.Entities.StationPlaylist", b =>
@@ -1233,7 +1233,7 @@ namespace LiveSessionService.Infrastructure.Migrations
 
                     b.HasIndex("AzuraCastStationId");
 
-                    b.ToTable("StationPlaylists");
+                    b.ToTable("StationPlaylists", (string)null);
                 });
 
             modelBuilder.Entity("LiveSessionService.Domain.Entities.SyncAuditLog", b =>
