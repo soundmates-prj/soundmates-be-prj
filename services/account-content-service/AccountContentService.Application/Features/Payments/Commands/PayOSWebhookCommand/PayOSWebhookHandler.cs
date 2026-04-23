@@ -15,6 +15,7 @@ public sealed class PayOSWebhookHandler : IRequestHandler<PayOSWebhookCommand, b
     private readonly ISubscriptionRepository _subscriptionRepo;
     private readonly IPendingPayoutRepository _pendingPayoutRepo;
     private readonly ILiveSessionApiClient _liveSessionApiClient;
+    private readonly IAuthApiClient _authApiClient;
     private readonly ILogger<PayOSWebhookHandler> _logger;
 
     public PayOSWebhookHandler(
@@ -23,6 +24,7 @@ public sealed class PayOSWebhookHandler : IRequestHandler<PayOSWebhookCommand, b
         ISubscriptionRepository subscriptionRepo,
         IPendingPayoutRepository pendingPayoutRepo,
         ILiveSessionApiClient liveSessionApiClient,
+        IAuthApiClient authApiClient,
         ILogger<PayOSWebhookHandler> logger)
     {
         _paymentRepo = paymentRepo;
@@ -30,6 +32,7 @@ public sealed class PayOSWebhookHandler : IRequestHandler<PayOSWebhookCommand, b
         _subscriptionRepo = subscriptionRepo;
         _pendingPayoutRepo = pendingPayoutRepo;
         _liveSessionApiClient = liveSessionApiClient;
+        _authApiClient = authApiClient;
         _logger = logger;
     }
 
@@ -100,6 +103,8 @@ public sealed class PayOSWebhookHandler : IRequestHandler<PayOSWebhookCommand, b
                 var podcast = await _liveSessionApiClient.GetPodcastAsync(payment.TargetId, cancellationToken);
                 if (podcast != null)
                 {
+                    var bankAccount = await _authApiClient.GetUserBankAccountAsync(podcast.CreatedBy, cancellationToken);
+
                     // Create pending payout
                     var pendingPayout = new PendingPayout
                     {
@@ -107,7 +112,11 @@ public sealed class PayOSWebhookHandler : IRequestHandler<PayOSWebhookCommand, b
                         PaymentId = payment.Id,
                         TargetUserId = podcast.CreatedBy,
                         Amount = podcast.Price, // Just the price, fee is kept by the system
-                        Status = "pending",
+                        BankId = bankAccount?.BankId,
+                        AccountNumber = bankAccount?.AccountNumber,
+                        AccountName = bankAccount?.AccountName,
+                        Status = bankAccount != null ? "pending" : "failed_no_bank",
+                        ErrorMessage = bankAccount == null ? "User has no bank account configured." : null,
                         ScheduledAt = DateTime.UtcNow.AddMinutes(5),
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow
