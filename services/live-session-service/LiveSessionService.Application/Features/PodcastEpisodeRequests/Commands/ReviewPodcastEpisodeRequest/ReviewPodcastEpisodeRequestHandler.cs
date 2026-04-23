@@ -88,12 +88,24 @@ public sealed class ReviewPodcastEpisodeRequestHandler
 
         await _repository.UpdateAsync(request, cancellationToken);
 
-        return Result<PodcastEpisodeRequestResult>.Success(new PodcastEpisodeRequestResult
-        {
+            object? parsedAuthorInfo = null;
+            if (!string.IsNullOrWhiteSpace(request.AuthorInfo))
+            {
+                var a = request.AuthorInfo.Trim();
+                if (a.Length > 0 && (a[0] == '{' || a[0] == '[' || a[0] == '"'))
+                {
+                    try { parsedAuthorInfo = System.Text.Json.JsonSerializer.Deserialize<object>(a); }
+                    catch (Exception) { parsedAuthorInfo = a; }
+                }
+                else { parsedAuthorInfo = a; }
+            }
+
+            return Result<PodcastEpisodeRequestResult>.Success(new PodcastEpisodeRequestResult
+            {
             Id = request.Id,
             PodcastId = request.PodcastId,
             RequestedByUserId = request.RequestedByUserId,
-            AuthorInfo = string.IsNullOrWhiteSpace(request.AuthorInfo) ? null : System.Text.Json.JsonSerializer.Deserialize<object>(request.AuthorInfo),
+                AuthorInfo = parsedAuthorInfo,
             Title = request.Title,
             Description = request.Description,
             ThumbnailUrl = request.ThumbnailUrl,

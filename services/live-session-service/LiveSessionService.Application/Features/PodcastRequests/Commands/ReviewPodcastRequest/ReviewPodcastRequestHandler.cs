@@ -117,11 +117,23 @@ public sealed class ReviewPodcastRequestHandler
 
         await _repository.UpdateAsync(podcastRequest, cancellationToken);
 
+        object? parsedAuthorInfo = null;
+        if (!string.IsNullOrWhiteSpace(podcastRequest.AuthorInfo))
+        {
+            var a = podcastRequest.AuthorInfo.Trim();
+                if (a.Length > 0 && (a[0] == '{' || a[0] == '[' || a[0] == '"'))
+            {
+                try { parsedAuthorInfo = System.Text.Json.JsonSerializer.Deserialize<object>(a); }
+                catch (Exception) { parsedAuthorInfo = a; }
+            }
+            else { parsedAuthorInfo = a; }
+        }
+
         return Result<PodcastRequestResult>.Success(new PodcastRequestResult
         {
             Id = podcastRequest.Id,
             RequestedByUserId = podcastRequest.RequestedByUserId,
-            AuthorInfo = string.IsNullOrWhiteSpace(podcastRequest.AuthorInfo) ? null : System.Text.Json.JsonSerializer.Deserialize<object>(podcastRequest.AuthorInfo),
+            AuthorInfo = parsedAuthorInfo,
             Title = podcastRequest.Title,
             EpisodeTitle = podcastRequest.EpisodeTitle,
             Description = podcastRequest.Description,

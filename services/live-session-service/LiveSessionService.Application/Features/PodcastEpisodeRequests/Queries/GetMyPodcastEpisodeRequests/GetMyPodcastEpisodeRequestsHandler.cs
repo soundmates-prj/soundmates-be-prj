@@ -35,22 +35,37 @@ public sealed class GetMyPodcastEpisodeRequestsHandler
 
         var results = await _repository.GetByUserIdAsync(query.UserId, status, cancellationToken);
 
-        var mapped = results.Select(r => new PodcastEpisodeRequestResult
+        var mapped = results.Select(r =>
         {
-            Id = r.Id,
-            PodcastId = r.PodcastId,
-            RequestedByUserId = r.RequestedByUserId,
-            AuthorInfo = string.IsNullOrWhiteSpace(r.AuthorInfo) ? null : System.Text.Json.JsonSerializer.Deserialize<object>(r.AuthorInfo),
-            Title = r.Title,
-            Description = r.Description,
-            ThumbnailUrl = r.ThumbnailUrl,
-            AudioUrl = r.AudioUrl,
-            Duration = r.Duration,
-            Status = r.Status.ToString(),
-            ReviewedByUserId = r.ReviewedByUserId,
-            ReviewedAt = r.ReviewedAt,
-            RejectReason = r.RejectReason,
-            RequestedAt = r.RequestedAt
+            object? parsedAuthorInfo = null;
+            if (!string.IsNullOrWhiteSpace(r.AuthorInfo))
+            {
+                var a = r.AuthorInfo.Trim();
+                if (a.Length > 0 && (a[0] == '{' || a[0] == '[' || a[0] == '"'))
+                {
+                    try { parsedAuthorInfo = System.Text.Json.JsonSerializer.Deserialize<object>(a); }
+                    catch (Exception) { parsedAuthorInfo = a; }
+                }
+                else { parsedAuthorInfo = a; }
+            }
+
+            return new PodcastEpisodeRequestResult
+            {
+                Id = r.Id,
+                PodcastId = r.PodcastId,
+                RequestedByUserId = r.RequestedByUserId,
+                AuthorInfo = parsedAuthorInfo,
+                Title = r.Title,
+                Description = r.Description,
+                ThumbnailUrl = r.ThumbnailUrl,
+                AudioUrl = r.AudioUrl,
+                Duration = r.Duration,
+                Status = r.Status.ToString(),
+                ReviewedByUserId = r.ReviewedByUserId,
+                ReviewedAt = r.ReviewedAt,
+                RejectReason = r.RejectReason,
+                RequestedAt = r.RequestedAt
+            };
         }).ToList();
 
         return Result<List<PodcastEpisodeRequestResult>>.Success(mapped);

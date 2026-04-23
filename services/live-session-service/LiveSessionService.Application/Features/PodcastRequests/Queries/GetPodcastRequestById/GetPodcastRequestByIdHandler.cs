@@ -22,11 +22,23 @@ public sealed class GetPodcastRequestByIdHandler
         if (r == null)
             return Result<PodcastRequestResult>.Failure("Podcast request not found", ErrorCode.NotFound);
 
+        object? parsedAuthorInfo = null;
+        if (!string.IsNullOrWhiteSpace(r.AuthorInfo))
+        {
+            var a = r.AuthorInfo.Trim();
+                if (a.Length > 0 && (a[0] == '{' || a[0] == '[' || a[0] == '"'))
+            {
+                try { parsedAuthorInfo = System.Text.Json.JsonSerializer.Deserialize<object>(a); }
+                catch (Exception) { parsedAuthorInfo = a; }
+            }
+            else { parsedAuthorInfo = a; }
+        }
+
         return Result<PodcastRequestResult>.Success(new PodcastRequestResult
         {
             Id = r.Id,
             RequestedByUserId = r.RequestedByUserId,
-            AuthorInfo = string.IsNullOrWhiteSpace(r.AuthorInfo) ? null : System.Text.Json.JsonSerializer.Deserialize<object>(r.AuthorInfo),
+            AuthorInfo = parsedAuthorInfo,
             Title = r.Title,
             EpisodeTitle = r.EpisodeTitle,
             Description = r.Description,

@@ -44,14 +44,26 @@ public sealed class FollowPodcastHandler : ICommandHandler<FollowPodcastCommand,
 
         await _userSavedPodcastRepository.AddAsync(userSavedPodcast, cancellationToken);
 
-        return Result<PodcastResult>.Success(new PodcastResult
-        {
+            object? parsedAuthor = null;
+            if (!string.IsNullOrWhiteSpace(podcast.Author))
+            {
+                var a = podcast.Author.Trim();
+                if (a.Length > 0 && (a[0] == '{' || a[0] == '[' || a[0] == '"'))
+                {
+                    try { parsedAuthor = System.Text.Json.JsonSerializer.Deserialize<object>(a); }
+                    catch (Exception) { parsedAuthor = a; }
+                }
+                else { parsedAuthor = a; }
+            }
+
+            return Result<PodcastResult>.Success(new PodcastResult
+            {
             Id = podcast.Id,
             Price = podcast.Price,
             IsPaid = podcast.IsPaid,
             Title = podcast.Title,
             Description = podcast.Description,
-            Author = string.IsNullOrWhiteSpace(podcast.Author) ? null : System.Text.Json.JsonSerializer.Deserialize<object>(podcast.Author),
+                Author = parsedAuthor,
             Status = podcast.Status.ToString(),
             Type = podcast.Type,
             Banner = podcast.Banner,

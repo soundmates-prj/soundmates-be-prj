@@ -21,6 +21,18 @@ public sealed class GetPodcastHandler : IQueryHandler<GetPodcastQuery, PodcastRe
         if (podcast == null)
             return Result<PodcastResult>.Failure("Podcast not found", ErrorCode.NotFound);
 
+        object? parsedAuthor = null;
+        if (!string.IsNullOrWhiteSpace(podcast.Author))
+        {
+            var a = podcast.Author.Trim();
+            if (a.Length > 0 && (a[0] == '{' || a[0] == '[' || a[0] == '"'))
+            {
+                try { parsedAuthor = System.Text.Json.JsonSerializer.Deserialize<object>(a); }
+                catch (Exception) { parsedAuthor = a; }
+            }
+            else { parsedAuthor = a; }
+        }
+
         return Result<PodcastResult>.Success(new PodcastResult
         {
             Id = podcast.Id,
@@ -28,7 +40,7 @@ public sealed class GetPodcastHandler : IQueryHandler<GetPodcastQuery, PodcastRe
             IsPaid = podcast.IsPaid,
             Title = podcast.Title,
             Description = podcast.Description,
-            Author = string.IsNullOrWhiteSpace(podcast.Author) ? null : System.Text.Json.JsonSerializer.Deserialize<object>(podcast.Author),
+            Author = parsedAuthor,
             Status = podcast.Status.ToString(),
             Type = podcast.Type,
             Banner = podcast.Banner,

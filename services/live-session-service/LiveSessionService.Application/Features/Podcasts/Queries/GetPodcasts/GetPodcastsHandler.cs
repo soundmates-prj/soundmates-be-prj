@@ -30,35 +30,59 @@ public sealed class GetPodcastsHandler : IQueryHandler<GetPodcastsQuery, List<Po
 
         var podcasts = await _podcastRepository.GetAllAsync(query.CreatedBy, status, cancellationToken);
 
-        var result = podcasts.Select(x => new PodcastResult
+        var result = podcasts.Select(x =>
         {
-            Id = x.Id,
+            object? parsedAuthor = null;
+            if (!string.IsNullOrWhiteSpace(x.Author))
+            {
+                var a = x.Author.Trim();
+                if (a.Length > 0 && (a[0] == '{' || a[0] == '[' || a[0] == '"'))
+                {
+                    try
+                    {
+                        parsedAuthor = System.Text.Json.JsonSerializer.Deserialize<object>(a);
+                    }
+                    catch (Exception)
+                    {
+                        parsedAuthor = a;
+                    }
+                }
+                else
+                {
+                    parsedAuthor = a;
+                }
+            }
+
+            return new PodcastResult
+            {
+                Id = x.Id,
                 Price = x.Price,
                 IsPaid = x.IsPaid,
-            Title = x.Title,
-            Description = x.Description,
-            Author = string.IsNullOrWhiteSpace(x.Author) ? null : System.Text.Json.JsonSerializer.Deserialize<object>(x.Author),
-            Status = x.Status.ToString(),
-            Type = x.Type,
-            Banner = x.Banner,
-            CreatedAt = x.CreatedAt,
-            UpdatedAt = x.UpdatedAt,
-            CreatedBy = x.CreatedBy,
-            EpisodeCount = x.Episodes.Count,
-            AllEpisodes = x.Episodes
-                .OrderBy(e => e.EpisodeNumber)
-                .Select(e => new PodcastEpisodeResult
-                {
-                    Id = e.Id,
-                    Title = e.Title,
-                    Description = e.Description,
-                    AudioUrl = e.AudioUrl,
-                    ThumbnailUrl = e.ThumbnailUrl,
-                    EpisodeNumber = e.EpisodeNumber,
-                    PublishDate = e.PublishDate,
-                    Duration = e.Duration
-                })
-                .ToList()
+                Title = x.Title,
+                Description = x.Description,
+                Author = parsedAuthor,
+                Status = x.Status.ToString(),
+                Type = x.Type,
+                Banner = x.Banner,
+                CreatedAt = x.CreatedAt,
+                UpdatedAt = x.UpdatedAt,
+                CreatedBy = x.CreatedBy,
+                EpisodeCount = x.Episodes.Count,
+                AllEpisodes = x.Episodes
+                    .OrderBy(e => e.EpisodeNumber)
+                    .Select(e => new PodcastEpisodeResult
+                    {
+                        Id = e.Id,
+                        Title = e.Title,
+                        Description = e.Description,
+                        AudioUrl = e.AudioUrl,
+                        ThumbnailUrl = e.ThumbnailUrl,
+                        EpisodeNumber = e.EpisodeNumber,
+                        PublishDate = e.PublishDate,
+                        Duration = e.Duration
+                    })
+                    .ToList()
+            };
         }).ToList();
 
         return Result<List<PodcastResult>>.Success(result);

@@ -36,6 +36,27 @@ public sealed class CreatePodcastHandler : ICommandHandler<CreatePodcastCommand,
 
         await _podcastRepository.AddAsync(podcast, cancellationToken);
 
+        object? parsedAuthor = null;
+        if (!string.IsNullOrWhiteSpace(podcast.Author))
+        {
+            var a = podcast.Author.Trim();
+            if (a.Length > 0 && (a[0] == '{' || a[0] == '[' || a[0] == '"'))
+            {
+                try
+                {
+                    parsedAuthor = System.Text.Json.JsonSerializer.Deserialize<object>(a);
+                }
+                catch (Exception)
+                {
+                    parsedAuthor = a;
+                }
+            }
+            else
+            {
+                parsedAuthor = a;
+            }
+        }
+
         return Result<PodcastResult>.Success(new PodcastResult
         {
             Id = podcast.Id,
@@ -43,7 +64,7 @@ public sealed class CreatePodcastHandler : ICommandHandler<CreatePodcastCommand,
             IsPaid = podcast.IsPaid,
             Title = podcast.Title,
             Description = podcast.Description,
-            Author = string.IsNullOrWhiteSpace(podcast.Author) ? null : System.Text.Json.JsonSerializer.Deserialize<object>(podcast.Author),
+            Author = parsedAuthor,
             Status = podcast.Status.ToString(),
             Type = podcast.Type,
             Banner = podcast.Banner,
@@ -51,7 +72,7 @@ public sealed class CreatePodcastHandler : ICommandHandler<CreatePodcastCommand,
             UpdatedAt = podcast.UpdatedAt,
             CreatedBy = podcast.CreatedBy,
             EpisodeCount = 0,
-            AllEpisodes = []
+            AllEpisodes = new List<PodcastEpisodeResult>()
         });
     }
 }
