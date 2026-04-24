@@ -200,6 +200,7 @@ public static class DependencyInjection
 
         // Register Podcast Command Handlers
         services.AddScoped<ICommandHandler<CreatePodcastCommand, PodcastResult>, CreatePodcastHandler>();
+        services.AddScoped<ICommandHandler<LiveSessionService.Application.Features.Podcasts.Commands.GrantPodcastAccess.GrantPodcastAccessCommand>, LiveSessionService.Application.Features.Podcasts.Commands.GrantPodcastAccess.GrantPodcastAccessHandler>();
         services.AddScoped<ICommandHandler<FollowPodcastCommand, PodcastResult>, FollowPodcastHandler>();
         services.AddScoped<ICommandHandler<UnfollowPodcastCommand>, UnfollowPodcastHandler>();
         services.AddScoped<ICommandHandler<UpdatePodcastCommand, PodcastResult>, UpdatePodcastHandler>();

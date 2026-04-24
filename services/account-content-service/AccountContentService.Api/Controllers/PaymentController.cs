@@ -201,6 +201,8 @@ namespace AccountContentService.Api.Controllers
                 query["provider"] = "vnpay";
                 query["vnp_ResponseCode"] = data.GetValueOrDefault("vnp_ResponseCode", "");
                 query["vnp_TransactionNo"] = data.GetValueOrDefault("vnp_TransactionNo", "");
+                query["targetType"] = result.TargetType;
+                query["targetId"] = result.TargetId?.ToString();
 
                 return Redirect($"{returnPage}?{query}");
             }
@@ -422,6 +424,18 @@ namespace AccountContentService.Api.Controllers
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Gets all pending payouts.
+        /// </summary>
+        [HttpGet("api/v1/payments/payouts")]
+        [Authorize(Roles = "STAFF,ADMIN")]
+        [ProducesResponseType(typeof(ApiResponse<List<AccountContentService.Application.Features.Payments.Queries.GetAllPendingPayouts.PendingPayoutDto>>), 200)]
+        public async Task<IActionResult> GetPayouts(CancellationToken ct)
+        {
+            var result = await _mediator.Send(new AccountContentService.Application.Features.Payments.Queries.GetAllPendingPayouts.GetAllPendingPayoutsQuery(), ct);
+            return Ok(ApiResponse<List<AccountContentService.Application.Features.Payments.Queries.GetAllPendingPayouts.PendingPayoutDto>>.Ok(result, "Retrieved pending payouts successfully"));
         }
     }
 

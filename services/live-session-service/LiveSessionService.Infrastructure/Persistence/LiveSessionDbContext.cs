@@ -4,9 +4,11 @@ using Microsoft.Extensions.Configuration;
 using System;
 using System.Text.RegularExpressions;
 
+using LiveSessionService.Application.Abstractions.Persistence;
+
 namespace LiveSessionService.Infrastructure.Persistence;
 
-public class LiveSessionDbContext : DbContext
+public class LiveSessionDbContext : DbContext, ILiveSessionDbContext
 {
     private readonly IConfiguration? _configuration;
 
@@ -84,6 +86,7 @@ public class LiveSessionDbContext : DbContext
     public DbSet<Podcast> Podcasts => Set<Podcast>();
     public DbSet<PodcastEpisode> PodcastEpisodes => Set<PodcastEpisode>();
     public DbSet<UserSavedPodcast> UserSavedPodcasts => Set<UserSavedPodcast>();
+    public DbSet<UserPurchasedPodcast> UserPurchasedPodcasts => Set<UserPurchasedPodcast>();
     public DbSet<PodcastRequest> PodcastRequests => Set<PodcastRequest>();
     public DbSet<PodcastEpisodeRequest> PodcastEpisodeRequests => Set<PodcastEpisodeRequest>();
     public DbSet<StationMediaFile> StationMediaFiles => Set<StationMediaFile>();

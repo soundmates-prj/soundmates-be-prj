@@ -550,6 +550,91 @@ public sealed class LiveSessionRepository : ILiveSessionRepository
         };
     }
 
+    public async Task<AdminAnalyticsOverview> GetAdminAnalyticsOverviewAsync(int days, CancellationToken cancellationToken = default)
+    {
+        var normalizedDays = days <= 0 ? 7 : Math.Min(days, 90);
+        var fromDate = DateTime.UtcNow.Date.AddDays(-normalizedDays);
+
+        var totalSessions = await _context.LiveSessions.CountAsync(cancellationToken);
+        
+        var listenerRows = await _context.SessionListeners
+            .AsNoTracking()
+            .Select(x => new { x.Id, x.ConnectedAt, x.UserId, x.AnonymousIdentifier })
+            .ToListAsync(cancellationToken);
+
+        string ToListenerKey(Guid id, Guid? userId, string? anonymousIdentifier)
+        {
+            if (userId.HasValue) return $"u:{userId.Value}";
+            if (!string.IsNullOrWhiteSpace(anonymousIdentifier)) return $"a:{anonymousIdentifier}";
+            return $"g:{id}";
+        }
+
+        var totalViews = listenerRows
+            .Select(x => ToListenerKey(x.Id, x.UserId, x.AnonymousIdentifier))
+            .Distinct()
+            .Count();
+
+        var totalChats = await _context.LiveSessionChats.CountAsync(cancellationToken);
+        var totalSongRequests = await _context.SongRequests.CountAsync(cancellationToken);
+        var totalInteractions = totalChats + totalSongRequests;
+
+        var allSessions = await _context.LiveSessions
+            .AsNoTracking()
+            .Where(x => x.CreatedAt >= fromDate)
+            .Select(x => new { x.CreatedAt })
+            .ToListAsync(cancellationToken);
+
+        var sessionGrowthChart = Enumerable.Range(0, normalizedDays)
+            .Select(offset => fromDate.AddDays(offset))
+            .Select(day => new DailySessionMetric
+            {
+                Date = day,
+                Count = allSessions.Count(x => x.CreatedAt.Date == day)
+            }).ToList();
+
+        var listenerGrowthChart = Enumerable.Range(0, normalizedDays)
+            .Select(offset => fromDate.AddDays(offset))
+            .Select(day => new DailyListenerMetric
+            {
+                Date = day,
+                ListenerCount = listenerRows
+                    .Where(x => x.ConnectedAt.Date == day)
+                    .Select(x => ToListenerKey(x.Id, x.UserId, x.AnonymousIdentifier))
+                    .Distinct()
+                    .Count()
+            }).ToList();
+
+        var allChats = await _context.LiveSessionChats
+            .AsNoTracking()
+            .Where(x => x.CreatedAt >= fromDate)
+            .Select(x => new { x.CreatedAt })
+            .ToListAsync(cancellationToken);
+
+        var allRequests = await _context.SongRequests
+            .AsNoTracking()
+            .Where(x => x.RequestedAt >= fromDate)
+            .Select(x => new { x.RequestedAt })
+            .ToListAsync(cancellationToken);
+
+        var interactionGrowthChart = Enumerable.Range(0, normalizedDays)
+            .Select(offset => fromDate.AddDays(offset))
+            .Select(day => new DailyInteractionMetric
+            {
+                Date = day,
+                Count = allChats.Count(x => x.CreatedAt.Date == day) + allRequests.Count(x => x.RequestedAt.Date == day)
+            }).ToList();
+
+        return new AdminAnalyticsOverview
+        {
+            TotalSessions = totalSessions,
+            TotalViews = totalViews,
+            TotalInteractions = totalInteractions,
+            SessionGrowthChart = sessionGrowthChart,
+            ListenerGrowthChart = listenerGrowthChart,
+            InteractionGrowthChart = interactionGrowthChart
+        };
+    }
+
     public async Task<List<LiveSessionChat>> GetSessionChatsAsync(Guid sessionId, CancellationToken cancellationToken = default)
     {
         return await _context.LiveSessionChats

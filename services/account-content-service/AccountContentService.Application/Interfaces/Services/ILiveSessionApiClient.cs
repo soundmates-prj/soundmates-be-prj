@@ -7,6 +7,7 @@ namespace AccountContentService.Application.Interfaces.Services;
 public interface ILiveSessionApiClient
 {
     Task<PodcastDto?> GetPodcastAsync(Guid podcastId, CancellationToken cancellationToken);
+    Task<bool> GrantPodcastAccessAsync(Guid podcastId, Guid userId, decimal price, CancellationToken cancellationToken);
 }
 
 public class PodcastDto
