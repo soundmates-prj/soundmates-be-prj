@@ -64,6 +64,7 @@ public sealed class ReviewPodcastRequestHandler
                 Title = podcastRequest.Title,
                 Description = podcastRequest.Description,
                 Author = podcastRequest.AuthorInfo,
+                Type = podcastRequest.Type,
                 Status = PodcastStatus.Published,
                 Banner = podcastRequest.BannerUrl,
                 Price = podcastRequest.Price,
