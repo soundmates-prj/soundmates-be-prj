@@ -11,4 +11,6 @@ public sealed record CreatePodcastCommand(
     string? Author,
     PodcastStatus Status,
     string? Type,
-    string? Banner) : ICommand<PodcastResult>;
+    string? Banner,
+    decimal Price = 0,
+    bool IsPaid = false) : ICommand<PodcastResult>;

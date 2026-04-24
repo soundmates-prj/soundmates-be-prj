@@ -44,6 +44,27 @@ public class LiveSessionApiClient : ILiveSessionApiClient
         }
     }
 
+    public async Task<bool> GrantPodcastAccessAsync(Guid podcastId, Guid userId, decimal price, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var request = new { UserId = userId, Price = price };
+            var response = await _httpClient.PostAsJsonAsync($"/api/v1/podcast/{podcastId}/grant-access", request, cancellationToken);
+            if (response.IsSuccessStatusCode)
+            {
+                return true;
+            }
+
+            _logger.LogWarning("Failed to grant podcast {PodcastId} access to user {UserId}. Status: {StatusCode}", podcastId, userId, response.StatusCode);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error granting podcast {PodcastId} access to user {UserId}", podcastId, userId);
+            return false;
+        }
+    }
+
     private class ApiResult<T>
     {
         public T? Data { get; set; }

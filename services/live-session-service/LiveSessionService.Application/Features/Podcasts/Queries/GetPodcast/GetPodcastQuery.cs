@@ -3,4 +3,4 @@ using LiveSessionService.Application.Features.Results.Podcasts;
 
 namespace LiveSessionService.Application.Features.Podcasts.Queries.GetPodcast;
 
-public sealed record GetPodcastQuery(Guid PodcastId) : IQuery<PodcastResult>;
+public sealed record GetPodcastQuery(Guid PodcastId, Guid? UserId = null) : IQuery<PodcastResult>;

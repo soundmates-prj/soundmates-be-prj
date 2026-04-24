@@ -98,8 +98,8 @@ public sealed class PodcastRequestController : ControllerBase
             Type: request.Type,
             Description: request.Description,
             BannerUrl: request.BannerUrl,
-            Price: request.Price,
-            IsPaid: request.IsPaid);
+            Price: request.Price ?? 0m,
+            IsPaid: request.IsPaid ?? false);
 
         var result = await _commands.Send<CreatePodcastRequestCommand, PodcastRequestResult>(command, ct);
 

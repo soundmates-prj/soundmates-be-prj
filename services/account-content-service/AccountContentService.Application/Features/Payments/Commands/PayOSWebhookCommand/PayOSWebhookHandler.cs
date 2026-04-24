@@ -125,8 +125,9 @@ public sealed class PayOSWebhookHandler : IRequestHandler<PayOSWebhookCommand, b
                     
                     _logger.LogInformation("Scheduled Payout for Podcast {PodcastId} to User {UserId} at {ScheduledAt}", payment.TargetId, podcast.CreatedBy, pendingPayout.ScheduledAt);
 
-                    // Note: Actual access granting logic (e.g. adding to UserPurchasedPodcast)
-                    // would be done via another API call or event publishing here if needed.
+                    // Grant access to the podcast
+                    await _liveSessionApiClient.GrantPodcastAccessAsync(payment.TargetId, payment.UserId, podcast.Price, cancellationToken);
+                    _logger.LogInformation("Granted access to Podcast {PodcastId} for User {UserId}", payment.TargetId, payment.UserId);
                 }
             }
             else
