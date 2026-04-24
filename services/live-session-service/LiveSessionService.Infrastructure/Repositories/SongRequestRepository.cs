@@ -63,4 +63,30 @@ public sealed class SongRequestRepository : ISongRequestRepository
             .Where(x => x.RequestedByUserId == userId && x.RequestedAt >= today)
             .CountAsync(cancellationToken);
     }
+
+    public async Task<(IReadOnlyList<SongRequest> Items, int TotalCount)> GetAllAsync(
+        SongRequestStatus? status = null,
+        int page = 1,
+        int pageSize = 10,
+        CancellationToken cancellationToken = default)
+    {
+        IQueryable<SongRequest> query = _context.SongRequests
+            .AsNoTracking()
+            .Include(x => x.MediaFile);
+
+        if (status.HasValue)
+        {
+            query = query.Where(x => x.Status == status.Value);
+        }
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .OrderByDescending(x => x.RequestedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, totalCount);
+    }
 }

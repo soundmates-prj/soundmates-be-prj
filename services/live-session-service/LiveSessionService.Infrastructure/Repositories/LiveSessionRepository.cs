@@ -484,6 +484,72 @@ public sealed class LiveSessionRepository : ILiveSessionRepository
         };
     }
 
+    public async Task<StaffAnalyticsOverview> GetStaffAnalyticsOverviewAsync(int days, CancellationToken cancellationToken = default)
+    {
+        var fromDate = DateTime.UtcNow.Date.AddDays(-days);
+
+        // 1. System Music
+        var systemMedia = await _context.MediaFiles
+            .AsNoTracking()
+            .Where(x => x.OriginalSourceType == "system")
+            .Select(x => new { x.Id, x.FileSizeBytes, x.UploadedAt })
+            .ToListAsync(cancellationToken);
+
+        var totalSystemMusic = systemMedia.Count;
+        var totalStorageBytes = systemMedia.Sum(x => x.FileSizeBytes);
+
+        // 2. Stations
+        var totalStations = await _context.AzuraCastStations
+            .AsNoTracking()
+            .CountAsync(cancellationToken);
+
+        // 3. Song Requests
+        var songRequests = await _context.SongRequests
+            .Include(x => x.MediaFile)
+            .AsNoTracking()
+            .Where(x => x.RequestedAt >= fromDate)
+            .ToListAsync(cancellationToken);
+
+        var pendingSongRequests = songRequests.Count(x => x.Status == LiveSessionService.Domain.Enums.SongRequestStatus.Pending);
+
+        // 4. Charts
+        var contentGrowthChart = Enumerable.Range(0, days)
+            .Select(offset => fromDate.AddDays(offset))
+            .Select(day =>
+            {
+                return new DailyContentGrowthMetric
+                {
+                    Date = day,
+                    NewMusicCount = systemMedia.Count(x => x.UploadedAt.Date == day)
+                };
+            })
+            .ToList();
+
+        var moderationChart = Enumerable.Range(0, days)
+            .Select(offset => fromDate.AddDays(offset))
+            .Select(day =>
+            {
+                var requestsThatDay = songRequests.Where(x => x.RequestedAt.Date == day).ToList();
+                return new DailyModerationMetric
+                {
+                    Date = day,
+                    PendingCount = requestsThatDay.Count(x => x.Status == LiveSessionService.Domain.Enums.SongRequestStatus.Pending),
+                    ResolvedCount = requestsThatDay.Count(x => x.Status != LiveSessionService.Domain.Enums.SongRequestStatus.Pending)
+                };
+            })
+            .ToList();
+
+        return new StaffAnalyticsOverview
+        {
+            TotalSystemMusic = totalSystemMusic,
+            TotalStorageBytes = totalStorageBytes,
+            TotalStations = totalStations,
+            PendingSongRequests = pendingSongRequests,
+            ContentGrowthChart = contentGrowthChart,
+            ModerationChart = moderationChart
+        };
+    }
+
     public async Task<List<LiveSessionChat>> GetSessionChatsAsync(Guid sessionId, CancellationToken cancellationToken = default)
     {
         return await _context.LiveSessionChats
