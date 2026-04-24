@@ -101,6 +101,7 @@ using LiveSessionService.Application.Features.Stations.Commands.ReloadStation;
 using LiveSessionService.Application.Features.LiveSessions.Commands.ReloadBroadcast;
 using LiveSessionService.Application.Features.Stations.Queries.GetAllStations;
 using LiveSessionService.Application.Features.Stations.Queries.GetStationNowPlaying;
+using LiveSessionService.Application.Features.LiveSessions.Queries.GetAdminAnalyticsOverview;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http;
 
@@ -183,6 +184,7 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<GetStaffAnalyticsOverviewQuery, StaffAnalyticsOverviewResult>, GetStaffAnalyticsOverviewHandler>();
         services.AddScoped<IQueryHandler<GetHostDashboardOverviewQuery, HostDashboardOverviewResult>, GetHostDashboardOverviewHandler>();
         services.AddScoped<IQueryHandler<GetHostAnalyticsOverviewQuery, HostAnalyticsOverviewResult>, GetHostAnalyticsOverviewHandler>();
+        services.AddScoped<IQueryHandler<GetAdminAnalyticsOverviewQuery, AdminAnalyticsOverviewResult>, GetAdminAnalyticsOverviewHandler>();
         services.AddScoped<IQueryHandler<GetActiveLiveSessionsQuery, List<LiveSessionResult>>, GetActiveLiveSessionsHandler>();
         services.AddScoped<IQueryHandler<GetLiveSessionStatisticsQuery, LiveSessionStatisticsResult>, GetLiveSessionStatisticsHandler>();
         services.AddScoped<IQueryHandler<GetLiveSessionChatsQuery, List<LiveSessionChatResult>>, GetLiveSessionChatsHandler>();
