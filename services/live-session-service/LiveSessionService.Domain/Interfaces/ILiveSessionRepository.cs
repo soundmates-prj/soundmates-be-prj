@@ -25,4 +25,5 @@ public interface ILiveSessionRepository
     Task<StaffAnalyticsOverview> GetStaffAnalyticsOverviewAsync(int days, CancellationToken cancellationToken = default);
     Task<AdminAnalyticsOverview> GetAdminAnalyticsOverviewAsync(int days, CancellationToken cancellationToken = default);
     Task<List<LiveSessionChat>> GetSessionChatsAsync(Guid sessionId, CancellationToken cancellationToken = default);
+    Task<AdminAnalyticsOverview> GetAdminAnalyticsOverviewAsync(int days, CancellationToken cancellationToken = default);
 }
