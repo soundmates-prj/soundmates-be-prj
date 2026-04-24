@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using LiveSessionService.Domain.Entities;
 using LiveSessionService.Domain.Interfaces;
 using LiveSessionService.Domain.Models;
@@ -558,4 +558,76 @@ public sealed class LiveSessionRepository : ILiveSessionRepository
             .OrderBy(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<AdminAnalyticsOverview> GetAdminAnalyticsOverviewAsync(int days, CancellationToken cancellationToken = default)
+    {
+        var fromDate = DateTime.UtcNow.Date.AddDays(-days);
+
+        // 1. Query dữ liệu biểu đồ (Chỉ lấy trong khoảng 'days' gần đây)
+        // Dùng AsNoTracking để tối ưu performance cho các câu query Read-only
+
+        var sessionsData = await _context.LiveSessions
+            .AsNoTracking()
+            .Where(x => x.CreatedAt >= fromDate)
+            .GroupBy(x => x.CreatedAt.Date)
+            .Select(g => new { Day = g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken);
+
+        var listenersData = await _context.SessionListeners
+            .AsNoTracking()
+            .Where(x => x.ConnectedAt >= fromDate)
+            .GroupBy(x => x.ConnectedAt.Date)
+            .Select(g => new
+            {
+                Day = g.Key,
+                Count = g.Select(x => x.UserId.HasValue ? "u" + x.UserId.Value : "a" + x.AnonymousIdentifier).Distinct().Count()
+            })
+            .ToListAsync(cancellationToken);
+
+        var interactionsData = await _context.LiveSessionChats
+            .AsNoTracking()
+            .Where(x => x.CreatedAt >= fromDate)
+            .GroupBy(x => x.CreatedAt.Date)
+            .Select(g => new { Day = g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken);
+
+        // 2. Tạo Range ngày để đổ dữ liệu vào Chart
+        var dateRange = Enumerable.Range(0, days)
+            .Select(offset => fromDate.AddDays(offset))
+            .ToList();
+
+        // 3. Map dữ liệu vào Chart
+        var sessionGrowthChart = dateRange.Select(day => new DailySessionMetric
+        {
+            Date = day,
+            Count = sessionsData.FirstOrDefault(x => x.Day == day)?.Count ?? 0
+        }).ToList();
+
+        var listenerGrowthChart = dateRange.Select(day => new DailyListenerMetric
+        {
+            Date = day,
+            ListenerCount = listenersData.FirstOrDefault(x => x.Day == day)?.Count ?? 0
+        }).ToList();
+
+        var interactionGrowthChart = dateRange.Select(day => new DailyInteractionMetric
+        {
+            Date = day,
+            Count = interactionsData.FirstOrDefault(x => x.Day == day)?.Count ?? 0
+        }).ToList();
+
+        // 4. Tính toán Total dựa trên Chart 
+        return new AdminAnalyticsOverview
+        {
+            TotalSessions = sessionsData.Sum(x => x.Count),
+            TotalViews = listenersData.Sum(x => x.Count),
+            TotalInteractions = interactionsData.Sum(x => x.Count),
+
+            SessionGrowthChart = sessionGrowthChart,
+            ListenerGrowthChart = listenerGrowthChart,
+            InteractionGrowthChart = interactionGrowthChart
+        };
+    }
+
+
+
 }
