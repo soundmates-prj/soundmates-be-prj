@@ -13,4 +13,9 @@ public interface ISongRequestRepository
     Task AddAsync(SongRequest songRequest, CancellationToken cancellationToken = default);
     Task UpdateAsync(SongRequest songRequest, CancellationToken cancellationToken = default);
     Task<int> CountRequestsByUserTodayAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<(IReadOnlyList<SongRequest> Items, int TotalCount)> GetAllAsync(
+        SongRequestStatus? status = null,
+        int page = 1,
+        int pageSize = 10,
+        CancellationToken cancellationToken = default);
 }
