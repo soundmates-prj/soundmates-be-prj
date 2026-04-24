@@ -19,8 +19,9 @@ using LiveSessionService.Application.Features.LiveSessions.Queries.GetScheduleBy
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetStaffDashboardOverview;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetHostDashboardOverview;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetHostAnalyticsOverview;
+using LiveSessionService.Application.Features.LiveSessions.Queries.GetStaffAnalyticsOverview;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSessionQueue;
-using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSessionQueue;
+using LiveSessionService.Application.Features.SongRequests.Queries.GetAllSongRequests;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSessionChats;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSessionStatistics;
 using LiveSessionService.Application.Features.LiveSessions.Commands.RestartBroadcast;
@@ -100,6 +101,7 @@ using LiveSessionService.Application.Features.Stations.Commands.ReloadStation;
 using LiveSessionService.Application.Features.LiveSessions.Commands.ReloadBroadcast;
 using LiveSessionService.Application.Features.Stations.Queries.GetAllStations;
 using LiveSessionService.Application.Features.Stations.Queries.GetStationNowPlaying;
+using LiveSessionService.Application.Features.LiveSessions.Queries.GetAdminAnalyticsOverview;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http;
 
@@ -179,8 +181,10 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<GetScheduleByIdQuery, SessionScheduleResult>, GetScheduleByIdHandler>();
         services.AddScoped<IQueryHandler<SearchSchedulesQuery, SearchSchedulesResult>, SearchSchedulesQueryHandler>();
         services.AddScoped<IQueryHandler<GetStaffDashboardOverviewQuery, StaffDashboardOverviewResult>, GetStaffDashboardOverviewHandler>();
+        services.AddScoped<IQueryHandler<GetStaffAnalyticsOverviewQuery, StaffAnalyticsOverviewResult>, GetStaffAnalyticsOverviewHandler>();
         services.AddScoped<IQueryHandler<GetHostDashboardOverviewQuery, HostDashboardOverviewResult>, GetHostDashboardOverviewHandler>();
         services.AddScoped<IQueryHandler<GetHostAnalyticsOverviewQuery, HostAnalyticsOverviewResult>, GetHostAnalyticsOverviewHandler>();
+        services.AddScoped<IQueryHandler<GetAdminAnalyticsOverviewQuery, AdminAnalyticsOverviewResult>, GetAdminAnalyticsOverviewHandler>();
         services.AddScoped<IQueryHandler<GetActiveLiveSessionsQuery, List<LiveSessionResult>>, GetActiveLiveSessionsHandler>();
         services.AddScoped<IQueryHandler<GetLiveSessionStatisticsQuery, LiveSessionStatisticsResult>, GetLiveSessionStatisticsHandler>();
         services.AddScoped<IQueryHandler<GetLiveSessionChatsQuery, List<LiveSessionChatResult>>, GetLiveSessionChatsHandler>();
@@ -218,6 +222,7 @@ public static class DependencyInjection
 
         // Register SongRequest Query Handlers
         services.AddScoped<IQueryHandler<GetSongRequestsBySessionQuery, List<SongRequestResult>>, GetSongRequestsBySessionHandler>();
+        services.AddScoped<IQueryHandler<GetAllSongRequestsQuery, PagedResult<SongRequestResult>>, GetAllSongRequestsHandler>();
         services.AddScoped<IQueryHandler<GetMySongRequestLimitsQuery, MySongRequestLimitsResult>, GetMySongRequestLimitsQueryHandler>();
 
         // Register PodcastRequest Command Handlers

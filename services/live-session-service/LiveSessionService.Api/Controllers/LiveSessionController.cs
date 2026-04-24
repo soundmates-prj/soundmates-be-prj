@@ -11,6 +11,7 @@ using LiveSessionService.Application.Features.LiveSessions.Commands.StopSession;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetActiveLiveSessions;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetAllLiveSessions;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSession;
+using LiveSessionService.Application.Features.LiveSessions.Queries.GetStaffAnalyticsOverview;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetStaffDashboardOverview;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetSessionSchedules;
 using LiveSessionService.Application.Features.Results;
@@ -22,6 +23,7 @@ using LiveSessionService.Application.Features.LiveSessions.Queries.GetHostAnalyt
 using LiveSessionService.Application.Features.SongRequests.Commands.CreateSongRequest;
 using LiveSessionService.Application.Features.SongRequests.Commands.ReviewSongRequest;
 using LiveSessionService.Application.Features.SongRequests.Queries.GetSongRequestsBySession;
+using LiveSessionService.Application.Features.SongRequests.Queries.GetAllSongRequests;
 using LiveSessionService.Application.Features.LiveSessions.Commands.RestartBroadcast;
 using LiveSessionService.Application.Features.LiveSessions.Commands.SkipTrack;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSessionQueue;
@@ -188,6 +190,26 @@ public class LiveSessionController : ControllerBase
         }
 
         return Ok(ApiResponse<HostAnalyticsOverviewResult>.SuccessResponse(result.Data!, "Host analytics retrieved"));
+    }
+
+    /// <summary>
+    /// Get analytics overview data for the staff
+    /// </summary>
+    [HttpGet("analytics/staff")]
+    [Authorize(Roles = "STAFF,ADMIN")]
+    [ProducesResponseType(typeof(ApiResponse<StaffAnalyticsOverviewResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    public async Task<IActionResult> GetStaffAnalyticsOverview([FromQuery] int days = 7, CancellationToken ct = default)
+    {
+        var query = new GetStaffAnalyticsOverviewQuery(days);
+        var result = await _queries.Send<GetStaffAnalyticsOverviewQuery, StaffAnalyticsOverviewResult>(query, ct);
+
+        if (!result.IsSuccess)
+        {
+            return StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse());
+        }
+
+        return Ok(ApiResponse<StaffAnalyticsOverviewResult>.SuccessResponse(result.Data!, "Staff analytics retrieved"));
     }
 
     /// <summary>
@@ -632,6 +654,42 @@ public class LiveSessionController : ControllerBase
         }
 
         return Ok(result.ToApiResponse());
+    }
+
+    /// <summary>
+    /// Get all song requests paginated (for staff)
+    /// </summary>
+    [HttpGet("song-requests/all")]
+    [ProducesResponseType(typeof(ApiResponse<PageResponse<SongRequestResult>>), 200)]
+    public async Task<IActionResult> GetAllSongRequests(
+        [FromQuery] string? status,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        CancellationToken ct = default)
+    {
+        var query = new GetAllSongRequestsQuery(status, page, pageSize);
+        var result = await _queries.Send<GetAllSongRequestsQuery, PagedResult<SongRequestResult>>(query, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        var pageResponse = new PageResponse<SongRequestResult>
+        {
+            Content = result.Data!.Items.ToList(),
+            TotalElements = result.Data!.TotalCount,
+            TotalPages = result.Data!.TotalPages,
+            Page = result.Data!.PageNumber,
+            Size = result.Data!.PageSize
+        };
+
+        return Ok(ApiResponse<PageResponse<SongRequestResult>>.SuccessResponse(pageResponse, "Song requests retrieved"));
     }
 
     /// <summary>

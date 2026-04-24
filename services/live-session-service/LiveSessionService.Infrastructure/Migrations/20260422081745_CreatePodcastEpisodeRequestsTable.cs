@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -11,9 +11,7 @@ namespace LiveSessionService.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "TargetPodcastId",
-                table: "podcast_requests");
+            // (Removed redundant DropColumn for TargetPodcastId)
 
             migrationBuilder.CreateTable(
                 name: "PodcastEpisodeRequests",

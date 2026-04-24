@@ -84,11 +84,11 @@ public sealed class PodcastRequestController : ControllerBase
         var authorEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value;
         
         var authorInfoStr = System.Text.Json.JsonSerializer.Serialize(new {
-            Name = authorName,
-            Avatar = authorAvatar,
-            Email = authorEmail,
-            Plan = sub.PlanName,
-            UserId = userId.Value
+            name = authorName,
+            avatar = authorAvatar,
+            email = authorEmail,
+            plan = sub.PlanName,
+            userId = userId.Value
         });
 
         var command = new CreatePodcastRequestCommand(
