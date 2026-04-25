@@ -344,16 +344,16 @@ volumes:
   # name cố định = không bị đổi khi project name thay đổi
   postgres-data:
     name: soundmates_postgres_data
-    # external: true
+    external: true
   mongodb-data:
     name: soundmates_mongodb_data
-    # external: true
+    external: true
   rabbitmq-data:
     name: soundmates_rabbitmq_data
-    # external: true
+    external: true
   ai-audios-data:
     name: soundmates_ai_audios_data
-    # external: true
+    external: true
   # DataProtection Keys - persist JWT signing keys across restarts
   auth-service-dp-keys:
     name: soundmates_auth_service_dp_keys
