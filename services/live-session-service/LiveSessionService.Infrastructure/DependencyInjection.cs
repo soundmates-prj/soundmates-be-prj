@@ -79,6 +79,9 @@ public static class DependencyInjection
                 Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
         });
 
+        // Register the interface to resolve to the DbContext
+        services.AddScoped<LiveSessionService.Application.Abstractions.Persistence.ILiveSessionDbContext>(provider => provider.GetRequiredService<LiveSessionDbContext>());
+
         // DateTime Provider
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
 

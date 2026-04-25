@@ -42,4 +42,11 @@ public class PendingPayoutRepository : IPendingPayoutRepository
             .Where(x => x.Status == "pending" && x.ScheduledAt <= maxScheduledAt)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<IEnumerable<PendingPayout>> GetAllPendingPayoutsAsync(CancellationToken cancellationToken)
+    {
+        return await _context.PendingPayouts
+            .OrderByDescending(x => x.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
 }

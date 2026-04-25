@@ -71,7 +71,10 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
                 var existingTransaction = await _transactionRepo.GetByPaymentIdAsync(payment.Id, cancellationToken);
                 if (existingTransaction != null)
                 {
-                    return _mapper.Map<TransactionDto>(existingTransaction);
+                    var existingResponse = _mapper.Map<TransactionDto>(existingTransaction);
+                    existingResponse.TargetType = payment.TargetType;
+                    existingResponse.TargetId = payment.TargetId;
+                    return existingResponse;
                 }
                 throw new Exception("Payment already processed but transaction not found");
             }
@@ -128,6 +131,9 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
                             UpdatedAt = DateTime.UtcNow
                         };
                         await _pendingPayoutRepo.AddAsync(pendingPayout);
+                        
+                        // 🔥 7.1 Grant Podcast Access to Buyer
+                        await _liveSessionApiClient.GrantPodcastAccessAsync(payment.TargetId, payment.UserId, podcast.Price, cancellationToken);
                     }
                 }
                 else
@@ -157,6 +163,8 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
             }
 
             var respose = _mapper.Map<TransactionDto>(transaction);
+            respose.TargetType = payment.TargetType;
+            respose.TargetId = payment.TargetId;
             return respose;
         }
     }

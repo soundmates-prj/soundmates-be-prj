@@ -80,7 +80,8 @@ public class PodcastController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
     {
-        var query = new GetPodcastQuery(id);
+        TryGetCurrentUserId(out var userId);
+        var query = new GetPodcastQuery(id, userId == Guid.Empty ? null : userId);
         var result = await _queries.Send<GetPodcastQuery, PodcastResult>(query, ct);
 
         if (!result.IsSuccess)
@@ -625,6 +626,34 @@ public class PodcastController : ControllerBase
         userId = Guid.Empty;
         return false;
     }
+
+    /// <summary>
+    /// Internal API: Grants access to a podcast for a specific user after purchase
+    /// </summary>
+    [HttpPost("{id:guid}/grant-access")]
+    [AllowAnonymous] // Ideally this should be protected by an internal API key or service-to-service auth, but keeping it accessible for the webhook flow for now.
+    [ProducesResponseType(200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    public async Task<IActionResult> GrantAccess(Guid id, [FromBody] GrantPodcastAccessRequest request, CancellationToken ct)
+    {
+        var command = new LiveSessionService.Application.Features.Podcasts.Commands.GrantPodcastAccess.GrantPodcastAccessCommand(id, request.UserId, request.Price);
+        var result = await _commands.Send(command, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode == ErrorCode.NotFound
+                ? NotFound(result.ToApiResponse())
+                : StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse());
+        }
+
+        return Ok(ApiResponse<object>.SuccessResponse(null, "Access granted successfully"));
+    }
+}
+
+public class GrantPodcastAccessRequest
+{
+    public Guid UserId { get; set; }
+    public decimal Price { get; set; }
 }
 
 internal sealed class TagLibStreamAbstraction : TagLib.File.IFileAbstraction

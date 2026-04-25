@@ -15,6 +15,7 @@ public sealed class PodcastResult
     public decimal Price { get; init; }
     public bool IsPaid { get; init; }
     public int EpisodeCount { get; init; }
+    public bool IsPurchased { get; init; }
     public List<PodcastEpisodeResult> AllEpisodes { get; init; } = [];
 }
 

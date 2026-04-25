@@ -17,7 +17,7 @@ public sealed class CreatePodcastRequestRequest
 
     public string? BannerUrl { get; set; }
 
-    public decimal Price { get; set; }
+    public decimal? Price { get; set; }
 
-    public bool IsPaid { get; set; }
+    public bool? IsPaid { get; set; }
 }

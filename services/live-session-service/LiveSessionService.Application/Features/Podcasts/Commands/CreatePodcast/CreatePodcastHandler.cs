@@ -31,6 +31,8 @@ public sealed class CreatePodcastHandler : ICommandHandler<CreatePodcastCommand,
             Type = command.Type,
             Banner = command.Banner,
             Status = command.Status,
+            Price = command.Price,
+            IsPaid = command.IsPaid,
             CreatedAt = _dateTimeProvider.UtcNow
         };
 

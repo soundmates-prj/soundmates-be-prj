@@ -50,4 +50,25 @@ public sealed class StatisticController : ControllerBase
             result.Data!,
             "Session statistics retrieved"));
     }
+
+    /// <summary>
+    /// Get aggregated analytics overview for admin dashboard.
+    /// </summary>
+    [HttpGet("admin/overview")]
+    [Authorize(Roles = "ADMIN")]
+    [ProducesResponseType(typeof(ApiResponse<AdminAnalyticsOverviewResult>), 200)]
+    public async Task<IActionResult> GetAdminAnalyticsOverview([FromQuery] int days = 7, CancellationToken ct = default)
+    {
+        var query = new LiveSessionService.Application.Features.LiveSessions.Queries.GetAdminAnalyticsOverview.GetAdminAnalyticsOverviewQuery(days);
+        var result = await _queries.Send<LiveSessionService.Application.Features.LiveSessions.Queries.GetAdminAnalyticsOverview.GetAdminAnalyticsOverviewQuery, AdminAnalyticsOverviewResult>(query, ct);
+
+        if (!result.IsSuccess)
+        {
+            return StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse());
+        }
+
+        return Ok(ApiResponse<AdminAnalyticsOverviewResult>.SuccessResponse(
+            result.Data!,
+            "Admin analytics overview retrieved"));
+    }
 }

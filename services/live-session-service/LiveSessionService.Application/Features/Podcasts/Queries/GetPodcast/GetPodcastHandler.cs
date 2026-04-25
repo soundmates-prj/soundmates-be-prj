@@ -1,4 +1,5 @@
 using LiveSessionService.Application.Abstractions.Messaging;
+using LiveSessionService.Application.Abstractions.Persistence;
 using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Features.Results;
 using LiveSessionService.Application.Features.Results.Podcasts;
@@ -9,10 +10,12 @@ namespace LiveSessionService.Application.Features.Podcasts.Queries.GetPodcast;
 public sealed class GetPodcastHandler : IQueryHandler<GetPodcastQuery, PodcastResult>
 {
     private readonly IPodcastRepository _podcastRepository;
+    private readonly ILiveSessionDbContext _dbContext;
 
-    public GetPodcastHandler(IPodcastRepository podcastRepository)
+    public GetPodcastHandler(IPodcastRepository podcastRepository, ILiveSessionDbContext dbContext)
     {
         _podcastRepository = podcastRepository;
+        _dbContext = dbContext;
     }
 
     public async Task<Result<PodcastResult>> Handle(GetPodcastQuery query, CancellationToken cancellationToken)
@@ -21,16 +24,17 @@ public sealed class GetPodcastHandler : IQueryHandler<GetPodcastQuery, PodcastRe
         if (podcast == null)
             return Result<PodcastResult>.Failure("Podcast not found", ErrorCode.NotFound);
 
-        object? parsedAuthor = null;
-        if (!string.IsNullOrWhiteSpace(podcast.Author))
+        bool isPurchased = false;
+        if (query.UserId.HasValue)
         {
-            var a = podcast.Author.Trim();
-            if (a.Length > 0 && (a[0] == '{' || a[0] == '[' || a[0] == '"'))
+            if (podcast.CreatedBy == query.UserId.Value)
             {
-                try { parsedAuthor = System.Text.Json.JsonSerializer.Deserialize<object>(a); }
-                catch (Exception) { parsedAuthor = a; }
+                isPurchased = true;
             }
-            else { parsedAuthor = a; }
+            else
+            {
+                isPurchased = _dbContext.UserPurchasedPodcasts.Any(x => x.PodcastId == query.PodcastId && x.UserId == query.UserId.Value);
+            }
         }
 
         return Result<PodcastResult>.Success(new PodcastResult
@@ -38,6 +42,7 @@ public sealed class GetPodcastHandler : IQueryHandler<GetPodcastQuery, PodcastRe
             Id = podcast.Id,
             Price = podcast.Price,
             IsPaid = podcast.IsPaid,
+            IsPurchased = isPurchased,
             Title = podcast.Title,
             Description = podcast.Description,
             Author = parsedAuthor,
