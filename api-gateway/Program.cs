@@ -37,6 +37,7 @@ var allowedOrigins = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 // Keep localhost defaults for local development.
 AddOrigin(allowedOrigins, "http://localhost:3000");
 AddOrigin(allowedOrigins, "http://localhost:5173");
+AddOrigin(allowedOrigins, "https://app.soundmates.xyz");
 
 // Support production values from environment/config.
 AddOrigin(allowedOrigins, builder.Configuration["FRONTEND_URL"]);
