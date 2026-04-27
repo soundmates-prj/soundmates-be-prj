@@ -1,3 +1,6 @@
+// NOTE: This service is not currently used as the query service uses MongoDB directly
+// and doesn't require EF Core outbox pattern. Keeping for future reference.
+/*
 using System;
 using System.Linq;
 using System.Threading;
@@ -76,3 +79,4 @@ namespace AuthQueryService.Infrastructure.Messaging
         }
     }
 }
+*/

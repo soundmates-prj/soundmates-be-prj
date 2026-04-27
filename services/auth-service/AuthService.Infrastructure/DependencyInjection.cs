@@ -1,19 +1,18 @@
-using System;
+using AuthService.Application.Abstractions;
+using AuthService.Application.Configuration;
+using AuthService.Application.Features.Common;
 using AuthService.Domain.Interfaces;
-using AuthService.Infrastructure.Dao;
-using AuthService.Infrastructure.Dao.Interfaces;
-using AuthService.Infrastructure.Data;
-using AuthService.Infrastructure.Jwt;
-using AuthService.Infrastructure.Messaging;
+using AuthService.Infrastructure.ExternalServices;
+using AuthService.Infrastructure.Messaging.MessageBus;
+using AuthService.Infrastructure.Messaging.Outbox;
+using AuthService.Infrastructure.Persistence;
 using AuthService.Infrastructure.Repositories;
+using AuthService.Infrastructure.Security.Jwt;
 using AuthService.Infrastructure.Services;
-using AuthService.Application.Common;
-using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using RabbitMQ.Client;
-using AuthService.Application.Abstractions.Messaging;
+using Microsoft.Extensions.Logging;
 
 namespace AuthService.Infrastructure;
 
@@ -28,19 +27,28 @@ public static class DependencyInjection
         // Unit of Work
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-        // DAOs (write side - PostgreSQL)
-        services.AddScoped<IAuthDao, AuthDao>();
-        services.AddScoped<IUserDao, UserDao>();
-        services.AddScoped<IRoleDao, RoleDao>();
-        services.AddScoped<IProfileDAO, ProfileDAO>();
-
-        // Repositories (write side)
+        // Repositories (direct DbContext access - DAO layer removed)
         services.AddScoped<IAuthRepository, AuthRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IProfileRepository, ProfileRepository>();
+        services.AddScoped<IUserFavouriteRepository, UserFavouriteRepository>();
+        services.AddScoped<ISpotifyItemRepository, SpotifyItemRepository>();
+        services.AddScoped<ISpotifyTokenRepository, SpotifyTokenRepository>();
+        services.AddScoped<IOtpRepository, OtpRepository>();
+        services.AddScoped<IOutboxRepository, OutboxRepository>();
+        services.AddScoped<IBankAccountRepository, AuthService.Infrastructure.Persistence.Repositories.BankAccountRepository>();
 
+        // Dual-write: sync favourites to MongoDB read-side (auth-query-service)
+        services.AddSingleton<IFavouriteSyncRepository, FavouriteSyncRepository>();
+
+        // Spotify integration
+        // Binds Spotify:ClientId, Spotify:ClientSecret, etc. from IConfiguration
+        // (env vars are mapped to Spotify:* keys in ConfigurationExtensions.cs)
+        services.Configure<SpotifyOptions>(configuration.GetSection(SpotifyOptions.SectionName));
+        services.AddHttpClient<ISpotifyApiClient, SpotifyApiClient>();
+        services.AddHttpClient<ISpotifyUserApiClient, SpotifyUserApiClient>();
         // JWT token generator
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 
@@ -54,15 +62,18 @@ public static class DependencyInjection
         // App settings (Frontend URL, etc.)
         services.Configure<AppSettings>(configuration.GetSection("AppSettings"));
 
-        // OTP repository
-        services.AddScoped<IOtpRepository, OtpRepository>();
+        // DateTime provider (infrastructure concern)
+        services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
 
-        // Outbox + background publisher
-        services.AddScoped<IOutbox, EfCoreOutbox>();
-        services.AddHostedService<OutboxPublisherBackgroundService>();
+        // Application services (implemented in infrastructure)
+        services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
+        services.AddScoped<IOtpService, OtpService>();
 
-        // Remove IConnection singleton; register publisher directly.
+        // Message Bus Publisher (RabbitMQ)
         services.AddSingleton<IMessageBusPublisher, RabbitMqPublisher>();
+
+        // Outbox Background Publisher Service
+        services.AddHostedService<OutboxPublisherBackgroundService>();
 
         return services;
     }

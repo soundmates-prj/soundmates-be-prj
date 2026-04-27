@@ -10,6 +10,7 @@ namespace AuthService.Application.Enums
         
         // 403 - Forbidden
         HB40301 = 40301,
+        HB40302 = 40302,
         
         // 404 - Not Found
         HB40401 = 40401,

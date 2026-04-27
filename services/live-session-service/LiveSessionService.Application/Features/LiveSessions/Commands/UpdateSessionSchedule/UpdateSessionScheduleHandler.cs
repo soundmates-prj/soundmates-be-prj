@@ -1,0 +1,154 @@
+using LiveSessionService.Application.Abstractions.Messaging;
+using LiveSessionService.Application.Enums;
+using LiveSessionService.Application.Features.LiveSessions.Scheduling;
+using LiveSessionService.Application.Features.Results;
+using LiveSessionService.Application.Features.Results.LiveSessions;
+using LiveSessionService.Domain.Enums;
+using LiveSessionService.Domain.Exceptions;
+using LiveSessionService.Domain.Interfaces;
+
+namespace LiveSessionService.Application.Features.LiveSessions.Commands.UpdateSessionSchedule;
+
+public sealed class UpdateSessionScheduleHandler : ICommandHandler<UpdateSessionScheduleCommand, SessionScheduleResult>
+{
+    private readonly ISessionScheduleRepository _scheduleRepository;
+    private readonly ILiveSessionRepository _sessionRepository;
+    private readonly IDateTimeProvider _dateTimeProvider;
+
+    public UpdateSessionScheduleHandler(
+        ISessionScheduleRepository scheduleRepository,
+        ILiveSessionRepository sessionRepository,
+        IDateTimeProvider dateTimeProvider)
+    {
+        _scheduleRepository = scheduleRepository;
+        _sessionRepository = sessionRepository;
+        _dateTimeProvider = dateTimeProvider;
+    }
+
+    public async Task<Result<SessionScheduleResult>> Handle(
+        UpdateSessionScheduleCommand command,
+        CancellationToken cancellationToken)
+    {
+        if (command.EndTime <= command.StartTime)
+        {
+            return Result<SessionScheduleResult>.Failure("End time must be greater than start time", ErrorCode.BadRequest);
+        }
+
+        if (command.EndDate.HasValue && command.EndDate.Value < command.StartDate)
+        {
+            return Result<SessionScheduleResult>.Failure("End date cannot be earlier than start date", ErrorCode.BadRequest);
+        }
+
+        var nowUtc = _dateTimeProvider.UtcNow;
+        var scheduleNow = ScheduleTimeConverter.ConvertUtcToVietnamLocal(nowUtc);
+        var today = DateOnly.FromDateTime(scheduleNow);
+        var nowTime = TimeOnly.FromDateTime(scheduleNow);
+
+        if (command.StartDate == today &&
+            (command.StartTime <= nowTime || command.EndTime <= nowTime))
+        {
+            return Result<SessionScheduleResult>.Failure(
+                "For today schedule, start time and end time must be greater than current time",
+                ErrorCode.BadRequest);
+        }
+
+        var schedule = await _scheduleRepository.GetByIdAsync(command.ScheduleId, cancellationToken);
+        if (schedule == null)
+        {
+            return Result<SessionScheduleResult>.Failure("Schedule not found", ErrorCode.NotFound);
+        }
+
+        var session = await _sessionRepository.GetByIdAsync(schedule.LiveSessionId, cancellationToken);
+        if (session == null)
+        {
+            return Result<SessionScheduleResult>.Failure("Session not found", ErrorCode.NotFound);
+        }
+
+        var isRecurring = command.IsRecurring ?? schedule.IsRecurring;
+        var daysOfWeek = command.DaysOfWeek ?? schedule.DaysOfWeek;
+
+        if (isRecurring && daysOfWeek == DaysOfWeek.None)
+        {
+            return Result<SessionScheduleResult>.Failure("At least one day of week is required for recurring schedules", ErrorCode.BadRequest);
+        }
+
+        schedule.StartTime = command.StartTime;
+        schedule.EndTime = command.EndTime;
+        schedule.StartDate = command.StartDate;
+        schedule.EndDate = command.EndDate;
+
+        if (!string.IsNullOrWhiteSpace(command.Title))
+        {
+            schedule.Title = command.Title.Trim();
+        }
+
+        schedule.IsRecurring = isRecurring;
+        schedule.DaysOfWeek = isRecurring ? daysOfWeek : DaysOfWeek.None;
+        schedule.UpdatedBy = command.ActorUserId;
+
+        var allSchedules = await _scheduleRepository.GetByLiveSessionIdAsync(schedule.LiveSessionId, cancellationToken);
+        var nextOccurrence = ScheduleOccurrenceCalculator.GetNextOccurrenceUtc(allSchedules, _dateTimeProvider.UtcNow);
+
+        await _scheduleRepository.UpdateAsync(schedule, cancellationToken);
+
+        try
+        {
+            if (nextOccurrence.HasValue)
+            {
+                session.Schedule(nextOccurrence.Value, _dateTimeProvider);
+            }
+            else if (session.Status == SessionStatus.Scheduled)
+            {
+                session.RevertToCreated(_dateTimeProvider);
+            }
+
+            await _sessionRepository.UpdateAsync(session, cancellationToken);
+        }
+        catch (DomainException ex)
+        {
+            return Result<SessionScheduleResult>.Failure(ex.Message, (ErrorCode)ex.StatusCode);
+        }
+
+        return Result<SessionScheduleResult>.Success(MapToResult(schedule, session));
+    }
+
+    private static SessionScheduleResult MapToResult(Domain.Entities.SessionSchedule schedule, Domain.Entities.LiveSession session) => new()
+    {
+        Id = schedule.Id,
+        LiveSessionId = schedule.LiveSessionId,
+        StartTime = schedule.StartTime,
+        EndTime = schedule.EndTime,
+        Title = schedule.Title,
+        Status = schedule.Status.ToString(),
+        IsRecurring = schedule.IsRecurring,
+        DaysOfWeek = schedule.DaysOfWeek,
+        StartDate = schedule.StartDate,
+        EndDate = schedule.EndDate,
+        CreatedBy = schedule.CreatedBy,
+        UpdatedBy = schedule.UpdatedBy,
+        CreatedAt = schedule.CreatedAt,
+        LiveSession = new LiveSessionScheduleData
+        {
+            Id = session.Id,
+            SessionName = session.SessionName,
+            Description = session.Description,
+            Status = session.Status.ToString(),
+            HostUserId = session.HostUserId,
+            StartedAt = session.StartedAt,
+            EndedAt = session.EndedAt,
+            Genre = session.Genre,
+            ThumbnailUrl = session.ThumbnailUrl,
+            Station = session.AzuraCastStation != null ? new StationScheduleData
+            {
+                Id = session.AzuraCastStation.Id,
+                ExternalStationId = session.AzuraCastStation.ExternalStationId,
+                StationName = session.AzuraCastStation.StationName,
+                StationShortcode = session.AzuraCastStation.StationShortcode,
+                Description = session.AzuraCastStation.Description,
+                StreamUrl = session.AzuraCastStation.StreamUrl,
+                PublicPlayerUrl = session.AzuraCastStation.PublicPlayerUrl
+            } : null
+        }
+    };
+
+}

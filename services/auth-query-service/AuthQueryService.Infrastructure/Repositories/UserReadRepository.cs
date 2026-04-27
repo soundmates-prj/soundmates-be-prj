@@ -1,41 +1,151 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using AuthQueryService.Domain.Entities.ReadModels;
 using AuthQueryService.Domain.Interfaces;
-using AuthQueryService.Infrastructure.DAO.Interfaces;
+using MongoDB.Driver;
 
 namespace AuthQueryService.Infrastructure.Repositories
 {
+    /// <summary>
+    /// MongoDB implementation of IUserReadRepository
+    /// Directly connects to MongoDB without additional DAO layer
+    /// </summary>
     public sealed class UserReadRepository : IUserReadRepository
     {
-        private readonly IUserReadDAO _dao;
+        private readonly IMongoCollection<UserReadModel> _collection;
 
-        public UserReadRepository(IUserReadDAO dao)
+        private static bool _indexesEnsured;
+        private static readonly object _indexLock = new();
+
+        public UserReadRepository(IMongoDatabase database)
         {
-            _dao = dao;
+            _collection = database.GetCollection<UserReadModel>("users_read");
+            
+            if (!_indexesEnsured)
+            {
+                lock (_indexLock)
+                {
+                    if (!_indexesEnsured)
+                    {
+                        var indexModels = new[]
+                        {
+                            new CreateIndexModel<UserReadModel>(
+                                Builders<UserReadModel>.IndexKeys.Ascending(x => x.Username),
+                                new CreateIndexOptions { Unique = true, Name = "ux_users_read_username" }),
+                            new CreateIndexModel<UserReadModel>(
+                                Builders<UserReadModel>.IndexKeys.Ascending(x => x.Email),
+                                new CreateIndexOptions { Unique = true, Name = "ux_users_read_email" })
+                        };
+                        
+                        try
+                        {
+                            _collection.Indexes.CreateMany(indexModels);
+                        }
+                        catch
+                        {
+                            // Indexes might already exist, ignore
+                        }
+                        _indexesEnsured = true;
+                    }
+                }
+            }
         }
 
-        public Task<UserReadModel?> GetByIdAsync(Guid id)
-            => _dao.GetByIdAsync(id);
+        public async Task<UserReadModel?> GetByIdAsync(Guid id)
+            => await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
 
-        public Task<UserReadModel?> GetByUsernameAsync(string username)
-            => _dao.GetByUsernameAsync(username);
+        public async Task<UserReadModel?> GetByUsernameAsync(string username)
+            => await _collection.Find(x => x.Username == username).FirstOrDefaultAsync();
 
-        public Task<List<UserReadModel>> GetAllAsync()
-            => _dao.GetAllAsync();
+        public async Task<List<UserReadModel>> GetAllAsync()
+            => await _collection.Find(FilterDefinition<UserReadModel>.Empty).ToListAsync();
 
-        public Task<(List<UserReadModel> Items, int TotalCount)> GetPagedAsync(int page, int size)
-            => _dao.GetPagedAsync(page, size);
+        public async Task<(List<UserReadModel> Items, int TotalCount)> GetByRoleAsync(
+            string roleName,
+            int page,
+            int size)
+        {
+            page = page <= 0 ? 1 : page;
+            size = size <= 0 ? 20 : size;
 
-        public Task<(List<UserReadModel> Items, int TotalCount)> SearchAsync(string? searchTerm, int page, int size)
-            => _dao.SearchAsync(searchTerm, page, size);
+            var normalizedRole = roleName.Trim();
+            var filter = Builders<UserReadModel>.Filter.Regex(
+                x => x.RoleName,
+                new MongoDB.Bson.BsonRegularExpression($"^{System.Text.RegularExpressions.Regex.Escape(normalizedRole)}$", "i"));
 
-        public Task UpsertAsync(UserReadModel model)
-            => _dao.UpsertAsync(model);
+            var countTask = _collection.CountDocumentsAsync(filter);
+            var itemsTask = _collection.Find(filter)
+                .SortBy(x => x.Username)
+                .Skip((page - 1) * size)
+                .Limit(size)
+                .ToListAsync();
 
-        public Task DeleteAsync(Guid id)
-            => _dao.DeleteAsync(id);
+            await Task.WhenAll(countTask, itemsTask);
+
+            return (itemsTask.Result, (int)countTask.Result);
+        }
+
+        public async Task<(List<UserReadModel> Items, int TotalCount)> GetPagedAsync(int page, int size)
+        {
+            page = page <= 0 ? 1 : page;
+            size = size <= 0 ? 20 : size;
+
+            var filter = FilterDefinition<UserReadModel>.Empty;
+            
+            var countTask = _collection.CountDocumentsAsync(filter);
+            var itemsTask = _collection.Find(filter)
+                .SortBy(x => x.Username)
+                .Skip((page - 1) * size)
+                .Limit(size)
+                .ToListAsync();
+
+            await Task.WhenAll(countTask, itemsTask);
+
+            return (itemsTask.Result, (int)countTask.Result);
+        }
+
+        public async Task<(List<UserReadModel> Items, int TotalCount)> SearchAsync(
+            string? searchTerm, 
+            int page, 
+            int size)
+        {
+            page = page <= 0 ? 1 : page;
+            size = size <= 0 ? 20 : size;
+
+            FilterDefinition<UserReadModel> filter = FilterDefinition<UserReadModel>.Empty;
+            
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                var builder = Builders<UserReadModel>.Filter;
+                filter = builder.Or(
+                    builder.Regex(x => x.Username, new MongoDB.Bson.BsonRegularExpression(searchTerm, "i")),
+                    builder.Regex(x => x.Email, new MongoDB.Bson.BsonRegularExpression(searchTerm, "i")),
+                    builder.Regex(x => x.FirstName, new MongoDB.Bson.BsonRegularExpression(searchTerm, "i")),
+                    builder.Regex(x => x.LastName, new MongoDB.Bson.BsonRegularExpression(searchTerm, "i"))
+                );
+            }
+
+            var countTask = _collection.CountDocumentsAsync(filter);
+            var itemsTask = _collection.Find(filter)
+                .SortBy(x => x.Username)
+                .Skip((page - 1) * size)
+                .Limit(size)
+                .ToListAsync();
+
+            await Task.WhenAll(countTask, itemsTask);
+
+            return (itemsTask.Result, (int)countTask.Result);
+        }
+
+        public async Task UpsertAsync(UserReadModel model)
+        {
+            var filter = Builders<UserReadModel>.Filter.Eq(x => x.Id, model.Id);
+            await _collection.ReplaceOneAsync(
+                filter, 
+                model, 
+                new ReplaceOptions { IsUpsert = true });
+        }
+        
+        public async Task DeleteAsync(Guid id)
+            => await _collection.DeleteOneAsync(x => x.Id == id);
     }
 }
 

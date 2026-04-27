@@ -1,21 +1,24 @@
-﻿using AuthService.Application.DTOs.Response;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using AuthService.Application.Results;
 
 namespace AuthService.Application.Abstractions.Messaging
 {
+    /// <summary>
+    /// Command handler without response data
+    /// Returns Result for application-level error handling
+    /// </summary>
     public interface ICommandHandler<in TCommand>
         where TCommand : ICommand
     {
-        Task<ApiResponse<object>> Handle(TCommand command, CancellationToken cancellationToken);
+        Task<Result> Handle(TCommand command, CancellationToken cancellationToken);
     }
 
+    /// <summary>
+    /// Command handler with typed response
+    /// Returns Result{TResponse} for application-level error handling
+    /// </summary>
     public interface ICommandHandler<in TCommand, TResponse>
         where TCommand : ICommand<TResponse>
     {
-        Task<ApiResponse<TResponse>> Handle(TCommand command, CancellationToken cancellationToken);
+        Task<Result<TResponse>> Handle(TCommand command, CancellationToken cancellationToken);
     }
 }

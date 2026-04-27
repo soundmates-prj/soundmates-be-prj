@@ -10,8 +10,12 @@ using AuthQueryService.Infrastructure.Middlewares;
 using AuthQueryService.Application;
 using AuthQueryService.Infrastructure;
 using Microsoft.OpenApi.Models;
+using AuthQueryService.Api.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Load .env + map env vars → IConfiguration (no secrets in appsettings files)
+builder.AddEnvironmentConfig();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -32,16 +36,17 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
     };
 });
 
-// Support environment variables for JWT configuration
-var jwtKey = Environment.GetEnvironmentVariable("JWT_KEY")
-    ?? builder.Configuration["Jwt:Key"]
-    ?? throw new InvalidOperationException("JWT Key not configured. Set JWT_KEY environment variable or configure in appsettings.json");
-var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER")
-    ?? builder.Configuration["Jwt:Issuer"]
-    ?? "SoundmatesAuthService";
-var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE")
-    ?? builder.Configuration["Jwt:Audience"]
-    ?? "SoundmatesUsers";
+var jwtKey = builder.Configuration["Jwt:Secret"] ?? builder.Configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.StartsWith("${") || jwtKey.Contains("<"))
+{
+    throw new InvalidOperationException("JWT secret is missing. Configure Jwt__Secret (or legacy JWT_KEY).");
+}
+
+var jwtIssuer = builder.Configuration["Jwt:Issuer"]
+    ?? throw new InvalidOperationException("JWT issuer is missing. Configure Jwt__Issuer.");
+
+var jwtAudience = builder.Configuration["Jwt:Audience"]
+    ?? throw new InvalidOperationException("JWT audience is missing. Configure Jwt__Audience.");
 
 builder.Services.AddAuthentication(options =>
 {
@@ -109,7 +114,15 @@ builder.Services.AddRouting(options => options.LowercaseUrls = true);
 // Swagger + JWT security
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "AuthQueryService API", Version = "v1" });
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "QueryService API", Version = "v1" });
+
+    // Enable XML comments for standard API documentation
+    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = System.IO.Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (System.IO.File.Exists(xmlPath))
+    {
+        c.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
+    }
 
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {

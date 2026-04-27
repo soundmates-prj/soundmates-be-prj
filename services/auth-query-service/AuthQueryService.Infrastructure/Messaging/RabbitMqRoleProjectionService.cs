@@ -1,23 +1,26 @@
-using System;
 using System.Text;
 using System.Text.Json;
-using System.Net.Sockets;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Exceptions;
+using System.Net.Sockets;
 using AuthQueryService.Domain.Entities;
-using Microsoft.Extensions.DependencyInjection;
+using AuthQueryService.Domain.Entities.ReadModels;
 using MongoDB.Driver;
 
 namespace AuthQueryService.Infrastructure.Messaging
 {
+    /// <summary>
+    /// Clean Role Projection Service - Simplified and maintainable
+    /// </summary>
     public sealed class RabbitMqRoleProjectionService : BackgroundService
     {
         private readonly ILogger<RabbitMqRoleProjectionService> _logger;
-        private readonly IServiceProvider _sp;
+        private readonly IServiceProvider _serviceProvider;
         private readonly ConnectionFactory _factory;
         private IConnection? _conn;
         private IChannel? _channel;
@@ -30,495 +33,257 @@ namespace AuthQueryService.Infrastructure.Messaging
         public RabbitMqRoleProjectionService(
             IConfiguration cfg,
             ILogger<RabbitMqRoleProjectionService> logger,
-            IServiceProvider sp)
+            IServiceProvider serviceProvider)
         {
             _logger = logger;
-            _sp = sp;
+            _serviceProvider = serviceProvider;
+            _factory = CreateConnectionFactory(cfg);
 
-            // Read from environment variables first (Docker/Kubernetes), then from config
-            // Environment variables take precedence over appsettings.json
+            _logger.LogInformation("RabbitMQ Role Service Config: Host={Host}, Port={Port}", 
+                _factory.HostName, _factory.Port);
+        }
+
+        private static ConnectionFactory CreateConnectionFactory(IConfiguration cfg)
+        {
             var hostName = Environment.GetEnvironmentVariable("RABBITMQ_HOST") 
-                        ?? cfg["RabbitMq:HostName"]?.Replace("${RABBITMQ_HOST}", "")?.Trim()
-                        ?? cfg["RABBITMQ_HOST"] 
+                        ?? cfg["RabbitMq:HostName"]?.Replace("${RABBITMQ_HOST}", "").Trim() 
                         ?? "rabbitmq";
             
-            // Remove placeholder syntax if present
-            if (hostName.Contains("${"))
+            var port = int.TryParse(
+                Environment.GetEnvironmentVariable("RABBITMQ_PORT") 
+                ?? cfg["RabbitMq:Port"]?.Replace("${RABBITMQ_PORT}", "").Trim(), 
+                out var p) ? p : 5672;
+
+            return new ConnectionFactory
             {
-                hostName = "rabbitmq"; // Default to service name in Docker
-            }
-            
-            var portStr = Environment.GetEnvironmentVariable("RABBITMQ_PORT") 
-                       ?? cfg["RabbitMq:Port"]?.Replace("${RABBITMQ_PORT}", "")?.Trim()
-                       ?? cfg["RABBITMQ_PORT"] 
-                       ?? "5672";
-            
-            var userName = Environment.GetEnvironmentVariable("RABBITMQ_USERNAME") 
-                        ?? cfg["RabbitMq:UserName"]?.Replace("${RABBITMQ_USERNAME}", "")?.Trim()
-                        ?? cfg["RABBITMQ_USERNAME"] 
-                        ?? "guest";
-            
-            var password = Environment.GetEnvironmentVariable("RABBITMQ_PASSWORD") 
-                        ?? cfg["RabbitMq:Password"]?.Replace("${RABBITMQ_PASSWORD}", "")?.Trim()
-                        ?? cfg["RABBITMQ_PASSWORD"] 
-                        ?? "guest";
-            
-            var virtualHost = Environment.GetEnvironmentVariable("RABBITMQ_VIRTUALHOST") 
-                           ?? cfg["RabbitMq:VirtualHost"]?.Replace("${RABBITMQ_VIRTUALHOST}", "")?.Trim()
-                           ?? cfg["RABBITMQ_VIRTUALHOST"] 
-                           ?? "/";
-            
-            _factory = new ConnectionFactory
-            {
-                HostName = hostName,
-                Port = int.TryParse(portStr, out var p) ? p : 5672,
-                UserName = userName,
-                Password = password,
-                VirtualHost = virtualHost,
+                HostName = hostName.Contains("${") ? "rabbitmq" : hostName,
+                Port = port,
+                UserName = Environment.GetEnvironmentVariable("RABBITMQ_USERNAME") ?? cfg["RabbitMq:UserName"] ?? "guest",
+                Password = Environment.GetEnvironmentVariable("RABBITMQ_PASSWORD") ?? cfg["RabbitMq:Password"] ?? "guest",
+                VirtualHost = Environment.GetEnvironmentVariable("RABBITMQ_VIRTUALHOST") ?? cfg["RabbitMq:VirtualHost"] ?? "/",
                 AutomaticRecoveryEnabled = true,
                 NetworkRecoveryInterval = TimeSpan.FromSeconds(10),
                 RequestedHeartbeat = TimeSpan.FromSeconds(60),
                 RequestedConnectionTimeout = TimeSpan.FromSeconds(30)
             };
-
-            _logger.LogInformation("RabbitMQ Role Projection Configuration: Host={Host}, Port={Port}, VHost={VHost}, User={User}",
-                _factory.HostName, _factory.Port, _factory.VirtualHost, _factory.UserName);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation("Starting RabbitMQ Role Projection Service...");
-            
-            // Initial delay to let RabbitMQ start
-            _logger.LogInformation("Waiting 15 seconds for RabbitMQ to be ready...");
+            _logger.LogInformation("?? Starting Role Projection Service...");
             await Task.Delay(TimeSpan.FromSeconds(15), stoppingToken);
 
             try
             {
                 await ConnectWithRetryAsync(stoppingToken);
-
                 if (_conn == null || _channel == null)
                 {
-                    _logger.LogError("Failed to establish RabbitMQ connection. Service will not process events.");
+                    _logger.LogError("? Failed to connect. Service stopped.");
                     return;
                 }
 
-                await SetupExchangeAndQueueAsync(stoppingToken);
+                await SetupQueueAsync(stoppingToken);
                 await StartConsumingAsync(stoppingToken);
                 
-                _logger.LogInformation("RabbitMQ Role Projection Service started successfully!");
-                
-                // Keep the service running
+                _logger.LogInformation("? Role Service started successfully!");
                 await Task.Delay(Timeout.Infinite, stoppingToken);
             }
             catch (OperationCanceledException)
             {
-                _logger.LogInformation("RabbitMQ Role Projection Service is stopping (cancellation requested)...");
+                _logger.LogInformation("?? Role Service stopping...");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Fatal error in RabbitMQ Role Projection Service");
+                _logger.LogError(ex, "?? Fatal error in Role Service");
                 throw;
             }
         }
 
-        private async Task ConnectWithRetryAsync(CancellationToken stoppingToken)
+        private async Task ConnectWithRetryAsync(CancellationToken ct)
         {
-            _logger.LogInformation("Connecting to RabbitMQ: {Host}:{Port}", _factory.HostName, _factory.Port);
-
             for (int attempt = 1; attempt <= MaxRetryAttempts; attempt++)
             {
-                if (stoppingToken.IsCancellationRequested)
-                {
-                    _logger.LogWarning("Connection attempts cancelled");
-                    return;
-                }
+                if (ct.IsCancellationRequested) return;
 
                 try
                 {
-                    if (attempt % 5 == 1 || attempt <= 3)
-                    {
-                        _logger.LogInformation("Connection attempt {Attempt}/{Max}...", attempt, MaxRetryAttempts);
-                    }
-                    
-                    _conn = await _factory.CreateConnectionAsync(
-                        clientProvidedName: "auth-query-service-roles", 
-                        cancellationToken: stoppingToken);
-                    
-                    _channel = await _conn.CreateChannelAsync(cancellationToken: stoppingToken);
-                    
-                    _logger.LogInformation("Connected to RabbitMQ successfully on attempt {Attempt}!", attempt);
+                    _conn = await _factory.CreateConnectionAsync("auth-query-roles", cancellationToken: ct);
+                    _channel = await _conn.CreateChannelAsync(cancellationToken: ct);
+                    _logger.LogInformation("? Role Service connected on attempt {Attempt}", attempt);
                     return;
                 }
-                catch (BrokerUnreachableException ex)
+                catch (Exception ex) when (ex is BrokerUnreachableException or SocketException or TimeoutException)
                 {
-                    if (attempt % 5 == 0 || attempt <= 3)
-                    {
-                        _logger.LogWarning("RabbitMQ broker unreachable (attempt {Attempt}/{Max}): {Message}", 
+                    if (attempt % 5 == 0)
+                        _logger.LogWarning("?? Role Service attempt {Attempt}/{Max}: {Message}", 
                             attempt, MaxRetryAttempts, ex.Message);
-                    }
-                }
-                catch (SocketException ex)
-                {
-                    if (attempt % 5 == 0 || attempt <= 3)
-                    {
-                        _logger.LogWarning("Socket error connecting to RabbitMQ (attempt {Attempt}/{Max}): {Message}", 
-                            attempt, MaxRetryAttempts, ex.Message);
-                    }
-                }
-                catch (TimeoutException ex)
-                {
-                    if (attempt % 5 == 0 || attempt <= 3)
-                    {
-                        _logger.LogWarning("Connection timeout (attempt {Attempt}/{Max}): {Message}", 
-                            attempt, MaxRetryAttempts, ex.Message);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Unexpected error connecting to RabbitMQ (attempt {Attempt}/{Max})", 
-                        attempt, MaxRetryAttempts);
                 }
 
                 if (attempt < MaxRetryAttempts)
-                {
-                    if (attempt % 5 == 0 || attempt <= 3)
-                    {
-                        _logger.LogInformation("Retrying in {Seconds} seconds...", RetryDelaySeconds);
-                    }
-                    await Task.Delay(TimeSpan.FromSeconds(RetryDelaySeconds), stoppingToken);
-                }
+                    await Task.Delay(TimeSpan.FromSeconds(RetryDelaySeconds), ct);
             }
 
-            _logger.LogError("Could not connect to RabbitMQ after {Attempts} attempts. Giving up.", MaxRetryAttempts);
+            _logger.LogError("? Role Service failed after {Attempts} attempts", MaxRetryAttempts);
         }
 
-        private async Task SetupExchangeAndQueueAsync(CancellationToken stoppingToken)
+        private async Task SetupQueueAsync(CancellationToken ct)
         {
-            if (_channel == null)
-            {
-                throw new InvalidOperationException("Channel is not initialized");
-            }
+            if (_channel == null) throw new InvalidOperationException("Channel not initialized");
 
-            _logger.LogInformation("Declaring exchange: {Exchange}", Exchange);
-            await _channel.ExchangeDeclareAsync(
-                exchange: Exchange, 
-                type: ExchangeType.Topic, 
-                durable: true, 
-                autoDelete: false, 
-                arguments: null, 
-                cancellationToken: stoppingToken);
-
-            _logger.LogInformation("Declaring queue: {Queue}", QueueName);
-            await _channel.QueueDeclareAsync(
-                queue: QueueName, 
-                durable: true, 
-                exclusive: false, 
-                autoDelete: false, 
-                arguments: null, 
-                cancellationToken: stoppingToken);
+            await _channel.ExchangeDeclareAsync(Exchange, ExchangeType.Topic, durable: true, autoDelete: false, cancellationToken: ct);
+            await _channel.QueueDeclareAsync(QueueName, durable: true, exclusive: false, autoDelete: false, cancellationToken: ct);
 
             var routingKeys = new[] { "auth.role.created", "auth.role.updated", "auth.role.deleted" };
             foreach (var rk in routingKeys)
             {
-                await _channel.QueueBindAsync(
-                    queue: QueueName, 
-                    exchange: Exchange, 
-                    routingKey: rk, 
-                    arguments: null, 
-                    cancellationToken: stoppingToken);
-                
-                _logger.LogInformation("Bound queue to routing key: {RoutingKey}", rk);
+                await _channel.QueueBindAsync(QueueName, Exchange, rk, cancellationToken: ct);
+                _logger.LogDebug("?? Role bound: {RoutingKey}", rk);
+            }
+
+            _logger.LogInformation("?? Role queue setup complete");
+        }
+
+        private async Task StartConsumingAsync(CancellationToken ct)
+        {
+            if (_channel == null) throw new InvalidOperationException("Channel not initialized");
+
+            var consumer = new AsyncEventingBasicConsumer(_channel);
+            consumer.ReceivedAsync += async (_, ea) => await ProcessEventAsync(ea, ct);
+
+            await _channel.BasicConsumeAsync(QueueName, autoAck: false, consumer: consumer, cancellationToken: ct);
+            _logger.LogInformation("?? Role Service listening on: {Queue}", QueueName);
+        }
+
+        private async Task ProcessEventAsync(BasicDeliverEventArgs ea, CancellationToken ct)
+        {
+            var eventType = ea.RoutingKey;
+            
+            try
+            {
+                var json = Encoding.UTF8.GetString(ea.Body.ToArray());
+                _logger.LogDebug("?? Role event: {EventType}", eventType);
+
+                await using var scope = _serviceProvider.CreateAsyncScope();
+                var db = scope.ServiceProvider.GetRequiredService<IMongoDatabase>();
+                var collection = db.GetCollection<RoleReadModel>("roles_read");
+
+                await HandleRoleEventAsync(eventType, json, collection, ct);
+
+                await _channel!.BasicAckAsync(ea.DeliveryTag, multiple: false, cancellationToken: ct);
+                _logger.LogDebug("? Role processed: {EventType}", eventType);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "? Role event failed: {EventType}", eventType);
+                await _channel!.BasicNackAsync(ea.DeliveryTag, multiple: false, requeue: true, cancellationToken: ct);
             }
         }
 
-        private async Task StartConsumingAsync(CancellationToken stoppingToken)
+        private async Task HandleRoleEventAsync(
+            string eventType, 
+            string json, 
+            IMongoCollection<RoleReadModel> collection, 
+            CancellationToken ct)
         {
-            if (_channel == null)
+            using var doc = JsonDocument.Parse(UnwrapPayload(json));
+            var root = doc.RootElement;
+
+            switch (eventType)
             {
-                throw new InvalidOperationException("Channel is not initialized");
+                case "auth.role.created":
+                case "auth.role.updated":
+                    var id = GetGuid(root, "id", "Id");
+                    var name = GetString(root, "name", "Name");
+                    var description = GetString(root, "description", "Description", optional: true);
+                    var createdAt = root.TryGetProperty("createdAt", out var ca) || root.TryGetProperty("CreatedAt", out ca) 
+                        ? ca.GetDateTime() : (DateTime?)null;
+
+                    var role = new RoleReadModel 
+                    { 
+                        Id = id, 
+                        Name = name,
+                        Description = description,
+                        CreatedAt = createdAt,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+                    await collection.ReplaceOneAsync(
+                        r => r.Id == id, 
+                        role, 
+                        new ReplaceOptions { IsUpsert = true }, 
+                        cancellationToken: ct);
+
+                    _logger.LogInformation("? Role {Action}: {Name}", 
+                        eventType.Contains("created") ? "created" : "updated", name);
+                    break;
+
+                case "auth.role.deleted":
+                    var roleId = GetGuid(root, "id", "Id");
+                    await collection.DeleteOneAsync(r => r.Id == roleId, cancellationToken: ct);
+                    _logger.LogInformation("? Role deleted: {Id}", roleId);
+                    break;
+
+                default:
+                    _logger.LogWarning("?? Unknown role event: {EventType}", eventType);
+                    break;
             }
+        }
 
-            var consumer = new AsyncEventingBasicConsumer(_channel);
-            
-            consumer.ReceivedAsync += async (_, ea) =>
+        private string UnwrapPayload(string json)
+        {
+            try
             {
-                    try
-                    {
-                        var routingKey = ea.RoutingKey;
-                        var json = Encoding.UTF8.GetString(ea.Body.ToArray());
-                        
-                        _logger.LogDebug("Received role event: {RoutingKey}", routingKey);
-                        
-                        await ProjectAsync(routingKey, json, stoppingToken);
-                        await _channel.BasicAckAsync(ea.DeliveryTag, multiple: false, cancellationToken: stoppingToken);
-                        
-                        _logger.LogDebug("Role event processed successfully: {RoutingKey}", routingKey);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Role projection failed for event. Nacking message.");
-                    
-                    if (_channel != null)
-                    {
-                        await _channel.BasicNackAsync(ea.DeliveryTag, multiple: false, requeue: true, cancellationToken: stoppingToken);
-                    }
-                }
-            };
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.ValueKind == JsonValueKind.String)
+                    return doc.RootElement.GetString() ?? json;
+            }
+            catch { }
+            return json;
+        }
 
-            await _channel.BasicConsumeAsync(
-                queue: QueueName, 
-                autoAck: false, 
-                consumer: consumer, 
-                cancellationToken: stoppingToken);
-            
-            _logger.LogInformation("Now listening for role events on queue: {Queue}", QueueName);
+        private Guid GetGuid(JsonElement element, params string[] names)
+        {
+            foreach (var name in names)
+            {
+                if (element.TryGetProperty(name, out var prop) && 
+                    Guid.TryParse(prop.GetString(), out var guid))
+                    return guid;
+            }
+            throw new JsonException($"Guid not found. Tried: {string.Join(", ", names)}");
+        }
+
+        private string GetString(JsonElement element, params string[] names)
+        {
+            foreach (var name in names)
+            {
+                if (element.TryGetProperty(name, out var prop) && 
+                    prop.ValueKind == JsonValueKind.String)
+                    return prop.GetString() ?? string.Empty;
+            }
+            throw new JsonException($"String not found. Tried: {string.Join(", ", names)}");
+        }
+
+        private string? GetString(JsonElement element, string name1, string name2, bool optional)
+        {
+            if (optional)
+            {
+                if (element.TryGetProperty(name1, out var prop) && prop.ValueKind == JsonValueKind.String)
+                    return prop.GetString();
+                if (element.TryGetProperty(name2, out var prop2) && prop2.ValueKind == JsonValueKind.String)
+                    return prop2.GetString();
+                return null;
+            }
+            return GetString(element, name1, name2);
         }
 
         public override async Task StopAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Stopping RabbitMQ Role Projection Service...");
+            _logger.LogInformation("?? Stopping Role Service...");
             
-            try 
-            { 
-                if (_channel is not null) 
-                {
-                    await _channel.CloseAsync(cancellationToken);
-                    _logger.LogInformation("Channel closed");
-                }
-            } 
-            catch (Exception ex) 
-            {
-                _logger.LogWarning(ex, "Error closing channel");
-            }
-            
-            try 
-            { 
-                if (_conn is not null) 
-                {
-                    await _conn.CloseAsync(cancellationToken);
-                    _logger.LogInformation("Connection closed");
-                }
-            } 
-            catch (Exception ex) 
-            {
-                _logger.LogWarning(ex, "Error closing connection");
-            }
+            if (_channel != null) await _channel.CloseAsync(cancellationToken);
+            if (_conn != null) await _conn.CloseAsync(cancellationToken);
             
             await base.StopAsync(cancellationToken);
-            _logger.LogInformation("RabbitMQ Role Projection Service stopped");
-        }
-
-        private async Task ProjectAsync(string type, string payload, CancellationToken ct)
-        {
-            _logger.LogDebug("Projecting role event type: {Type}", type);
-            
-            // Handle double-serialized JSON efficiently - parse once
-            string actualPayload = payload;
-            try
-            {
-                using var testDoc = JsonDocument.Parse(payload);
-                if (testDoc.RootElement.ValueKind == JsonValueKind.String)
-                {
-                    actualPayload = testDoc.RootElement.GetString() ?? payload;
-                    _logger.LogDebug("Unwrapped double-serialized JSON");
-                }
-            }
-            catch (JsonException ex)
-            {
-                _logger.LogError(ex, "Failed to parse JSON payload for event type: {Type}", type);
-                throw;
-            }
-            
-            await using var scope = _sp.CreateAsyncScope();
-            var mongoDatabase = scope.ServiceProvider.GetRequiredService<IMongoDatabase>();
-            var rolesCollection = mongoDatabase.GetCollection<UserRole>("roles_read");
-
-            switch (type)
-            {
-                case "auth.role.created":
-                {
-                    try
-                    {
-                        using var doc = JsonDocument.Parse(actualPayload);
-                        var root = doc.RootElement;
-                        
-                        var id = GetGuidProperty(root, "id", "Id", "roleId", "RoleId");
-                        var name = GetStringProperty(root, "name", "Name");
-                        
-                        if (id == Guid.Empty)
-                        {
-                            _logger.LogError("Failed to extract role ID from payload. Payload: {Payload}", actualPayload);
-                            // Try to get ID from the role object if nested
-                            if (root.TryGetProperty("role", out var roleElement))
-                            {
-                                id = GetGuidProperty(roleElement, "id", "Id");
-                            }
-                        }
-                        
-                        if (string.IsNullOrEmpty(name))
-                        {
-                            _logger.LogError("Invalid role data - Name is empty. Skipping.");
-                            break;
-                        }
-                        
-                        // If ID is empty, we'll still create the role with name
-                        // The role will be identified by name, and we'll generate a new ID for MongoDB
-                        if (id == Guid.Empty)
-                        {
-                            _logger.LogWarning("Role ID is empty for role {Name}. Generating new ID for MongoDB.", name);
-                            id = Guid.NewGuid();
-                        }
-                        
-                        _logger.LogDebug("Creating role in MongoDB: {Name} ({Id})", name, id);
-                        
-                        var role = new UserRole
-                        {
-                            Id = id,
-                            Name = name
-                        };
-                        
-                        // Use name as unique identifier instead of ID (in case ID is wrong)
-                        var filter = Builders<UserRole>.Filter.Eq(r => r.Name, name);
-                        await rolesCollection.ReplaceOneAsync(filter, role, new ReplaceOptions { IsUpsert = true }, cancellationToken: ct);
-                        
-                        _logger.LogDebug("Role created/updated in MongoDB: {Name} ({Id})", name, id);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Failed to parse RoleCreatedEvent. Payload: {Payload}", actualPayload);
-                        throw;
-                    }
-                    break;
-                }
-                case "auth.role.updated":
-                {
-                    try
-                    {
-                        _logger.LogInformation("Raw payload: {Payload}", actualPayload);
-                        using var doc = JsonDocument.Parse(actualPayload);
-                        var root = doc.RootElement;
-                        
-                        var id = GetGuidProperty(root, "id", "Id", "roleId", "RoleId");
-                        var name = GetStringProperty(root, "name", "Name");
-                        
-                        if (id == Guid.Empty)
-                        {
-                            _logger.LogError("Failed to extract role ID from payload. Payload: {Payload}", actualPayload);
-                            if (root.TryGetProperty("role", out var roleElement))
-                            {
-                                id = GetGuidProperty(roleElement, "id", "Id");
-                            }
-                        }
-                        
-                        if (id == Guid.Empty || string.IsNullOrEmpty(name))
-                        {
-                            _logger.LogError("Invalid role data - ID: {Id}, Name: {Name}. Skipping.", id, name);
-                            break;
-                        }
-                        
-                        _logger.LogDebug("Updating role in MongoDB: {Name} ({Id})", name, id);
-                        
-                        var role = new UserRole
-                        {
-                            Id = id,
-                            Name = name
-                        };
-                        
-                        // Use name as unique identifier to ensure we update the correct role
-                        var filter = Builders<UserRole>.Filter.Eq(r => r.Name, name);
-                        await rolesCollection.ReplaceOneAsync(filter, role, new ReplaceOptions { IsUpsert = true }, cancellationToken: ct);
-                        
-                        _logger.LogDebug("Role updated in MongoDB: {Name} ({Id})", name, id);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Failed to parse RoleUpdatedEvent. Payload: {Payload}", actualPayload);
-                        throw;
-                    }
-                    break;
-                }
-                case "auth.role.deleted":
-                {
-                    try
-                    {
-                        using var doc = JsonDocument.Parse(actualPayload);
-                        var root = doc.RootElement;
-                        
-                        var id = GetGuidProperty(root, "id", "Id", "roleId", "RoleId");
-                        
-                        _logger.LogDebug("Deleting role from MongoDB: {Id}", id);
-                        
-                        var filter = Builders<UserRole>.Filter.Eq(r => r.Id, id);
-                        await rolesCollection.DeleteOneAsync(filter, cancellationToken: ct);
-                        
-                        _logger.LogDebug("Role deleted from MongoDB: {Id}", id);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Failed to parse RoleDeletedEvent");
-                        throw;
-                    }
-                    break;
-                }
-                default:
-                    _logger.LogWarning("Unknown role event type: {Type}", type);
-                    break;
-            }
-        }
-
-        private Guid GetGuidProperty(JsonElement element, params string[] propertyNames)
-        {
-            foreach (var name in propertyNames)
-            {
-                if (element.TryGetProperty(name, out var prop))
-                {
-                    if (prop.ValueKind == JsonValueKind.String)
-                    {
-                        var str = prop.GetString();
-                        if (!string.IsNullOrEmpty(str) && Guid.TryParse(str, out var guid))
-                            return guid;
-                    }
-                    else if (prop.ValueKind == JsonValueKind.Object)
-                    {
-                        // Try to get value from nested object
-                        if (prop.TryGetProperty("value", out var valueProp) && valueProp.ValueKind == JsonValueKind.String)
-                        {
-                            var str = valueProp.GetString();
-                            if (!string.IsNullOrEmpty(str) && Guid.TryParse(str, out var guid2))
-                                return guid2;
-                        }
-                    }
-                    else if (prop.ValueKind == JsonValueKind.Array && prop.GetArrayLength() > 0)
-                    {
-                        // Sometimes GUIDs are serialized as arrays
-                        var first = prop[0];
-                        if (first.ValueKind == JsonValueKind.String)
-                        {
-                            var str = first.GetString();
-                            if (!string.IsNullOrEmpty(str) && Guid.TryParse(str, out var guid3))
-                                return guid3;
-                        }
-                    }
-                }
-            }
-            // If not found, log warning and return empty GUID
-            _logger.LogWarning("Required Guid property not found. Tried: {PropertyNames}. Returning empty GUID.", string.Join(", ", propertyNames));
-            return Guid.Empty;
-        }
-
-        private static string GetStringProperty(JsonElement element, params string[] propertyNames)
-        {
-            foreach (var name in propertyNames)
-            {
-                if (element.TryGetProperty(name, out var prop))
-                {
-                    if (prop.ValueKind == JsonValueKind.String)
-                        return prop.GetString() ?? string.Empty;
-                }
-            }
-            return string.Empty;
+            _logger.LogInformation("? Role Service stopped");
         }
     }
 }
-

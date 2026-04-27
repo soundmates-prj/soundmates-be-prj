@@ -1,24 +1,53 @@
-﻿using AuthService.Domain.Entities;
+using AuthService.Domain.Entities;
 using AuthService.Domain.Interfaces;
-using AuthService.Infrastructure.Dao.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using AuthService.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
-namespace AuthService.Infrastructure.Repositories
+namespace AuthService.Infrastructure.Repositories;
+
+/// <summary>
+/// Role repository implementation
+/// Direct access to DbContext through UnitOfWork (DAO layer removed)
+/// </summary>
+public class RoleRepository : IRoleRepository
 {
-    public class RoleRepository : IRoleRepository
-    {
-        private readonly IRoleDao _dao;
-        public RoleRepository(IRoleDao dao) => _dao = dao;
+    private readonly IUnitOfWork _uow;
+    private readonly AuthDbContext _db;
 
-        public Task<UserRole?> GetByIdAsync(Guid id) => _dao.GetByIdAsync(id);
-        public Task<List<UserRole>> GetAllAsync() => _dao.GetAllAsync();
-        public Task<UserRole?> GetByNameAsync(string name) => _dao.GetByNameAsync(name);
-        public Task AddAsync(UserRole role) => _dao.AddAsync(role);
-        public Task UpdateAsync(UserRole role) => _dao.UpdateAsync(role);
-        public Task DeleteAsync(UserRole role) => _dao.DeleteAsync(role);
+    public RoleRepository(IUnitOfWork uow)
+    {
+        _uow = uow;
+        _db = (AuthDbContext)_uow.Context;
+    }
+
+    public async Task<UserRole?> GetByIdAsync(Guid id)
+    {
+        return await _db.Set<UserRole>().FindAsync(id);
+    }
+
+    public async Task<UserRole?> GetByNameAsync(string name)
+    {
+        return await _db.Set<UserRole>().FirstOrDefaultAsync(r => r.Name == name);
+    }
+
+    public async Task<List<UserRole>> GetAllAsync()
+    {
+        return await _db.Set<UserRole>().ToListAsync();
+    }
+
+    public async Task AddAsync(UserRole role)
+    {
+        await _db.Set<UserRole>().AddAsync(role);
+    }
+
+    public async Task UpdateAsync(UserRole role)
+    {
+        _db.Set<UserRole>().Update(role);
+    }
+
+    public async Task DeleteAsync(UserRole role)
+    {
+        _db.Set<UserRole>().Remove(role);
     }
 }
+

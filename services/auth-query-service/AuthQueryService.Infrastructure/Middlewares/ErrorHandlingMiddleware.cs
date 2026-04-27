@@ -42,6 +42,9 @@ namespace AuthQueryService.Infrastructure.Middlewares
 
         private static (HttpStatusCode, ApiStatusCode, string) MapException(Exception ex)
         {
+            // In development it is extremely useful to see the real exception message
+            // instead of a generic "Internal server error". For now we always surface
+            // ex.Message for unknown exceptions; known cases are still mapped explicitly.
             return ex switch
             {
                 ArgumentNullException ane => (HttpStatusCode.BadRequest, ApiStatusCode.HB40001, ane.Message),
@@ -56,7 +59,7 @@ namespace AuthQueryService.Infrastructure.Middlewares
                     (HttpStatusCode.Conflict, ApiStatusCode.HB40901, "Duplicate entry detected"),
                 DbUpdateException dbEx when dbEx.InnerException is PostgresException pgEx => 
                     (HttpStatusCode.InternalServerError, ApiStatusCode.HB50001, pgEx.Message),
-                _ => (HttpStatusCode.InternalServerError, ApiStatusCode.HB50001, "Internal server error")
+                _ => (HttpStatusCode.InternalServerError, ApiStatusCode.HB50001, ex.Message)
             };
         }
     }

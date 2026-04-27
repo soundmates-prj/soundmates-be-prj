@@ -1,0 +1,806 @@
+using LiveSessionService.Api.Extensions;
+using LiveSessionService.Api.Models.Requests.LiveSessions;
+using LiveSessionService.Api.Models.Responses;
+using LiveSessionService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
+using LiveSessionService.Application.Enums;
+using LiveSessionService.Application.Features.LiveSessions.Commands.CreateLiveSession;
+using LiveSessionService.Application.Features.LiveSessions.Commands.PauseSession;
+using LiveSessionService.Application.Features.LiveSessions.Commands.ResumeSession;
+using LiveSessionService.Application.Features.LiveSessions.Commands.StartSession;
+using LiveSessionService.Application.Features.LiveSessions.Commands.StopSession;
+using LiveSessionService.Application.Features.LiveSessions.Queries.GetActiveLiveSessions;
+using LiveSessionService.Application.Features.LiveSessions.Queries.GetAllLiveSessions;
+using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSession;
+using LiveSessionService.Application.Features.LiveSessions.Queries.GetStaffAnalyticsOverview;
+using LiveSessionService.Application.Features.LiveSessions.Queries.GetStaffDashboardOverview;
+using LiveSessionService.Application.Features.LiveSessions.Queries.GetSessionSchedules;
+using LiveSessionService.Application.Features.Results;
+using LiveSessionService.Application.Features.Results.LiveSessions;
+using LiveSessionService.Application.Features.Results.NowPlaying;
+using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSessionNowPlaying;
+using LiveSessionService.Application.Features.Results.SongRequests;
+using LiveSessionService.Application.Features.LiveSessions.Queries.GetHostAnalyticsOverview;
+using LiveSessionService.Application.Features.SongRequests.Commands.CreateSongRequest;
+using LiveSessionService.Application.Features.SongRequests.Commands.ReviewSongRequest;
+using LiveSessionService.Application.Features.SongRequests.Queries.GetSongRequestsBySession;
+using LiveSessionService.Application.Features.SongRequests.Queries.GetAllSongRequests;
+using LiveSessionService.Application.Features.LiveSessions.Commands.RestartBroadcast;
+using LiveSessionService.Application.Features.LiveSessions.Commands.SkipTrack;
+using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSessionQueue;
+using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSessionChats;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+
+namespace LiveSessionService.Api.Controllers;
+
+/// <summary>
+/// API endpoints for Live Session management
+/// Clean controller following StationController pattern
+/// </summary>
+[ApiController]
+[Route("api/v1/[controller]")]
+[Produces("application/json")]
+[Authorize]
+public class LiveSessionController : ControllerBase
+{
+    private readonly ICommandDispatcher _commands;
+    private readonly IQueryDispatcher _queries;
+
+    public LiveSessionController(ICommandDispatcher commands, IQueryDispatcher queries)
+    {
+        _commands = commands;
+        _queries = queries;
+    }
+
+    /// <summary>
+    /// Get all live sessions with optional filtering
+    /// </summary>
+    [HttpGet]
+    [ProducesResponseType(typeof(ApiResponse<PagedResult<LiveSessionResult>>), 200)]
+    public async Task<IActionResult> GetAll(
+        [FromQuery] Guid? userId,
+        [FromQuery] string? status,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken ct = default)
+    {
+        if (pageNumber < 1) pageNumber = 1;
+        if (pageSize < 1 || pageSize > 100) pageSize = 20;
+
+        var query = new GetAllLiveSessionsQuery(userId, status, pageNumber, pageSize);
+        var result = await _queries.Send<GetAllLiveSessionsQuery, PagedResult<LiveSessionResult>>(query, ct);
+
+        if (!result.IsSuccess)
+        {
+            return StatusCode(
+                (int)(result.ErrorCode ?? ErrorCode.InternalServerError),
+                result.ToApiResponse());
+        }
+
+        return Ok(ApiResponse<PagedResult<LiveSessionResult>>.SuccessResponse(
+            result.Data!,
+            $"Retrieved {result.Data!.Items.Count} session(s)"));
+    }
+
+    /// <summary>
+    /// Get all currently active (Live/Paused) sessions
+    /// </summary>
+    [HttpGet("active")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResponse<List<LiveSessionResult>>), 200)]
+    public async Task<IActionResult> GetActive(CancellationToken ct)
+    {
+        var query = new GetActiveLiveSessionsQuery();
+        var result = await _queries.Send<GetActiveLiveSessionsQuery, List<LiveSessionResult>>(query, ct);
+
+        if (!result.IsSuccess)
+        {
+            return StatusCode(
+                (int)(result.ErrorCode ?? ErrorCode.InternalServerError),
+                result.ToApiResponse());
+        }
+
+        return Ok(ApiResponse<List<LiveSessionResult>>.SuccessResponse(
+            result.Data!,
+            $"Retrieved {result.Data!.Count} active session(s)"));
+    }
+
+    /// <summary>
+    /// Get staff dashboard overview metrics
+    /// </summary>
+    [HttpGet("dashboard/overview")]
+    [Authorize(Roles = "STAFF,ADMIN")]
+    [ProducesResponseType(typeof(ApiResponse<StaffDashboardOverviewResult>), 200)]
+    public async Task<IActionResult> GetDashboardOverview(
+        [FromQuery] int days = 7,
+        CancellationToken ct = default)
+    {
+        var query = new GetStaffDashboardOverviewQuery(days);
+        var result = await _queries.Send<GetStaffDashboardOverviewQuery, StaffDashboardOverviewResult>(query, ct);
+
+        if (!result.IsSuccess)
+        {
+            return StatusCode(
+                (int)(result.ErrorCode ?? ErrorCode.InternalServerError),
+                result.ToApiResponse());
+        }
+
+        return Ok(ApiResponse<StaffDashboardOverviewResult>.SuccessResponse(
+            result.Data!,
+            "Dashboard overview retrieved"));
+    }
+
+    /// <summary>
+    /// Get host dashboard overview metrics
+    /// </summary>
+    [HttpGet("dashboard/host")]
+    [Authorize]
+    [ProducesResponseType(typeof(ApiResponse<HostDashboardOverviewResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    public async Task<IActionResult> GetHostDashboardOverview(
+        [FromQuery] int days = 7,
+        CancellationToken ct = default)
+    {
+        if (!TryGetCurrentUserId(out var currentUserId))
+        {
+            return Unauthorized(ApiResponse<object>.FailureResponse(
+                "Invalid or missing user token",
+                (int)ErrorCode.Unauthorized));
+        }
+
+        var query = new Application.Features.LiveSessions.Queries.GetHostDashboardOverview.GetHostDashboardOverviewQuery(currentUserId, days);
+        var result = await _queries.Send<Application.Features.LiveSessions.Queries.GetHostDashboardOverview.GetHostDashboardOverviewQuery, HostDashboardOverviewResult>(query, ct);
+
+        if (!result.IsSuccess)
+        {
+            return StatusCode(
+                (int)(result.ErrorCode ?? ErrorCode.InternalServerError),
+                result.ToApiResponse());
+        }
+
+        return Ok(ApiResponse<HostDashboardOverviewResult>.SuccessResponse(
+            result.Data!,
+            "Host dashboard overview retrieved"));
+    }
+
+
+    /// <summary>
+    /// Get analytics overview data for the host
+    /// </summary>
+    [HttpGet("analytics/host")]
+    [Authorize]
+    [ProducesResponseType(typeof(ApiResponse<HostAnalyticsOverviewResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    public async Task<IActionResult> GetHostAnalyticsOverview([FromQuery] int days = 7, CancellationToken ct = default)
+    {
+        if (!TryGetCurrentUserId(out var currentUserId))
+        {
+            return Unauthorized(ApiResponse<object>.FailureResponse(
+                "Invalid or missing user token",
+                (int)ErrorCode.Unauthorized));
+        }
+
+        var query = new GetHostAnalyticsOverviewQuery(currentUserId, days);
+        var result = await _queries.Send<GetHostAnalyticsOverviewQuery, HostAnalyticsOverviewResult>(query, ct);
+
+        if (!result.IsSuccess)
+        {
+            return StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse());
+        }
+
+        return Ok(ApiResponse<HostAnalyticsOverviewResult>.SuccessResponse(result.Data!, "Host analytics retrieved"));
+    }
+
+    /// <summary>
+    /// Get analytics overview data for the staff
+    /// </summary>
+    [HttpGet("analytics/staff")]
+    [Authorize(Roles = "STAFF,ADMIN")]
+    [ProducesResponseType(typeof(ApiResponse<StaffAnalyticsOverviewResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    public async Task<IActionResult> GetStaffAnalyticsOverview([FromQuery] int days = 7, CancellationToken ct = default)
+    {
+        var query = new GetStaffAnalyticsOverviewQuery(days);
+        var result = await _queries.Send<GetStaffAnalyticsOverviewQuery, StaffAnalyticsOverviewResult>(query, ct);
+
+        if (!result.IsSuccess)
+        {
+            return StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse());
+        }
+
+        return Ok(ApiResponse<StaffAnalyticsOverviewResult>.SuccessResponse(result.Data!, "Staff analytics retrieved"));
+    }
+
+    /// <summary>
+    /// Get a specific live session by ID
+    /// </summary>
+    [HttpGet("{id:guid}")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResponse<LiveSessionResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
+    {
+        var query = new GetLiveSessionQuery(id);
+        var result = await _queries.Send<GetLiveSessionQuery, LiveSessionResult>(query, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(ApiResponse<LiveSessionResult>.SuccessResponse(result.Data!, "Success"));
+    }
+
+    /// <summary>
+    /// Get chat history of a specific live session
+    /// </summary>
+    [HttpGet("{id:guid}/chats")]
+    [Authorize]
+    [ProducesResponseType(typeof(ApiResponse<List<LiveSessionChatResult>>), 200)]
+    public async Task<IActionResult> GetChats(Guid id, CancellationToken ct)
+    {
+        var result = await _queries.Send<GetLiveSessionChatsQuery, List<LiveSessionChatResult>>(
+            new GetLiveSessionChatsQuery(id), ct);
+
+        if (!result.IsSuccess)
+        {
+            return StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse());
+        }
+
+        return Ok(ApiResponse<List<LiveSessionChatResult>>.SuccessResponse(result.Data!, "Live session chats retrieved successfully"));
+    }
+
+    /// <summary>
+    /// Get live now-playing data from AzuraCast for a live session
+    /// </summary>
+    [HttpGet("{id:guid}/now-playing")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResponse<StationNowPlayingResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> GetNowPlaying(Guid id, CancellationToken ct)
+    {
+        var query = new Application.Features.LiveSessions.Queries.GetLiveSessionNowPlaying.GetLiveSessionNowPlayingQuery(id);
+        var result = await _queries.Send<Application.Features.LiveSessions.Queries.GetLiveSessionNowPlaying.GetLiveSessionNowPlayingQuery, StationNowPlayingResult>(query, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(ApiResponse<StationNowPlayingResult>.SuccessResponse(result.Data!, "Success"));
+    }
+
+    /// <summary>
+    /// Get upcoming song queue for a live session
+    /// </summary>
+    [HttpGet("{id:guid}/queue")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResponse<LiveSessionQueueResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> GetQueue(Guid id, CancellationToken ct)
+    {
+        var query = new GetLiveSessionQueueQuery(id);
+        var result = await _queries.Send<GetLiveSessionQueueQuery, LiveSessionQueueResult>(query, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(ApiResponse<LiveSessionQueueResult>.SuccessResponse(result.Data!, "Queue retrieved"));
+    }
+
+    /// <summary>
+    /// Skip the currently playing track in a live session
+    /// </summary>
+    [HttpPost("{id:guid}/skip")]
+    [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> Skip(Guid id, CancellationToken ct)
+    {
+        var command = new SkipSessionTrackCommand(id);
+        var result = await _commands.Send<SkipSessionTrackCommand, bool>(command, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(ApiResponse<bool>.SuccessResponse(true, "Track skipped"));
+    }
+
+    /// <summary>
+    /// Restart the broadcast/station for a live session
+    /// </summary>
+    [HttpPost("{id:guid}/restart")]
+    [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> Restart(Guid id, CancellationToken ct)
+    {
+        var command = new RestartSessionBroadcastCommand(id);
+        var result = await _commands.Send<RestartSessionBroadcastCommand, bool>(command, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(ApiResponse<bool>.SuccessResponse(true, "Station restart requested"));
+    }
+
+    /// <summary>
+    /// Reload the broadcast config and playlist for a live session without restarting
+    /// </summary>
+    [HttpPost("{id:guid}/reload")]
+    [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> Reload(Guid id, CancellationToken ct)
+    {
+        var command = new Application.Features.LiveSessions.Commands.ReloadBroadcast.ReloadSessionBroadcastCommand(id);
+        var result = await _commands.Send<Application.Features.LiveSessions.Commands.ReloadBroadcast.ReloadSessionBroadcastCommand, bool>(command, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(ApiResponse<bool>.SuccessResponse(true, "Station reload requested"));
+    }
+
+    /// <summary>
+    /// Create a new live stream session
+    /// </summary>
+    [HttpPost]
+    [Authorize(Roles = "STAFF,ADMIN")]
+    [ProducesResponseType(typeof(ApiResponse<LiveSessionResult>), 201)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> Create([FromBody] CreateLiveSessionRequest request, CancellationToken ct)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ApiResponse<object>.FailureResponse(
+                "Invalid input",
+                (int)ErrorCode.BadRequest));
+        }
+
+        if (!TryGetCurrentUserId(out var currentUserId))
+        {
+            return Unauthorized(ApiResponse<object>.FailureResponse(
+                "Invalid or missing user token",
+                (int)ErrorCode.Unauthorized));
+        }
+
+        var command = new CreateLiveSessionCommand(
+            request.HostUserId ?? currentUserId,
+            request.StationId,
+            request.SessionName,
+            request.Description);
+
+        var result = await _commands.Send<CreateLiveSessionCommand, LiveSessionResult>(command, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return CreatedAtAction(
+            nameof(GetById),
+            new { id = result.Data!.Id },
+            ApiResponse<LiveSessionResult>.SuccessResponse(result.Data!, "Live session created"));
+    }
+
+    /// <summary>
+    /// Start a live session
+    /// </summary>
+    [HttpPost("{id:guid}/start")]
+    [ProducesResponseType(typeof(ApiResponse<LiveSessionResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> Start(Guid id, CancellationToken ct)
+    {
+        var command = new StartSessionCommand(id);
+        var result = await _commands.Send<StartSessionCommand, LiveSessionResult>(command, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                ErrorCode.Conflict => Conflict(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(ApiResponse<LiveSessionResult>.SuccessResponse(result.Data!, "Session started"));
+    }
+
+    /// <summary>
+    /// Pause a live session
+    /// </summary>
+    [HttpPost("{id:guid}/pause")]
+    [ProducesResponseType(typeof(ApiResponse<LiveSessionResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> Pause(Guid id, CancellationToken ct)
+    {
+        var command = new PauseSessionCommand(id);
+        var result = await _commands.Send<PauseSessionCommand, LiveSessionResult>(command, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                ErrorCode.Conflict => Conflict(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(ApiResponse<LiveSessionResult>.SuccessResponse(result.Data!, "Session paused"));
+    }
+
+    /// <summary>
+    /// Resume a paused live session
+    /// </summary>
+    [HttpPost("{id:guid}/resume")]
+    [ProducesResponseType(typeof(ApiResponse<LiveSessionResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> Resume(Guid id, CancellationToken ct)
+    {
+        var command = new ResumeSessionCommand(id);
+        var result = await _commands.Send<ResumeSessionCommand, LiveSessionResult>(command, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                ErrorCode.Conflict => Conflict(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(ApiResponse<LiveSessionResult>.SuccessResponse(result.Data!, "Session resumed"));
+    }
+
+    /// <summary>
+    /// End a live session (alias for stop)
+    /// </summary>
+    [HttpPost("{id:guid}/end")]
+    [ProducesResponseType(typeof(ApiResponse<LiveSessionResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> End(Guid id, CancellationToken ct)
+    {
+        return await Stop(id, ct);
+    }
+
+    /// <summary>
+    /// Stop a live session
+    /// </summary>
+    [HttpPost("{id:guid}/stop")]
+    [ProducesResponseType(typeof(ApiResponse<LiveSessionResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> Stop(Guid id, CancellationToken ct)
+    {
+        var command = new StopSessionCommand(id);
+        var result = await _commands.Send<StopSessionCommand, LiveSessionResult>(command, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                ErrorCode.Conflict => Conflict(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(ApiResponse<LiveSessionResult>.SuccessResponse(result.Data!, "Session stopped"));
+    }
+
+    /// <summary>
+    /// Get listener statistics for a live stream session
+    /// </summary>
+    [HttpGet("{id:guid}/listeners")]
+    [ProducesResponseType(typeof(ApiResponse<ListenerStatsResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> GetListeners(Guid id, CancellationToken ct)
+    {
+        var sessionQuery = new GetLiveSessionQuery(id);
+        var sessionResult = await _queries.Send<GetLiveSessionQuery, LiveSessionResult>(sessionQuery, ct);
+
+        if (!sessionResult.IsSuccess)
+        {
+            return NotFound(ApiResponse<object>.FailureResponse(
+                "Session not found",
+                (int)ErrorCode.NotFound));
+        }
+
+        var listenerStats = new ListenerStatsResult
+        {
+            SessionId = id,
+            CurrentListeners = sessionResult.Data!.ListenersCount,
+            PeakListeners = sessionResult.Data!.PeakListeners,
+            TotalListeners = sessionResult.Data!.TotalListeners
+        };
+
+        return Ok(ApiResponse<ListenerStatsResult>.SuccessResponse(
+            listenerStats,
+            "Listener statistics retrieved"));
+    }
+
+    /// <summary>
+    /// Create a new song request for a live session
+    /// </summary>
+    [HttpPost("{id:guid}/song-requests")]
+    [ProducesResponseType(typeof(ApiResponse<SongRequestResult>), 201)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> CreateSongRequest(
+        Guid id,
+        [FromBody] CreateSongRequestRequest request,
+        CancellationToken ct)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ApiResponse<object>.FailureResponse(
+                "Invalid input",
+                (int)ErrorCode.BadRequest));
+        }
+
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)
+            ?? User.FindFirst("sub")
+            ?? User.FindFirst("user_id");
+
+        if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var requestedByUserId))
+        {
+            return Unauthorized(ApiResponse<object>.FailureResponse(
+                "Invalid or missing user token",
+                (int)ErrorCode.Unauthorized));
+        }
+
+        var userToken = Request.Headers.Authorization.ToString() ?? string.Empty;
+
+        var command = new CreateSongRequestCommand(
+            id,
+            request.MediaFileId,
+            requestedByUserId,
+            request.Message,
+            userToken);
+
+        var result = await _commands.Send<CreateSongRequestCommand, SongRequestResult>(command, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return StatusCode(201, result.ToApiResponse());
+    }
+
+    /// <summary>
+    /// Get song requests of a live session
+    /// </summary>
+    [HttpGet("{id:guid}/song-requests")]
+    [ProducesResponseType(typeof(ApiResponse<List<SongRequestResult>>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> GetSongRequests(
+        Guid id,
+        [FromQuery] string? status,
+        CancellationToken ct)
+    {
+        var query = new GetSongRequestsBySessionQuery(id, status);
+        var result = await _queries.Send<GetSongRequestsBySessionQuery, List<SongRequestResult>>(query, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(result.ToApiResponse());
+    }
+
+    /// <summary>
+    /// Get all song requests paginated (for staff)
+    /// </summary>
+    [HttpGet("song-requests/all")]
+    [ProducesResponseType(typeof(ApiResponse<PageResponse<SongRequestResult>>), 200)]
+    public async Task<IActionResult> GetAllSongRequests(
+        [FromQuery] string? status,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        CancellationToken ct = default)
+    {
+        var query = new GetAllSongRequestsQuery(status, page, pageSize);
+        var result = await _queries.Send<GetAllSongRequestsQuery, PagedResult<SongRequestResult>>(query, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        var pageResponse = new PageResponse<SongRequestResult>
+        {
+            Content = result.Data!.Items.ToList(),
+            TotalElements = result.Data!.TotalCount,
+            TotalPages = result.Data!.TotalPages,
+            Page = result.Data!.PageNumber,
+            Size = result.Data!.PageSize
+        };
+
+        return Ok(ApiResponse<PageResponse<SongRequestResult>>.SuccessResponse(pageResponse, "Song requests retrieved"));
+    }
+
+    /// <summary>
+    /// Approve or reject a song request
+    /// </summary>
+    [HttpPost("song-requests/{songRequestId:guid}/review")]
+    [ProducesResponseType(typeof(ApiResponse<SongRequestResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> ReviewSongRequest(
+        Guid songRequestId,
+        [FromBody] ReviewSongRequestRequest request,
+        CancellationToken ct)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ApiResponse<object>.FailureResponse(
+                "Invalid input",
+                (int)ErrorCode.BadRequest));
+        }
+
+        if (!TryGetCurrentUserId(out var currentUserId))
+        {
+            return Unauthorized(ApiResponse<object>.FailureResponse(
+                "Invalid or missing user token",
+                (int)ErrorCode.Unauthorized));
+        }
+
+        var isApproved = request.Action.Equals("approve", StringComparison.OrdinalIgnoreCase);
+        var isRejected = request.Action.Equals("reject", StringComparison.OrdinalIgnoreCase);
+
+        if (!isApproved && !isRejected)
+        {
+            return BadRequest(ApiResponse<object>.FailureResponse(
+                "Action must be either 'approve' or 'reject'",
+                (int)ErrorCode.BadRequest));
+        }
+
+        if (isRejected && string.IsNullOrWhiteSpace(request.RejectReason))
+        {
+            return BadRequest(ApiResponse<object>.FailureResponse(
+                "Reject reason is required when action is reject",
+                (int)ErrorCode.BadRequest));
+        }
+
+        var command = new ReviewSongRequestCommand(
+            songRequestId,
+            currentUserId,
+            isApproved,
+            request.RejectReason);
+
+        var result = await _commands.Send<ReviewSongRequestCommand, SongRequestResult>(command, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(result.ToApiResponse());
+    }
+
+    /// <summary>
+    /// Get the current user's song request limit and usage for the day
+    /// </summary>
+    [HttpGet("song-requests/my-limits")]
+    [ProducesResponseType(typeof(ApiResponse<Application.Features.SongRequests.Queries.GetMySongRequestLimits.MySongRequestLimitsResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    public async Task<IActionResult> GetMySongRequestLimits(CancellationToken ct)
+    {
+        if (!TryGetCurrentUserId(out var currentUserId))
+        {
+            return Unauthorized(ApiResponse<object>.FailureResponse(
+                "Invalid or missing user token",
+                (int)ErrorCode.Unauthorized));
+        }
+
+        var userToken = Request.Headers.Authorization.ToString() ?? string.Empty;
+
+        var query = new Application.Features.SongRequests.Queries.GetMySongRequestLimits.GetMySongRequestLimitsQuery(
+            currentUserId,
+            userToken);
+
+        var result = await _queries.Send<Application.Features.SongRequests.Queries.GetMySongRequestLimits.GetMySongRequestLimitsQuery, Application.Features.SongRequests.Queries.GetMySongRequestLimits.MySongRequestLimitsResult>(query, ct);
+
+        if (!result.IsSuccess)
+        {
+            return StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse());
+        }
+
+        return Ok(result.ToApiResponse());
+    }
+
+    private bool TryGetCurrentUserId(out Guid userId)
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)
+            ?? User.FindFirst("sub")
+            ?? User.FindFirst("user_id");
+
+        if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var parsedUserId))
+        {
+            userId = parsedUserId;
+            return true;
+        }
+
+        userId = Guid.Empty;
+        return false;
+    }
+}

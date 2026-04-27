@@ -1,0 +1,11 @@
+# Ignore environment files with sensitive data
+.env
+.env.local
+.env.production
+
+# Keep the example file in version control
+!.env.example
+
+# appsettings.Development.json may contain local overrides / placeholder secrets
+# Each dev copies appsettings.Development.json from appsettings.Development.json.example
+appsettings.Development.json

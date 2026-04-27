@@ -1,52 +1,171 @@
-﻿using AuthService.Domain.Interfaces;
+using AuthService.Application.Enums;
 using AuthService.Domain.Entities;
-using System.Threading.Tasks;
-using AuthService.Infrastructure.Dao.Interfaces;
+using AuthService.Domain.Interfaces;
+using AuthService.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
-namespace AuthService.Infrastructure.Repositories
+namespace AuthService.Infrastructure.Repositories;
+
+/// <summary>
+/// Auth repository implementation
+/// Direct access to DbContext through UnitOfWork (DAO layer removed)
+/// </summary>
+public class AuthRepository : IAuthRepository
 {
-    public class AuthRepository : IAuthRepository
+    private readonly IUnitOfWork _uow;
+    private readonly AuthDbContext _db;
+    private readonly IDateTimeProvider _dateTimeProvider;
+
+    public AuthRepository(IUnitOfWork uow, IDateTimeProvider dateTimeProvider)
     {
-        private readonly IAuthDao _authDao;
+        _uow = uow;
+        _db = (AuthDbContext)_uow.Context;
+        _dateTimeProvider = dateTimeProvider;
+    }
 
-        public AuthRepository(IAuthDao authDao)
+    public async Task<User?> LoginAsync(string email, string password)
+    {
+        // Fetch user by email (password is verified with BCrypt)
+        var user = await _db.Users
+            .Include(u => u.Role)
+            .FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower());
+
+        if (user is null) return null;
+
+        // Verify password with BCrypt (hash comparison)
+        var ok = BCrypt.Net.BCrypt.Verify(password, user.Password);
+        return ok ? user : null;
+    }
+
+    public async Task<User?> LoginByUsernameOrEmailAsync(string emailOrUsername, string password)
+    {
+        // Try to find user by email or username
+        var user = await _db.Users
+            .Include(u => u.Role)
+            .FirstOrDefaultAsync(u =>
+                u.Email.ToLower() == emailOrUsername.ToLower() ||
+                u.Username.ToLower() == emailOrUsername.ToLower());
+
+        if (user is null) return null;
+
+        // Verify password with BCrypt (hash comparison)
+        var ok = BCrypt.Net.BCrypt.Verify(password, user.Password);
+        return ok ? user : null;
+    }
+
+    public async Task<User> RegisterAsync(string username, string email, string password, string firstName, string lastName)
+    {
+        // 1. Optimized check: combine username and email check in one query
+        var normalizedUsername = username.Trim().ToLower();
+        var normalizedEmail = email.Trim().ToLower();
+
+        var existingUser = await _db.Users
+            .FirstOrDefaultAsync(u => 
+                u.Username.ToLower() == normalizedUsername || 
+                u.Email.ToLower() == normalizedEmail);
+
+        if (existingUser != null)
         {
-            _authDao = authDao;
+            if (existingUser.Username.ToLower() == username.ToLower())
+            {
+                throw new Application.Exceptions.AuthException(
+                    AuthErrorCode.UserAlreadyExists,
+                    $"Username '{username}' is already taken");
+            }
+            
+            throw new Application.Exceptions.AuthException(
+                AuthErrorCode.UserAlreadyExists,
+                $"Email '{email}' is already registered");
         }
 
-        public async Task<User?> LoginAsync(string email, string password)
-        {
-            return await _authDao.LoginAsync(email, password);
-        }
+        var defaultRoleName = RoleType.MEMBER.ToString();
+        // Get the MEMBER role (default role for new registrations)
+        var userRole = await _db.UserRoles
+            .Where(r => r.Name == defaultRoleName)
+            .OrderBy(r => r.Id)
+            .FirstOrDefaultAsync();
 
-        public async Task<User?> LoginByUsernameOrEmailAsync(string emailOrUsername, string password)
-        {
-            return await _authDao.LoginByUsernameOrEmailAsync(emailOrUsername, password);
-        }
+        if (userRole == null)
+            throw new Exception($"Default role '{defaultRoleName}' not found. Please ensure roles are seeded.");
 
-        public async Task<User> RegisterAsync(string username, string email, string password, string firstName, string lastName)
-        {
-            return await _authDao.RegisterAsync(username, email, password, firstName, lastName);
-        }
+        // Hash the password before storing
+        var passwordHash = BCrypt.Net.BCrypt.HashPassword(password);
 
-        public async Task<User?> GetByUsernameAsync(string username)
+        var user = new User
         {
-            return await _authDao.GetByUsernameAsync(username);
-        }
+            Id = Guid.NewGuid(),
+            Username = username,
+            Email = email,
+            Password = passwordHash,
+            FirstName = firstName,
+            LastName = lastName,
+            CreatedAt = _dateTimeProvider.UtcNow,
+            RoleId = userRole.Id,
+            Role = userRole,
+            IsActive = false, // User must verify email before activation
+            EmailVerificationToken = null 
+        };
 
-        public async Task<Oauthaccount?> GetOAuthAccountAsync(string provider, string providerAccountId)
-        {
-            return await _authDao.GetOAuthAccountAsync(provider, providerAccountId);
-        }
+        // Just add to context, DON'T SaveChanges here.
+        // Let the Handler manage the transaction/unit of work.
+        _db.Users.Add(user);
 
-        public async Task AddOAuthAccountAsync(Oauthaccount oauthAccount)
-        {
-            await _authDao.AddOAuthAccountAsync(oauthAccount);
-        }
+        return user;
+    }
 
-        public async Task<User?> VerifyEmailAsync(string email, string otpCode)
-        {
-            return await _authDao.VerifyEmailAsync(email, otpCode);
-        }
+    public async Task<User?> GetByUsernameAsync(string username)
+    {
+        return await _db.Users
+            .Include(u => u.Role)
+            .FirstOrDefaultAsync(u => u.Username == username);
+    }
+
+    public async Task<User?> GetByUsernameOrEmailAsync(string emailOrUsername)
+    {
+        return await _db.Users
+            .Include(u => u.Role)
+            .FirstOrDefaultAsync(u =>
+                u.Email.ToLower() == emailOrUsername.ToLower() ||
+                u.Username.ToLower() == emailOrUsername.ToLower());
+    }
+
+    public async Task<Oauthaccount?> GetOAuthAccountAsync(string provider, string providerAccountId)
+    {
+        return await _db.Oauthaccounts
+            .Include(o => o.User)
+            .ThenInclude(u => u!.Role)
+            .FirstOrDefaultAsync(o => o.Provider == provider && o.ProviderAccountId == providerAccountId);
+    }
+
+    public async Task AddOAuthAccountAsync(Oauthaccount oauthAccount)
+    {
+        _db.Oauthaccounts.Add(oauthAccount);
+        await _uow.SaveChangesAsync();
+    }
+
+    public async Task<User?> VerifyEmailAsync(string email, string otpCode)
+    {
+        // Validate inputs
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(otpCode))
+            return null;
+
+        // Find user by email
+        var user = await _db.Users
+            .Include(u => u.Role)
+            .FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower());
+
+        // Return null if user not found or already active
+        if (user == null || user.IsActive)
+            return null;
+
+        // Note: OTP verification is done in the handler before calling this method
+        // This method just activates the user account
+
+        // Use domain method instead of directly setting properties
+        user.VerifyEmail(_dateTimeProvider);
+
+        await _uow.SaveChangesAsync();
+        return user;
     }
 }
+

@@ -1,20 +1,27 @@
-﻿using AuthService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
-using AuthService.Application.DTOs;
-using AuthService.Application.DTOs.Request;
-using AuthService.Application.DTOs.Response;
+using AuthService.Api.Models.Requests;
+using AuthService.Api.Models.Requests.User;
+using AuthService.Api.Models.Requests.Auth;
+using AuthService.Api.Models.Responses;
+using AuthService.Api.Extensions;
+using AuthService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
 using AuthService.Application.Enums;
 using AuthService.Application.Exceptions;
-using AuthService.Application.Services.Auth.Commands;
+using AuthService.Application.Results;
+using AuthService.Application.Features.Auth.Commands;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AuthService.Api.Controllers
 {
+    /// <summary>
+    /// Authentication and account security endpoints.
+    /// </summary>
     [ApiController]
     [Route("api/v1/[controller]")]
     public class AuthController : ControllerBase
     {
+        // khoi tao dispatcher
         private readonly ICommandDispatcher _commands;
 
         public AuthController(ICommandDispatcher commands)
@@ -22,204 +29,204 @@ namespace AuthService.Api.Controllers
             _commands = commands;
         }
 
-        // api/v1/auth/login
+        /// <summary>
+        /// Authenticates with username/email and password.
+        /// </summary>
+        /// <remarks>
+        /// Returns access token and refresh token when credentials are valid.
+        /// </remarks>
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken ct)
         {
             // check model state validations
             if (!ModelState.IsValid)
-                return BadRequest(ApiResponse<UserDto>.FailureResponse("Invalid input, please try again", 400));
-            // Handle Login Process
-            try
-            {
-                // Get IP address and User-Agent for security logging
-                var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() 
-                    ?? HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault()?.Split(',')[0].Trim()
-                    ?? "Unknown";
-                var userAgent = HttpContext.Request.Headers["User-Agent"].ToString();
+                return BadRequest(ApiResponse<AuthResult>.FailureResponse("Invalid input, please try again", 400));
+            
+            // Get IP address and User-Agent for security logging
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() 
+                ?? HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault()?.Split(',')[0].Trim()
+                ?? "Unknown";
+            var userAgent = HttpContext.Request.Headers["User-Agent"].ToString();
 
-                // create Login Command from Request
-                var cmd = new LoginCommand
+            // create Login Command from Request
+            var cmd = new LoginCommand
+            {
+                Identifier = request.EmailOrUsername,
+                Password = request.Password,
+                IpAddress = ipAddress,
+                UserAgent = userAgent,
+                RememberMe = request.RememberMe
+            };
+
+            // Send Login Command to Handler - returns Result<AuthResult>
+            var result = await _commands.Send<LoginCommand, AuthResult>(cmd, ct);
+
+            // Check result and return appropriate HTTP response
+            if (!result.IsSuccess)
+            {
+                return result.ErrorCode switch
                 {
-                    EmailOrUsername = request.EmailOrUsername,
-                    Password = request.Password,
-                    IpAddress = ipAddress,
-                    UserAgent = userAgent
+                    401 => Unauthorized(ApiResponse<AuthResult>.FailureResponse(result.ErrorMessage ?? "Unauthorized", 401)),
+                    403 => StatusCode(403, ApiResponse<AuthResult>.FailureResponse(result.ErrorMessage ?? "Forbidden", 403)),
+                    _ => BadRequest(ApiResponse<AuthResult>.FailureResponse(result.ErrorMessage ?? "Login failed", result.ErrorCode ?? 400))
                 };
-
-                // Send Login Command to Handler
-                var response = await _commands.Send<LoginCommand, UserDto>(cmd, ct);
-
-                // Note: All events (login.successful, login.failed) are published by LoginHandler via outbox pattern
-                if (!response.Success)
-                    return Unauthorized(response);
-
-                return Ok(response);
             }
-            catch (AuthException ex)
-            {
-                // Note: Login failed events are published by LoginHandler
-                return Unauthorized(ApiResponse<UserDto>.FailureResponse(ex.Message, (int)ex.ErrorCode));
-            }
-            catch (Exception)
-            {
-                // Note: Login failed events are published by LoginHandler
-                return StatusCode(StatusCodes.Status500InternalServerError, ApiResponse<UserDto>.FailureResponse("An unexpected error occurred", 500));
-            }
+
+            return Ok(ApiResponse<AuthResult>.SuccessResponse(result.Data!, result.ErrorMessage ?? "Login successful"));
         }
 
-        // api/v1/auth/register
+        /// <summary>
+        /// Registers a new user account.
+        /// </summary>
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request, CancellationToken ct)
         {
             // check model state validations
             if (!ModelState.IsValid)
-                return BadRequest(ApiResponse<UserDto>.FailureResponse("Invalid input", 400));
-            try
+                return BadRequest(ApiResponse<AuthResult>.FailureResponse("Invalid input", 400));
+            
+            // Mapping from Request into Command
+            var cmd = new RegisterCommand
             {
-                // Mapping from Request into Command
-                var cmd = new RegisterCommand
+                Username = request.Username,
+                Email = request.Email,
+                Password = request.Password,
+                FirstName = request.FirstName,
+                LastName = request.LastName
+            };
+
+            // Send Register Command to Handler - returns Result<AuthResult>
+            var result = await _commands.Send<RegisterCommand, AuthResult>(cmd, ct);
+
+            if (!result.IsSuccess)
+            {
+                return result.ErrorCode switch
                 {
-                    Username = request.Username,
-                    Email = request.Email,
-                    Password = request.Password,
-                    FirstName = request.FirstName,
-                    LastName = request.LastName
+                    409 => Conflict(ApiResponse<AuthResult>.FailureResponse(result.ErrorMessage ?? "User already exists", 409)),
+                    _ => BadRequest(ApiResponse<AuthResult>.FailureResponse(result.ErrorMessage ?? "Registration failed", result.ErrorCode ?? 400))
                 };
-
-                // Send Register Command to Handler
-                var response = await _commands.Send<RegisterCommand, UserDto>(cmd, ct);
-
-                // Note: All events (user.created, registration.failed) are published by RegisterHandler via outbox pattern
-                if (!response.Success || response.Data == null)
-                    return BadRequest(response);
-
-                return Ok(response);
             }
-            catch (AuthException ex)
-            {
-                // Note: Registration failed events are published by RegisterHandler
-                var status = ex.ErrorCode == AuthErrorCode.UserAlreadyExists
-                   ? StatusCodes.Status409Conflict
-                   : StatusCodes.Status400BadRequest;
 
-                return StatusCode(status, ApiResponse<UserDto>.FailureResponse(ex.Message, (int)ex.ErrorCode));
-            }
-            catch (Exception)
-            {
-                // Note: Registration failed events are published by RegisterHandler
-                return StatusCode(StatusCodes.Status500InternalServerError, ApiResponse<UserDto>.FailureResponse("An unexpected error occurred", 500));
-            }
+            return Ok(ApiResponse<AuthResult>.SuccessResponse(result.Data!, result.ErrorMessage ?? "Registration successful"));
         }
 
-        // api/v1/auth/google-login
+        /// <summary>
+        /// Authenticates a user using Google ID token.
+        /// </summary>
         [HttpPost("google-login")]
         public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request, CancellationToken ct)
         {
             if (!ModelState.IsValid)
-                return BadRequest(ApiResponse<UserDto>.FailureResponse("Invalid input", 400));
+                return BadRequest(ApiResponse<AuthResult>.FailureResponse("Invalid input", 400));
 
-            try
+            var cmd = new GoogleLoginCommand
             {
-                var cmd = new GoogleLoginCommand
+                IdToken = request.IdToken
+            };
+
+            var result = await _commands.Send<GoogleLoginCommand, AuthResult>(cmd, ct);
+
+            if (!result.IsSuccess)
+            {
+                return result.ErrorCode switch
                 {
-                    IdToken = request.IdToken
-                };
-
-                var response = await _commands.Send<GoogleLoginCommand, UserDto>(cmd, ct);
-
-                // Note: All events (google.login.successful, google.login.failed) are published by GoogleLoginHandler via outbox pattern
-                if (!response.Success)
-                    return Unauthorized(response);
-
-                return Ok(response);
+                    401 => Unauthorized(ApiResponse<AuthResult>.FailureResponse(result.ErrorMessage ?? "Unauthorized", 401)),
+                    _ => BadRequest(ApiResponse<AuthResult>.FailureResponse(result.ErrorMessage ?? "Login failed", result.ErrorCode ?? 400))
+                };  
             }
-            catch (Exception)
-            {
-                // Note: Google login failed events are published by GoogleLoginHandler
-                return StatusCode(StatusCodes.Status500InternalServerError, ApiResponse<UserDto>.FailureResponse("An unexpected error occurred", 500));
-            }
+
+            return Ok(ApiResponse<AuthResult>.SuccessResponse(result.Data!, result.ErrorMessage ?? "Google login successful"));
         }
 
-        // api/v1/auth/refresh-token
+        /// <summary>
+        /// Issues a new access token using a valid refresh token.
+        /// </summary>
         [HttpPost("refresh-token")]
         public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request, CancellationToken ct)
         {
             if (!ModelState.IsValid)
-                return BadRequest(ApiResponse<UserDto>.FailureResponse("Invalid input", 400));
+                return BadRequest(ApiResponse<AuthResult>.FailureResponse("Invalid input", 400));
 
-            try
+            var cmd = new RefreshTokenCommand
             {
-                var cmd = new RefreshTokenCommand
-                {
-                    RefreshToken = request.RefreshToken
-                };
+                RefreshToken = request.RefreshToken
+            };
 
-                var response = await _commands.Send<RefreshTokenCommand, UserDto>(cmd, ct);
+            var result = await _commands.Send<RefreshTokenCommand, AuthResult>(cmd, ct);
 
-                if (!response.Success)
-                {
-                    return Unauthorized(response);
-                }
-
-                return Ok(response);
-            }
-            catch (Exception)
+            if (!result.IsSuccess)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, ApiResponse<UserDto>.FailureResponse("An unexpected error occurred", 500));
+                return Unauthorized(ApiResponse<AuthResult>.FailureResponse(result.ErrorMessage ?? "Invalid or expired refresh token", 401));
             }
+
+            return Ok(ApiResponse<AuthResult>.SuccessResponse(result.Data!, result.ErrorMessage ?? "Token refreshed successfully"));
         }
 
-        // api/v1/auth/verify-email
+        /// <summary>
+        /// Verifies user email with OTP code.
+        /// </summary>
         [HttpPost("verify-email")]
         public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailRequest request, CancellationToken ct)
         {
             if (!ModelState.IsValid)
-                return BadRequest(ApiResponse<UserDto>.FailureResponse("Invalid input", 400));
+                return BadRequest(ApiResponse<AuthResult>.FailureResponse("Invalid input", 400));
 
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.OtpCode))
             {
-                return BadRequest(ApiResponse<UserDto>.FailureResponse("Email and OTP code are required", 400));
+                return BadRequest(ApiResponse<AuthResult>.FailureResponse("Email and OTP code are required", 400));
             }
 
-            try
+            var cmd = new VerifyEmailCommand
             {
-                var cmd = new VerifyEmailCommand
-                {
-                    Email = request.Email,
-                    OtpCode = request.OtpCode
-                };
+                Email = request.Email,
+                OtpCode = request.OtpCode
+            };
 
-                var response = await _commands.Send<VerifyEmailCommand, UserDto>(cmd, ct);
+            var result = await _commands.Send<VerifyEmailCommand, AuthResult>(cmd, ct);
 
-                if (!response.Success)
-                {
-                    return BadRequest(response);
-                }
-
-                return Ok(response);
-            }
-            catch (Exception)
+            if (!result.IsSuccess)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, ApiResponse<UserDto>.FailureResponse("An unexpected error occurred", 500));
+                return BadRequest(ApiResponse<AuthResult>.FailureResponse(result.ErrorMessage ?? "Email verification failed", result.ErrorCode ?? 400));
             }
+
+            return Ok(ApiResponse<AuthResult>.SuccessResponse(result.Data!, result.ErrorMessage ?? "Email verified successfully"));
         }
 
-        // api/v1/auth/forget-password
-        [HttpPost("forget-password")]
-        public async Task<IActionResult> ForgetPassword([FromBody] ForgetPasswordRequest request, CancellationToken ct)
+        /// <summary>
+        /// Resends OTP for email verification.
+        /// </summary>
+        [HttpPost("resend-otp")]
+        public async Task<IActionResult> ResendOtp([FromBody] ResendOtpRequest request, CancellationToken ct)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ApiResponse<bool>.FailureResponse("Invalid input", 400));
 
+            if (string.IsNullOrWhiteSpace(request.Email))
+            {
+                return BadRequest(ApiResponse<bool>.FailureResponse("Email is required", 400));
+            }
+
             try
             {
-                var cmd = new ForgetPasswordRequestCommand
+                var cmd = new ResendOtpCommand
                 {
                     Email = request.Email
                 };
 
-                var response = await _commands.Send<ForgetPasswordRequestCommand, bool>(cmd, ct);
+                var response = await _commands.Send<ResendOtpCommand, bool>(cmd, ct);
+
+                if (!response.IsSuccess)
+                {
+                    // Return appropriate status code based on error
+                    if (response.ErrorMessage?.Contains("wait") == true)
+                        return StatusCode(StatusCodes.Status429TooManyRequests, response);
+                    
+                    if (response.ErrorMessage?.Contains("not found") == true)
+                        return NotFound(response);
+
+                    return BadRequest(response);
+                }
+
                 return Ok(response);
             }
             catch (Exception)
@@ -228,7 +235,34 @@ namespace AuthService.Api.Controllers
             }
         }
 
-        // api/v1/auth/reset-password
+        /// <summary>
+        /// Starts forgot-password flow by sending reset OTP.
+        /// </summary>
+        [HttpPost("forget-password")]
+        public async Task<IActionResult> ForgetPassword([FromBody] ForgetPasswordRequest request, CancellationToken ct)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ApiResponse<bool>.FailureResponse("Invalid input", 400));
+
+            try
+            {
+                var cmd = new ForgetPasswordCommand
+                {
+                    Email = request.Email
+                };
+
+                var response = await _commands.Send<ForgetPasswordCommand, bool>(cmd, ct);
+                return Ok(response);
+            }
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, ApiResponse<bool>.FailureResponse("An unexpected error occurred", 500));
+            }
+        }
+
+        /// <summary>
+        /// Resets password using email + OTP.
+        /// </summary>
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request, CancellationToken ct)
         {
@@ -246,7 +280,7 @@ namespace AuthService.Api.Controllers
 
                 var response = await _commands.Send<ResetPasswordCommand, bool>(cmd, ct);
                 
-                if (!response.Success)
+                if (!response.IsSuccess)
                     return BadRequest(response);
 
                 return Ok(response);
@@ -257,9 +291,11 @@ namespace AuthService.Api.Controllers
             }
         }
 
-        // api/v1/auth/change-password
+        /// <summary>
+        /// Changes password for the authenticated user.
+        /// </summary>
         [HttpPost("change-password")]
-        [Microsoft.AspNetCore.Authorization.Authorize]
+        [Authorize]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request, CancellationToken ct)
         {
             if (!ModelState.IsValid)
@@ -268,11 +304,7 @@ namespace AuthService.Api.Controllers
             try
             {
                 // Get user ID from JWT claims
-                var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)
-                                  ?? User.FindFirst("sub")
-                                  ?? User.Claims.FirstOrDefault(c => c.Type == "user_id");
-
-                if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+                if (!User.TryGetCurrentUserId(out var userId))
                 {
                     return Unauthorized(ApiResponse<bool>.FailureResponse("Invalid or missing user token", 401));
                 }
@@ -286,7 +318,7 @@ namespace AuthService.Api.Controllers
 
                 var response = await _commands.Send<ChangePasswordCommand, bool>(cmd, ct);
                 
-                if (!response.Success)
+                if (!response.IsSuccess)
                     return BadRequest(response);
 
                 return Ok(response);
@@ -297,90 +329,127 @@ namespace AuthService.Api.Controllers
             }
         }
 
-        // api/v1/auth/profile (PUT - Edit Profile - First Name and Last Name)
+        /// <summary>
+        /// Updates authenticated user's profile (basic + extended fields).
+        /// </summary>
+        /// <remarks>
+        /// All fields are optional; only provided fields are updated.
+        /// </remarks>
         [HttpPut("profile")]
         [Authorize]
-        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest request, CancellationToken ct)
+        public async Task<IActionResult> UpdateUserProfile([FromBody] UpdateUserProfileRequest request, CancellationToken ct)
         {
             if (!ModelState.IsValid)
-                return BadRequest(ApiResponse<UserDto>.FailureResponse("Invalid input", 400));
+                return BadRequest(ApiResponse<UserProfileResult>.FailureResponse("Invalid input", 400));
 
-            try
+            // Get user ID from JWT claims
+            if (!User.TryGetCurrentUserId(out var userId))
             {
-                // Get user ID from JWT claims
-                var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)
-                                  ?? User.FindFirst("sub")
-                                  ?? User.Claims.FirstOrDefault(c => c.Type == "user_id");
-
-                if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
-                {
-                    return Unauthorized(ApiResponse<UserDto>.FailureResponse("Invalid or missing user token", 401));
-                }
-
-                var cmd = new UpdateProfileCommand
-                {
-                    UserId = userId,
-                    FirstName = request.FirstName,
-                    LastName = request.LastName
-                };
-
-                var response = await _commands.Send<UpdateProfileCommand, UserDto>(cmd, ct);
-                
-                if (!response.Success)
-                    return BadRequest(response);
-
-                return Ok(response);
+                return Unauthorized(ApiResponse<UserProfileResult>.FailureResponse("Invalid or missing user token", 401));
             }
-            catch (Exception)
+
+            var cmd = new UpdateUserProfileCommand
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, ApiResponse<UserDto>.FailureResponse("An unexpected error occurred", 500));
-            }
+                UserId = userId,
+                FirstName = request.FirstName,
+                LastName = request.LastName,
+                Bio = request.Bio,
+                Phone = request.Phone,
+                Gender = request.Gender,
+                DateOfBirth = request.DateOfBirth,
+                ProfileImageUrl = request.ProfileImageUrl,
+                BackgroundImageUrl = request.BackgroundImageUrl,
+                Location = request.Location,
+                Website = request.Website
+            };
+
+            var result = await _commands.Send<UpdateUserProfileCommand, UserProfileResult>(cmd, ct);
+
+            if (!result.IsSuccess)
+                return BadRequest(ApiResponse<UserProfileResult>.FailureResponse(result.ErrorMessage ?? "Profile update failed", result.ErrorCode ?? 400));
+
+            return Ok(ApiResponse<UserProfileResult>.SuccessResponse(result.Data!, result.ErrorMessage ?? "Profile updated successfully"));
         }
 
-        // api/v1/auth/profile/options (PUT - Edit Profile Options - Bio, Phone, Gender, DOB, Images)
-        [HttpPut("profile/options")]
+        // ═══════════════════════════════════════════════════════════════════════════
+        // ACCOUNT DEACTIVATION & DELETION (Member self-service)
+        // ═══════════════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Member-initiated account deactivation.
+        /// User is logged out and can reactivate by logging in within 90 days.
+        /// </summary>
+        [HttpPost("deactivate-account")]
         [Authorize]
-        public async Task<IActionResult> UpdateProfileOptions([FromBody] UpdateProfileOptionsRequest request, CancellationToken ct)
+        public async Task<IActionResult> DeactivateAccount([FromBody] DeactivateAccountRequest request, CancellationToken ct)
         {
             if (!ModelState.IsValid)
-                return BadRequest(ApiResponse<UserDto>.FailureResponse("Invalid input", 400));
+                return BadRequest(ApiResponse<bool>.FailureResponse("Invalid input", 400));
 
-            try
-            {
-                // Get user ID from JWT claims
-                var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)
-                                  ?? User.FindFirst("sub")
-                                  ?? User.Claims.FirstOrDefault(c => c.Type == "user_id");
+            if (!User.TryGetCurrentUserId(out var userId))
+                return Unauthorized(ApiResponse<bool>.FailureResponse("Invalid or missing user token", 401));
 
-                if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
-                {
-                    return Unauthorized(ApiResponse<UserDto>.FailureResponse("Invalid or missing user token", 401));
-                }
+            var cmd = new DeactivateAccountCommand(
+                UserId: userId,
+                Password: request.Password,
+                Reason: request.Reason,
+                AdditionalNote: request.AdditionalNote);
 
-                var cmd = new UpdateProfileOptionsCommand
-                {
-                    UserId = userId,
-                    Bio = request.Bio,
-                    Phone = request.Phone,
-                    Gender = request.Gender,
-                    DateOfBirth = request.DateOfBirth,
-                    ProfileImageUrl = request.ProfileImageUrl,
-                    BackgroundImageUrl = request.BackgroundImageUrl,
-                    Location = request.Location,
-                    Website = request.Website
-                };
+            var result = await _commands.Send<DeactivateAccountCommand, bool>(cmd, ct);
 
-                var response = await _commands.Send<UpdateProfileOptionsCommand, UserDto>(cmd, ct);
-                
-                if (!response.Success)
-                    return BadRequest(response);
+            if (!result.IsSuccess)
+                return BadRequest(ApiResponse<bool>.FailureResponse(result.ErrorMessage ?? "Deactivation failed", result.ErrorCode ?? 400));
 
-                return Ok(response);
-            }
-            catch (Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, ApiResponse<UserDto>.FailureResponse("An unexpected error occurred", 500));
-            }
+            // Revoke current session tokens immediately
+            return Ok(ApiResponse<bool>.SuccessResponse(true, result.ErrorMessage ?? "Account deactivated successfully"));
+        }
+
+        /// <summary>
+        /// Member-initiated permanent account deletion request.
+        /// Sets 30-day grace period. User can still log in to cancel during this period.
+        /// </summary>
+        [HttpPost("request-account-deletion")]
+        [Authorize]
+        public async Task<IActionResult> RequestAccountDeletion([FromBody] RequestAccountDeletionRequest request, CancellationToken ct)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ApiResponse<bool>.FailureResponse("Invalid input", 400));
+
+            if (!User.TryGetCurrentUserId(out var userId))
+                return Unauthorized(ApiResponse<bool>.FailureResponse("Invalid or missing user token", 401));
+
+            var cmd = new RequestAccountDeletionCommand(
+                UserId: userId,
+                Password: request.Password,
+                ConfirmationText: request.ConfirmationText);
+
+            var result = await _commands.Send<RequestAccountDeletionCommand, bool>(cmd, ct);
+
+            if (!result.IsSuccess)
+                return BadRequest(ApiResponse<bool>.FailureResponse(result.ErrorMessage ?? "Deletion request failed", result.ErrorCode ?? 400));
+
+            return Ok(ApiResponse<bool>.SuccessResponse(true, result.ErrorMessage ?? "Deletion request submitted"));
+        }
+
+        /// <summary>
+        /// Cancels a pending account deletion within the 30-day grace period.
+        /// Restores account to active state.
+        /// </summary>
+        [HttpPost("cancel-account-deletion")]
+        [Authorize]
+        public async Task<IActionResult> CancelAccountDeletion(CancellationToken ct)
+        {
+            if (!User.TryGetCurrentUserId(out var userId))
+                return Unauthorized(ApiResponse<bool>.FailureResponse("Invalid or missing user token", 401));
+
+            var cmd = new CancelAccountDeletionCommand(UserId: userId);
+            var result = await _commands.Send<CancelAccountDeletionCommand, bool>(cmd, ct);
+
+            if (!result.IsSuccess)
+                return BadRequest(ApiResponse<bool>.FailureResponse(result.ErrorMessage ?? "Failed to cancel deletion", result.ErrorCode ?? 400));
+
+            return Ok(ApiResponse<bool>.SuccessResponse(true, result.ErrorMessage ?? "Deletion request cancelled"));
         }
     }
 }
+
