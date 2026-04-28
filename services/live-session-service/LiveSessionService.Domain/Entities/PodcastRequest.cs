@@ -6,6 +6,7 @@ public class PodcastRequest
 {
     public Guid Id { get; set; }
     public Guid RequestedByUserId { get; set; }
+    public Guid? TargetPodcastId { get; set; }
     
     // New fields
     public string? AuthorInfo { get; set; }

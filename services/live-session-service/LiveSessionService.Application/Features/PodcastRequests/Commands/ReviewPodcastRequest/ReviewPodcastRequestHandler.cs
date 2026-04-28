@@ -63,28 +63,52 @@ public sealed class ReviewPodcastRequestHandler
 
             var now = _dateTimeProvider.UtcNow;
 
-            var newPodcast = new Podcast
+            if (podcastRequest.TargetPodcastId.HasValue)
             {
-                Id = Guid.NewGuid(),
-                Title = podcastRequest.Title,
-                Description = podcastRequest.Description,
-                Author = podcastRequest.AuthorInfo,
-                Type = podcastRequest.Type,
-                Status = PodcastStatus.Published,
-                Banner = podcastRequest.BannerUrl,
-                Price = podcastRequest.Price,
-                IsPaid = podcastRequest.IsPaid,
-                CreatedAt = now,
-                CreatedBy = podcastRequest.RequestedByUserId
-            };
+                var existingPodcast = await _podcastRepository.GetByIdAsync(podcastRequest.TargetPodcastId.Value, cancellationToken);
+                if (existingPodcast != null)
+                {
+                    existingPodcast.Title = podcastRequest.Title;
+                    existingPodcast.Description = podcastRequest.Description;
+                    existingPodcast.Banner = podcastRequest.BannerUrl ?? existingPodcast.Banner;
+                    if (!string.IsNullOrWhiteSpace(podcastRequest.Type))
+                    {
+                        existingPodcast.Type = podcastRequest.Type;
+                    }
+                    existingPodcast.Price = podcastRequest.Price;
+                    existingPodcast.IsPaid = podcastRequest.IsPaid;
+                    existingPodcast.UpdatedAt = now;
 
-            await _podcastRepository.AddAsync(newPodcast, cancellationToken);
+                    await _podcastRepository.UpdateAsync(existingPodcast, cancellationToken);
+                    _logger.LogInformation("Podcast request {Id} approved. Podcast updated: {PodcastId}", podcastRequest.Id, existingPodcast.Id);
+                }
+                else
+                {
+                    _logger.LogWarning("Podcast request {Id} approved but target podcast {TargetId} not found.", podcastRequest.Id, podcastRequest.TargetPodcastId.Value);
+                }
+            }
+            else
+            {
+                var newPodcast = new Podcast
+                {
+                    Id = Guid.NewGuid(),
+                    Title = podcastRequest.Title,
+                    Description = podcastRequest.Description,
+                    Author = podcastRequest.AuthorInfo,
+                    Type = podcastRequest.Type,
+                    Status = PodcastStatus.Published,
+                    Banner = podcastRequest.BannerUrl,
+                    Price = podcastRequest.Price,
+                    IsPaid = podcastRequest.IsPaid,
+                    CreatedAt = now,
+                    CreatedBy = podcastRequest.RequestedByUserId
+                };
+
+                await _podcastRepository.AddAsync(newPodcast, cancellationToken);
+                _logger.LogInformation("Podcast request {Id} approved. Podcast created: {PodcastId}", podcastRequest.Id, newPodcast.Id);
+            }
 
             podcastRequest.Status = PodcastRequestStatus.Approved;
-
-            _logger.LogInformation(
-                "Podcast request {Id} approved. Podcast created: {PodcastId}",
-                podcastRequest.Id, newPodcast.Id);
         }
         else
         {

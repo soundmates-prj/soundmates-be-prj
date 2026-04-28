@@ -20,4 +20,6 @@ public sealed class CreatePodcastRequestRequest
     public decimal? Price { get; set; }
 
     public bool? IsPaid { get; set; }
+
+    public Guid? TargetPodcastId { get; set; }
 }
