@@ -7,6 +7,8 @@ using LiveSessionService.Domain.Entities;
 using LiveSessionService.Domain.Enums;
 using LiveSessionService.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
+using shared.Contracts.Events.Notifications;
+using System.Text.Json;
 
 namespace LiveSessionService.Application.Features.PodcastEpisodeRequests.Commands.ReviewPodcastEpisodeRequest;
 
@@ -17,17 +19,20 @@ public sealed class ReviewPodcastEpisodeRequestHandler
     private readonly IPodcastRepository _podcastRepository;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<ReviewPodcastEpisodeRequestHandler> _logger;
+    private readonly IMessageBusPublisher _eventBus;
 
     public ReviewPodcastEpisodeRequestHandler(
         IPodcastEpisodeRequestRepository repository,
         IPodcastRepository podcastRepository,
         IDateTimeProvider dateTimeProvider,
-        ILogger<ReviewPodcastEpisodeRequestHandler> logger)
+        ILogger<ReviewPodcastEpisodeRequestHandler> logger,
+        IMessageBusPublisher eventBus)
     {
         _repository = repository;
         _podcastRepository = podcastRepository;
         _dateTimeProvider = dateTimeProvider;
         _logger = logger;
+        _eventBus = eventBus;
     }
 
     public async Task<Result<PodcastEpisodeRequestResult>> Handle(
@@ -87,6 +92,18 @@ public sealed class ReviewPodcastEpisodeRequestHandler
         request.ReviewedAt = _dateTimeProvider.UtcNow;
 
         await _repository.UpdateAsync(request, cancellationToken);
+
+        var notificationEvent = new NotificationEvent
+        {
+            Title = command.IsApproved ? "Tập Podcast đã được duyệt" : "Tập Podcast bị từ chối",
+            Message = command.IsApproved 
+                ? $"Yêu cầu đăng tập '{request.Title}' của bạn đã được phê duyệt."
+                : $"Yêu cầu đăng tập '{request.Title}' của bạn đã bị từ chối. Lý do: {command.RejectReason}",
+            ReceiveUserId = request.RequestedByUserId,
+            ReferenceId = request.Id,
+            Type = command.IsApproved ? "podcast_episode_request_approved" : "podcast_episode_request_rejected"
+        };
+        await _eventBus.PublishAsync("notification.created", JsonSerializer.Serialize(notificationEvent), cancellationToken);
 
         return Result<PodcastEpisodeRequestResult>.Success(new PodcastEpisodeRequestResult
         {

@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using LiveSessionService.Domain.Entities;
 using LiveSessionService.Domain.Interfaces;
 using LiveSessionService.Domain.Models;

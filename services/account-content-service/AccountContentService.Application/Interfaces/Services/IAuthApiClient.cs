@@ -7,6 +7,7 @@ namespace AccountContentService.Application.Interfaces.Services;
 public interface IAuthApiClient
 {
     Task<BankAccountDto?> GetUserBankAccountAsync(Guid userId, CancellationToken cancellationToken);
+    Task<List<Guid>> GetAdminUserIdsAsync(CancellationToken cancellationToken);
 }
 
 public class BankAccountDto
