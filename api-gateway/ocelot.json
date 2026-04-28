@@ -1215,6 +1215,21 @@
       }
     },
     {
+      "DownstreamPathTemplate": "/api/v1/me/revenues",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-content-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/me/revenues",
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ]
+    },
+    {
       "DownstreamPathTemplate": "/api/v1/me/transaction/history",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [

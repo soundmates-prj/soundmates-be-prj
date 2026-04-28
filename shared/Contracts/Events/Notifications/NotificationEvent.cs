@@ -19,5 +19,10 @@ namespace shared.Contracts.Events.Notifications
         /// When true, the notification is pushed to ALL connected users (e.g. new broadcast schedule).
         /// </summary>
         public bool IsBroadcast { get; set; } = false;
+
+        /// <summary>
+        /// When provided, the notification is pushed to ALL users matching this role (e.g. "ADMIN").
+        /// </summary>
+        public string? TargetRole { get; set; }
     }
 }

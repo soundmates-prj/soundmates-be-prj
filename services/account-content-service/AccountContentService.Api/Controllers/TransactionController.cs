@@ -1,4 +1,4 @@
-﻿using AccountContentService.Api.Common;
+using AccountContentService.Api.Common;
 using AccountContentService.Api.Constants;
 using AccountContentService.Api.Contracts.Requests;
 using AccountContentService.Api.Contracts.Responses;
@@ -138,6 +138,21 @@ namespace AccountContentService.Api.Controllers
                 result.TotalCount);
 
             return Ok(ApiResponse<PaginationResponse<TransactionResponse>>.Ok(response, "Get transactions successfully"));
+        }
+
+        /// <summary>
+        /// Get current user's revenues (completed pending payouts).
+        /// </summary>
+        /// <response code="200">Revenues retrieved successfully</response>
+        [HttpGet("/api/v1/me/revenues")]
+        public async Task<IActionResult> GetMyRevenues()
+        {
+            var userId = UserContext.GetUserId(HttpContext);
+            var query = new AccountContentService.Application.Features.Payments.Queries.GetMyRevenues.GetMyRevenuesQuery(userId);
+
+            var result = await _mediator.Send(query);
+
+            return Ok(ApiResponse<List<AccountContentService.Application.Features.Payments.Queries.GetMyRevenues.RevenueDto>>.Ok(result, "Get revenues successfully"));
         }
     }
 }

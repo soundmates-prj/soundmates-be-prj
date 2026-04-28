@@ -13,4 +13,5 @@ public interface IPendingPayoutRepository
     Task<PendingPayout?> GetByIdAsync(Guid id, CancellationToken cancellationToken);
     Task<IEnumerable<PendingPayout>> GetPendingPayoutsAsync(DateTime maxScheduledAt, CancellationToken cancellationToken);
     Task<IEnumerable<PendingPayout>> GetAllPendingPayoutsAsync(CancellationToken cancellationToken);
+    Task<IEnumerable<PendingPayout>> GetByTargetUserIdAsync(Guid targetUserId, CancellationToken cancellationToken);
 }

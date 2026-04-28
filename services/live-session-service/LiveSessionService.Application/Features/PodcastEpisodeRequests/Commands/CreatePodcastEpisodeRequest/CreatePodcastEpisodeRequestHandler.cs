@@ -7,6 +7,8 @@ using LiveSessionService.Domain.Entities;
 using LiveSessionService.Domain.Enums;
 using LiveSessionService.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
+using shared.Contracts.Events.Notifications;
+using System.Text.Json;
 
 namespace LiveSessionService.Application.Features.PodcastEpisodeRequests.Commands.CreatePodcastEpisodeRequest;
 
@@ -17,17 +19,20 @@ public sealed class CreatePodcastEpisodeRequestHandler
     private readonly IPodcastRepository _podcastRepository;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<CreatePodcastEpisodeRequestHandler> _logger;
+    private readonly IMessageBusPublisher _eventBus;
 
     public CreatePodcastEpisodeRequestHandler(
         IPodcastEpisodeRequestRepository repository,
         IPodcastRepository podcastRepository,
         IDateTimeProvider dateTimeProvider,
-        ILogger<CreatePodcastEpisodeRequestHandler> logger)
+        ILogger<CreatePodcastEpisodeRequestHandler> logger,
+        IMessageBusPublisher eventBus)
     {
         _repository = repository;
         _podcastRepository = podcastRepository;
         _dateTimeProvider = dateTimeProvider;
         _logger = logger;
+        _eventBus = eventBus;
     }
 
     public async Task<Result<PodcastEpisodeRequestResult>> Handle(
@@ -58,6 +63,16 @@ public sealed class CreatePodcastEpisodeRequestHandler
 
         _logger.LogInformation("PodcastEpisodeRequest {Id} created for Podcast {PodcastId} by user {UserId}",
             request.Id, request.PodcastId, command.RequestedByUserId);
+
+        var notificationEvent = new NotificationEvent
+        {
+            Title = "Yêu cầu đăng tập Podcast mới",
+            Message = $"Có yêu cầu đăng tập '{request.Title}' đang chờ duyệt.",
+            TargetRole = "ADMIN",
+            ReferenceId = request.Id,
+            Type = "podcast_episode_request_created"
+        };
+        await _eventBus.PublishAsync("notification.created", JsonSerializer.Serialize(notificationEvent), cancellationToken);
 
         return Result<PodcastEpisodeRequestResult>.Success(new PodcastEpisodeRequestResult
         {
