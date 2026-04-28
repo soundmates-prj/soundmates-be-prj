@@ -4,6 +4,7 @@ public sealed class PodcastRequestResult
 {
     public Guid Id { get; init; }
     public Guid RequestedByUserId { get; init; }
+    public Guid? TargetPodcastId { get; init; }
     public object? AuthorInfo { get; init; }
     public string Title { get; init; } = null!;
     public string Type { get; init; } = null!;

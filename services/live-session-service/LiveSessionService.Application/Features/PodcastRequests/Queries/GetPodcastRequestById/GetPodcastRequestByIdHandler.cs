@@ -26,6 +26,7 @@ public sealed class GetPodcastRequestByIdHandler
         {
             Id = r.Id,
             RequestedByUserId = r.RequestedByUserId,
+            TargetPodcastId = r.TargetPodcastId,
             AuthorInfo = string.IsNullOrWhiteSpace(r.AuthorInfo) ? null : System.Text.Json.JsonSerializer.Deserialize<object>(r.AuthorInfo),
             Title = r.Title,
             Type = r.Type,

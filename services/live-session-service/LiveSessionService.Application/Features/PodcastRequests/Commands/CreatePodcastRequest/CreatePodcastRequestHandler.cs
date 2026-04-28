@@ -42,6 +42,7 @@ public sealed class CreatePodcastRequestHandler
         {
             Id = Guid.NewGuid(),
             RequestedByUserId = command.RequestedByUserId,
+            TargetPodcastId = command.TargetPodcastId,
             AuthorInfo = command.AuthorInfo,
             Title = command.Title.Trim(),
             Type = command.Type.Trim(),
@@ -73,6 +74,7 @@ public sealed class CreatePodcastRequestHandler
         {
             Id = podcastRequest.Id,
             RequestedByUserId = podcastRequest.RequestedByUserId,
+            TargetPodcastId = podcastRequest.TargetPodcastId,
             AuthorInfo = string.IsNullOrWhiteSpace(podcastRequest.AuthorInfo) ? null : System.Text.Json.JsonSerializer.Deserialize<object>(podcastRequest.AuthorInfo),
             Title = podcastRequest.Title,
             Type = podcastRequest.Type,
