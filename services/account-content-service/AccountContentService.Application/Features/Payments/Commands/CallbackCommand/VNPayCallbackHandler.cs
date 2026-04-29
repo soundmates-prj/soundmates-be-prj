@@ -18,6 +18,8 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
         private readonly IPendingPayoutRepository _pendingPayoutRepo;
         private readonly ILiveSessionApiClient _liveSessionApiClient;
         private readonly IAuthApiClient _authApiClient;
+        private readonly INotificationRepository _notificationRepo;
+        private readonly INotificationPusher _notificationPusher;
         private readonly IMapper _mapper;   
 
         public VNPayCallbackHandler(
@@ -28,6 +30,8 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
             IPendingPayoutRepository pendingPayoutRepo,
             ILiveSessionApiClient liveSessionApiClient,
             IAuthApiClient authApiClient,
+            INotificationRepository notificationRepo,
+            INotificationPusher notificationPusher,
             IMapper mapper)
         {
             _paymentRepo = paymentRepo;
@@ -37,6 +41,8 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
             _pendingPayoutRepo = pendingPayoutRepo;
             _liveSessionApiClient = liveSessionApiClient;
             _authApiClient = authApiClient;
+            _notificationRepo = notificationRepo;
+            _notificationPusher = notificationPusher;
             _mapper = mapper;
         }
 
@@ -120,7 +126,7 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
                             Id = Guid.NewGuid(),
                             PaymentId = payment.Id,
                             TargetUserId = podcast.CreatedBy,
-                            Amount = podcast.Price, // Fee handled elsewhere or kept by system
+                            Amount = podcast.Price * 0.8m, // 🔥 Platform keeps 20%
                             BankId = bankAccount?.BankId,
                             AccountNumber = bankAccount?.AccountNumber,
                             AccountName = bankAccount?.AccountName,
@@ -134,6 +140,20 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
                         
                         // 🔥 7.1 Grant Podcast Access to Buyer
                         await _liveSessionApiClient.GrantPodcastAccessAsync(payment.TargetId, payment.UserId, podcast.Price, cancellationToken);
+
+                        // 🔥 7.2 Send notification to Podcast Owner
+                        var notification = new Notification
+                        {
+                            Id = Guid.NewGuid(),
+                            UserId = podcast.CreatedBy,
+                            Type = "podcast_purchased",
+                            ReferenceId = payment.TargetId,
+                            Message = $"Chúc mừng! Có người vừa mua podcast \"{podcast.Title}\" của bạn. Bạn nhận được {podcast.Price * 0.8m:N0}đ.",
+                            IsRead = false,
+                            CreatedAt = DateTime.UtcNow
+                        };
+                        await _notificationRepo.AddAsync(notification, cancellationToken);
+                        await _notificationPusher.PushToUserAsync(podcast.CreatedBy, notification, cancellationToken);
                     }
                 }
                 else

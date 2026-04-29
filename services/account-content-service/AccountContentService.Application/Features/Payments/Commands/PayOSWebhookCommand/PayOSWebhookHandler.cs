@@ -16,6 +16,8 @@ public sealed class PayOSWebhookHandler : IRequestHandler<PayOSWebhookCommand, b
     private readonly IPendingPayoutRepository _pendingPayoutRepo;
     private readonly ILiveSessionApiClient _liveSessionApiClient;
     private readonly IAuthApiClient _authApiClient;
+    private readonly INotificationRepository _notificationRepo;
+    private readonly INotificationPusher _notificationPusher;
     private readonly ILogger<PayOSWebhookHandler> _logger;
 
     public PayOSWebhookHandler(
@@ -25,6 +27,8 @@ public sealed class PayOSWebhookHandler : IRequestHandler<PayOSWebhookCommand, b
         IPendingPayoutRepository pendingPayoutRepo,
         ILiveSessionApiClient liveSessionApiClient,
         IAuthApiClient authApiClient,
+        INotificationRepository notificationRepo,
+        INotificationPusher notificationPusher,
         ILogger<PayOSWebhookHandler> logger)
     {
         _paymentRepo = paymentRepo;
@@ -33,6 +37,8 @@ public sealed class PayOSWebhookHandler : IRequestHandler<PayOSWebhookCommand, b
         _pendingPayoutRepo = pendingPayoutRepo;
         _liveSessionApiClient = liveSessionApiClient;
         _authApiClient = authApiClient;
+        _notificationRepo = notificationRepo;
+        _notificationPusher = notificationPusher;
         _logger = logger;
     }
 
@@ -111,7 +117,7 @@ public sealed class PayOSWebhookHandler : IRequestHandler<PayOSWebhookCommand, b
                         Id = Guid.NewGuid(),
                         PaymentId = payment.Id,
                         TargetUserId = podcast.CreatedBy,
-                        Amount = podcast.Price, // Just the price, fee is kept by the system
+                        Amount = podcast.Price * 0.8m, // 🔥 Platform keeps 20%
                         BankId = bankAccount?.BankId,
                         AccountNumber = bankAccount?.AccountNumber,
                         AccountName = bankAccount?.AccountName,
@@ -128,6 +134,20 @@ public sealed class PayOSWebhookHandler : IRequestHandler<PayOSWebhookCommand, b
                     // Grant access to the podcast
                     await _liveSessionApiClient.GrantPodcastAccessAsync(payment.TargetId, payment.UserId, podcast.Price, cancellationToken);
                     _logger.LogInformation("Granted access to Podcast {PodcastId} for User {UserId}", payment.TargetId, payment.UserId);
+
+                    // Send notification to Podcast Owner
+                    var notification = new Notification
+                    {
+                        Id = Guid.NewGuid(),
+                        UserId = podcast.CreatedBy,
+                        Type = "podcast_purchased",
+                        ReferenceId = payment.TargetId,
+                        Message = $"Chúc mừng! Có người vừa mua podcast \"{podcast.Title}\" của bạn. Bạn nhận được {podcast.Price * 0.8m:N0}đ.",
+                        IsRead = false,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    await _notificationRepo.AddAsync(notification, cancellationToken);
+                    await _notificationPusher.PushToUserAsync(podcast.CreatedBy, notification, cancellationToken);
                 }
             }
             else
