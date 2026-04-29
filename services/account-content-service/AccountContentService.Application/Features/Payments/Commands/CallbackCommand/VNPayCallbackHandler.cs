@@ -6,6 +6,7 @@ using AccountContentService.Domain.Enums;
 using AutoMapper;
 using MediatR;
 using System.Text.Json;
+using shared.Contracts.Events.Notifications;
 
 namespace AccountContentService.Application.Features.Payments.Commands.CallbackCommand
 {
@@ -19,6 +20,7 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
         private readonly ILiveSessionApiClient _liveSessionApiClient;
         private readonly IAuthApiClient _authApiClient;
         private readonly IMapper _mapper;   
+        private readonly IMessageBusPublisher _eventBus;
 
         public VNPayCallbackHandler(
             IPaymentRepository paymentRepo,
@@ -28,7 +30,8 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
             IPendingPayoutRepository pendingPayoutRepo,
             ILiveSessionApiClient liveSessionApiClient,
             IAuthApiClient authApiClient,
-            IMapper mapper)
+            IMapper mapper,
+            IMessageBusPublisher eventBus)
         {
             _paymentRepo = paymentRepo;
             _transactionRepo = transactionRepo;
@@ -38,6 +41,7 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
             _liveSessionApiClient = liveSessionApiClient;
             _authApiClient = authApiClient;
             _mapper = mapper;
+            _eventBus = eventBus;
         }
 
         public async Task<TransactionDto> Handle(VNPayCallbackCommand request, CancellationToken cancellationToken)
@@ -120,7 +124,7 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
                             Id = Guid.NewGuid(),
                             PaymentId = payment.Id,
                             TargetUserId = podcast.CreatedBy,
-                            Amount = podcast.Price, // Fee handled elsewhere or kept by system
+                            Amount = podcast.Price * 0.8m, // System keeps 20% fee
                             BankId = bankAccount?.BankId,
                             AccountNumber = bankAccount?.AccountNumber,
                             AccountName = bankAccount?.AccountName,
@@ -134,6 +138,17 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
                         
                         // 🔥 7.1 Grant Podcast Access to Buyer
                         await _liveSessionApiClient.GrantPodcastAccessAsync(payment.TargetId, payment.UserId, podcast.Price, cancellationToken);
+                        
+                        // 🔥 7.2 Send Notification to Seller
+                        var notificationEvent = new NotificationEvent
+                        {
+                            Title = "Podcast của bạn đã được mua",
+                            ReceiveUserId = podcast.CreatedBy,
+                            ReferenceId = payment.TargetId,
+                            Type = "PODCAST_PURCHASE",
+                            Message = $"Chúc mừng! Một người dùng đã mua khóa Podcast '{podcast.Title}'. Bạn nhận được 80% doanh thu là {podcast.Price * 0.8m:N0}đ."
+                        };
+                        await _eventBus.PublishAsync("notification.created", JsonSerializer.Serialize(notificationEvent), cancellationToken);
                     }
                 }
                 else
