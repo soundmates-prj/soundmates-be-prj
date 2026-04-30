@@ -29,7 +29,7 @@ public partial class LiveSession
     public int MaxListeners { get; set; } = 100;
     
     public bool IsPublic { get; set; } = true;
-    
+
     public string? ThumbnailUrl { get; set; }
     
     public string? Genre { get; set; }
