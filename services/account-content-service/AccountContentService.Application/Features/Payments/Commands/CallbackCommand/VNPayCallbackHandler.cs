@@ -7,6 +7,7 @@ using AccountContentService.Domain.Enums;
 using AutoMapper;
 using MediatR;
 using System.Text.Json;
+using shared.Contracts.Events.Notifications;
 
 namespace AccountContentService.Application.Features.Payments.Commands.CallbackCommand
 {
@@ -22,6 +23,7 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
         private readonly INotificationRepository _notificationRepo;
         private readonly INotificationPusher _notificationPusher;
         private readonly IMapper _mapper;   
+        private readonly IMessageBusPublisher _eventBus;
 
         public VNPayCallbackHandler(
             IPaymentRepository paymentRepo,
@@ -33,7 +35,8 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
             IAuthApiClient authApiClient,
             INotificationRepository notificationRepo,
             INotificationPusher notificationPusher,
-            IMapper mapper)
+            IMapper mapper,
+            IMessageBusPublisher eventBus)
         {
             _paymentRepo = paymentRepo;
             _transactionRepo = transactionRepo;
@@ -45,6 +48,7 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
             _notificationRepo = notificationRepo;
             _notificationPusher = notificationPusher;
             _mapper = mapper;
+            _eventBus = eventBus;
         }
 
         public async Task<TransactionDto> Handle(VNPayCallbackCommand request, CancellationToken cancellationToken)
@@ -127,7 +131,7 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
                             Id = Guid.NewGuid(),
                             PaymentId = payment.Id,
                             TargetUserId = podcast.CreatedBy,
-                            Amount = podcast.Price * 0.8m, // 🔥 Platform keeps 20%
+                            Amount = podcast.Price * 0.8m, // System keeps 20% fee
                             BankId = bankAccount?.BankId,
                             AccountNumber = bankAccount?.AccountNumber,
                             AccountName = bankAccount?.AccountName,

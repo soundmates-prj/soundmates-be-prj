@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using AccountContentService.Application.Interfaces.Services;
 using AccountContentService.Application.Interfaces;
+using shared.Contracts.Events.Notifications;
 
 namespace AccountContentService.Application.Features.Payments.Commands.PayOSWebhookCommand;
 
@@ -20,6 +21,7 @@ public sealed class PayOSWebhookHandler : IRequestHandler<PayOSWebhookCommand, b
     private readonly INotificationRepository _notificationRepo;
     private readonly INotificationPusher _notificationPusher;
     private readonly ILogger<PayOSWebhookHandler> _logger;
+    private readonly IMessageBusPublisher _eventBus;
 
     public PayOSWebhookHandler(
         IPaymentRepository paymentRepo,
@@ -30,7 +32,8 @@ public sealed class PayOSWebhookHandler : IRequestHandler<PayOSWebhookCommand, b
         IAuthApiClient authApiClient,
         INotificationRepository notificationRepo,
         INotificationPusher notificationPusher,
-        ILogger<PayOSWebhookHandler> logger)
+        ILogger<PayOSWebhookHandler> logger,
+        IMessageBusPublisher eventBus)
     {
         _paymentRepo = paymentRepo;
         _transactionRepo = transactionRepo;
@@ -41,6 +44,7 @@ public sealed class PayOSWebhookHandler : IRequestHandler<PayOSWebhookCommand, b
         _notificationRepo = notificationRepo;
         _notificationPusher = notificationPusher;
         _logger = logger;
+        _eventBus = eventBus;
     }
 
     public async Task<bool> Handle(PayOSWebhookCommand request, CancellationToken cancellationToken)
@@ -118,7 +122,7 @@ public sealed class PayOSWebhookHandler : IRequestHandler<PayOSWebhookCommand, b
                         Id = Guid.NewGuid(),
                         PaymentId = payment.Id,
                         TargetUserId = podcast.CreatedBy,
-                        Amount = podcast.Price * 0.8m, // 🔥 Platform keeps 20%
+                        Amount = podcast.Price * 0.8m, // System keeps 20% fee
                         BankId = bankAccount?.BankId,
                         AccountNumber = bankAccount?.AccountNumber,
                         AccountName = bankAccount?.AccountName,
