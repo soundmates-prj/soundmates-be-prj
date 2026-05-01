@@ -1,17 +1,20 @@
 using LiveSessionService.Application.Abstractions.Messaging;
 using LiveSessionService.Application.Features.Results;
-using LiveSessionService.Application.Features.Results.Podcasts;
 using LiveSessionService.Domain.Interfaces;
+using LiveSessionService.Application.Abstractions.Persistence;
+using LiveSessionService.Application.Features.Results.Podcasts;
 
 namespace LiveSessionService.Application.Features.Podcasts.Queries.GetFollowedPodcasts;
 
 public sealed class GetFollowedPodcastsHandler : IQueryHandler<GetFollowedPodcastsQuery, List<PodcastResult>>
 {
     private readonly IUserSavedPodcastRepository _userSavedPodcastRepository;
+    private readonly ILiveSessionDbContext _dbContext;
 
-    public GetFollowedPodcastsHandler(IUserSavedPodcastRepository userSavedPodcastRepository)
+    public GetFollowedPodcastsHandler(IUserSavedPodcastRepository userSavedPodcastRepository, ILiveSessionDbContext dbContext)
     {
         _userSavedPodcastRepository = userSavedPodcastRepository;
+        _dbContext = dbContext;
     }
 
     public async Task<Result<List<PodcastResult>>> Handle(GetFollowedPodcastsQuery query, CancellationToken cancellationToken)
@@ -25,6 +28,7 @@ public sealed class GetFollowedPodcastsHandler : IQueryHandler<GetFollowedPodcas
                 Id = x.Id,
                 Price = x.Price,
                 IsPaid = x.IsPaid,
+                IsPurchased = x.CreatedBy == query.UserId || _dbContext.UserPurchasedPodcasts.Any(p => p.PodcastId == x.Id && p.UserId == query.UserId),
                 Title = x.Title,
                 Description = x.Description,
                 Author = string.IsNullOrWhiteSpace(x.Author) ? null : System.Text.Json.JsonSerializer.Deserialize<object>(x.Author),

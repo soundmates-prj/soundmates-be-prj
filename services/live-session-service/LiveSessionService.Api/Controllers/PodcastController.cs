@@ -56,7 +56,8 @@ public class PodcastController : ControllerBase
         [FromQuery] string? status,
         CancellationToken ct)
     {
-        var query = new GetPodcastsQuery(createdBy, status);
+        TryGetCurrentUserId(out var userId);
+        var query = new GetPodcastsQuery(createdBy, status, userId == Guid.Empty ? null : userId);
         var result = await _queries.Send<GetPodcastsQuery, List<PodcastResult>>(query, ct);
 
         if (!result.IsSuccess)

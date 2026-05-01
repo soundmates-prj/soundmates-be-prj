@@ -5,6 +5,7 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using AccountContentService.Application.Interfaces.Services;
+using AccountContentService.Application.Interfaces;
 using shared.Contracts.Events.Notifications;
 
 namespace AccountContentService.Application.Features.Payments.Commands.PayOSWebhookCommand;
@@ -17,6 +18,8 @@ public sealed class PayOSWebhookHandler : IRequestHandler<PayOSWebhookCommand, b
     private readonly IPendingPayoutRepository _pendingPayoutRepo;
     private readonly ILiveSessionApiClient _liveSessionApiClient;
     private readonly IAuthApiClient _authApiClient;
+    private readonly INotificationRepository _notificationRepo;
+    private readonly INotificationPusher _notificationPusher;
     private readonly ILogger<PayOSWebhookHandler> _logger;
     private readonly IMessageBusPublisher _eventBus;
 
@@ -27,6 +30,8 @@ public sealed class PayOSWebhookHandler : IRequestHandler<PayOSWebhookCommand, b
         IPendingPayoutRepository pendingPayoutRepo,
         ILiveSessionApiClient liveSessionApiClient,
         IAuthApiClient authApiClient,
+        INotificationRepository notificationRepo,
+        INotificationPusher notificationPusher,
         ILogger<PayOSWebhookHandler> logger,
         IMessageBusPublisher eventBus)
     {
@@ -36,6 +41,8 @@ public sealed class PayOSWebhookHandler : IRequestHandler<PayOSWebhookCommand, b
         _pendingPayoutRepo = pendingPayoutRepo;
         _liveSessionApiClient = liveSessionApiClient;
         _authApiClient = authApiClient;
+        _notificationRepo = notificationRepo;
+        _notificationPusher = notificationPusher;
         _logger = logger;
         _eventBus = eventBus;
     }
@@ -132,17 +139,20 @@ public sealed class PayOSWebhookHandler : IRequestHandler<PayOSWebhookCommand, b
                     // Grant access to the podcast
                     await _liveSessionApiClient.GrantPodcastAccessAsync(payment.TargetId, payment.UserId, podcast.Price, cancellationToken);
                     _logger.LogInformation("Granted access to Podcast {PodcastId} for User {UserId}", payment.TargetId, payment.UserId);
-                    
-                    // Send Notification to Seller
-                    var notificationEvent = new NotificationEvent
+
+                    // Send notification to Podcast Owner
+                    var notification = new Notification
                     {
-                        Title = "Podcast của bạn đã được mua",
-                        ReceiveUserId = podcast.CreatedBy,
+                        Id = Guid.NewGuid(),
+                        UserId = podcast.CreatedBy,
+                        Type = "podcast_purchased",
                         ReferenceId = payment.TargetId,
-                        Type = "PODCAST_PURCHASE",
-                        Message = $"Chúc mừng! Một người dùng đã mua khóa Podcast '{podcast.Title}'. Bạn nhận được 80% doanh thu là {podcast.Price * 0.8m:N0}đ."
+                        Message = $"Chúc mừng! Có người vừa mua podcast \"{podcast.Title}\" của bạn. Bạn nhận được {podcast.Price * 0.8m:N0}đ.",
+                        IsRead = false,
+                        CreatedAt = DateTime.UtcNow
                     };
-                    await _eventBus.PublishAsync("notification.created", JsonSerializer.Serialize(notificationEvent), cancellationToken);
+                    await _notificationRepo.AddAsync(notification, cancellationToken);
+                    await _notificationPusher.PushToUserAsync(podcast.CreatedBy, notification, cancellationToken);
                 }
             }
             else
