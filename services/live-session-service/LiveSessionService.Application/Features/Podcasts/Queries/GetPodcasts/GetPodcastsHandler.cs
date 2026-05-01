@@ -4,16 +4,19 @@ using LiveSessionService.Application.Features.Results;
 using LiveSessionService.Application.Features.Results.Podcasts;
 using LiveSessionService.Domain.Enums;
 using LiveSessionService.Domain.Interfaces;
+using LiveSessionService.Application.Abstractions.Persistence;
 
 namespace LiveSessionService.Application.Features.Podcasts.Queries.GetPodcasts;
 
 public sealed class GetPodcastsHandler : IQueryHandler<GetPodcastsQuery, List<PodcastResult>>
 {
     private readonly IPodcastRepository _podcastRepository;
+    private readonly ILiveSessionDbContext _dbContext;
 
-    public GetPodcastsHandler(IPodcastRepository podcastRepository)
+    public GetPodcastsHandler(IPodcastRepository podcastRepository, ILiveSessionDbContext dbContext)
     {
         _podcastRepository = podcastRepository;
+        _dbContext = dbContext;
     }
 
     public async Task<Result<List<PodcastResult>>> Handle(GetPodcastsQuery query, CancellationToken cancellationToken)
@@ -33,8 +36,9 @@ public sealed class GetPodcastsHandler : IQueryHandler<GetPodcastsQuery, List<Po
         var result = podcasts.Select(x => new PodcastResult
         {
             Id = x.Id,
-                Price = x.Price,
-                IsPaid = x.IsPaid,
+            Price = x.Price,
+            IsPaid = x.IsPaid,
+            IsPurchased = query.UserId.HasValue && (x.CreatedBy == query.UserId.Value || _dbContext.UserPurchasedPodcasts.Any(p => p.PodcastId == x.Id && p.UserId == query.UserId.Value)),
             Title = x.Title,
             Description = x.Description,
             Author = string.IsNullOrWhiteSpace(x.Author) ? null : System.Text.Json.JsonSerializer.Deserialize<object>(x.Author),
