@@ -45,12 +45,16 @@ public sealed class CreateStationHandler : ICommandHandler<CreateStationCommand,
         {
             _logger.LogInformation("Creating station: {StationName}", command.StationName);
 
+            // Auto-generate port (starts from 8010: 8009 + next external ID)
+            var nextExternalStationId = await _stationRepository.GetNextExternalStationIdAsync(cancellationToken);
+            var port = 8009 + nextExternalStationId;
+
             // Create station in AzuraCast via API
             var azuraStation = await _azuraCastClient.CreateStationAsync(
                 command.StationName,
                 command.ShortCode,
                 command.Description,
-                command.Port,
+                port,
                 cancellationToken);
 
             if (azuraStation == null)
