@@ -95,7 +95,8 @@ public class StationController : ControllerBase
             var command = new CreateStationCommand(
                 request.StationName,
                 request.Description,
-                request.ShortCode);
+                request.ShortCode,
+                request.Port);
 
             var result = await _commands.Send<CreateStationCommand, StationResult>(command, ct);
 

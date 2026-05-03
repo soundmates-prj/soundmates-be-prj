@@ -9,4 +9,5 @@ namespace LiveSessionService.Application.Features.Stations.Commands.CreateStatio
 public sealed record CreateStationCommand(
     string StationName,
     string? Description,
-    string? ShortCode) : ICommand<StationResult>;
+    string? ShortCode,
+    int Port) : ICommand<StationResult>;

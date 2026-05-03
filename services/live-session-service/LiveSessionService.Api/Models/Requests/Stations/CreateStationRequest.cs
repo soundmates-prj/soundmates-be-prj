@@ -17,4 +17,7 @@ public sealed class CreateStationRequest
     [StringLength(50)]
     [RegularExpression("^[a-z0-9_-]+$", ErrorMessage = "Short code must contain only lowercase letters, numbers, hyphens and underscores")]
     public string? ShortCode { get; set; }
+
+    [Range(8001, 8999, ErrorMessage = "Port must be between 8001 and 8999")]
+    public int Port { get; set; }
 }
