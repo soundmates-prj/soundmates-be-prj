@@ -8,6 +8,7 @@ using LiveSessionService.Application.Features.LiveSessions.Commands.PauseSession
 using LiveSessionService.Application.Features.LiveSessions.Commands.ResumeSession;
 using LiveSessionService.Application.Features.LiveSessions.Commands.StartSession;
 using LiveSessionService.Application.Features.LiveSessions.Commands.StopSession;
+using LiveSessionService.Application.Features.LiveSessions.Commands.UpdateLiveSession;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetActiveLiveSessions;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetAllLiveSessions;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetLiveSession;
@@ -425,6 +426,60 @@ public class LiveSessionController : ControllerBase
             nameof(GetById),
             new { id = result.Data!.Id },
             ApiResponse<LiveSessionResult>.SuccessResponse(result.Data!, "Live session created"));
+    }
+
+    /// <summary>
+    /// Update live session details
+    /// </summary>
+    [HttpPut("{id:guid}")]
+    [ProducesResponseType(typeof(ApiResponse<LiveSessionResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> Update(
+        Guid id,
+        [FromBody] UpdateLiveSessionRequest request,
+        CancellationToken ct)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ApiResponse<object>.FailureResponse(
+                "Invalid input",
+                (int)ErrorCode.BadRequest));
+        }
+
+        if (!TryGetCurrentUserId(out var currentUserId))
+        {
+            return Unauthorized(ApiResponse<object>.FailureResponse(
+                "Invalid or missing user token",
+                (int)ErrorCode.Unauthorized));
+        }
+
+        var command = new UpdateLiveSessionCommand(
+            id,
+            currentUserId,
+            request.HostUserId,
+            request.StationId,
+            request.SessionName,
+            request.Description,
+            request.ThumbnailUrl);
+
+        var result = await _commands.Send<UpdateLiveSessionCommand, LiveSessionResult>(command, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                ErrorCode.Forbidden => StatusCode((int)ErrorCode.Forbidden, result.ToApiResponse()),
+                ErrorCode.Conflict => Conflict(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(ApiResponse<LiveSessionResult>.SuccessResponse(result.Data!, "Live session updated"));
     }
 
     /// <summary>

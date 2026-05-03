@@ -235,9 +235,9 @@ public partial class LiveSession
         string? genre,
         IDateTimeProvider dateTimeProvider)
     {
-        if (Status != SessionStatus.Live)
+        if (Status == SessionStatus.Ended || Status == SessionStatus.Cancelled)
             throw new InvalidSessionStateException(
-                "Cannot update details of non-active session",
+                "Cannot update details of ended or cancelled session",
                 LiveSessionErrorCodes.SessionNotActive);
 
         // Validate session name

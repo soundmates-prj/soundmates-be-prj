@@ -8,6 +8,7 @@ using LiveSessionService.Application.Features.LiveSessions.Commands.PauseSession
 using LiveSessionService.Application.Features.LiveSessions.Commands.ResumeSession;
 using LiveSessionService.Application.Features.LiveSessions.Commands.StartSession;
 using LiveSessionService.Application.Features.LiveSessions.Commands.StopSession;
+using LiveSessionService.Application.Features.LiveSessions.Commands.UpdateLiveSession;
 using LiveSessionService.Application.Features.LiveSessions.Commands.UpdateSessionSchedule;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetActiveLiveSessions;
 using LiveSessionService.Application.Features.LiveSessions.Queries.GetAllLiveSessions;
@@ -128,6 +129,7 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<CreateLiveSessionCommand, LiveSessionResult>, CreateLiveSessionHandler>();
         services.AddScoped<ICommandHandler<CreateSessionScheduleCommand, SessionScheduleResult>, CreateSessionScheduleHandler>();
         services.AddScoped<ICommandHandler<UpdateSessionScheduleCommand, SessionScheduleResult>, UpdateSessionScheduleHandler>();
+        services.AddScoped<ICommandHandler<UpdateLiveSessionCommand, LiveSessionResult>, UpdateLiveSessionHandler>();
         services.AddScoped<ICommandHandler<DeleteSessionScheduleCommand>, DeleteSessionScheduleHandler>();
         services.AddScoped<ICommandHandler<StartSessionCommand, LiveSessionResult>, StartSessionHandler>();
         services.AddScoped<ICommandHandler<PauseSessionCommand, LiveSessionResult>, PauseSessionHandler>();
