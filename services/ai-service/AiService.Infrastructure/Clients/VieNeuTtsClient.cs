@@ -481,8 +481,33 @@ public class VieNeuTtsClient : ITtsClient
 
     private async Task<TtsSynthesizeResponse?> TrySynthesizeViaStreamAsync(string baseUrl, TtsSynthesizeRequest request, CancellationToken cancellationToken)
     {
+        var ttsModel = string.IsNullOrWhiteSpace(request.Model) || request.Model.StartsWith("${")
+            ? _options.Model
+            : request.Model;
+
         foreach (var candidateBaseUrl in GetStreamCandidates(baseUrl))
         {
+            if (!string.IsNullOrWhiteSpace(ttsModel))
+            {
+                try
+                {
+                    var setModelPayload = new { model_key = ttsModel };
+                    using var setModelRequest = new HttpRequestMessage(HttpMethod.Post, BuildUri(candidateBaseUrl, "/set_model"))
+                    {
+                        Content = JsonContent.Create(setModelPayload, options: JsonOptions)
+                    };
+                    if (!string.IsNullOrWhiteSpace(_options.ApiKey) && !_options.ApiKey.StartsWith("${"))
+                        setModelRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.ApiKey);
+                    
+                    // Fire and forget or await briefly
+                    await _http.SendAsync(setModelRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                }
+                catch
+                {
+                    // Ignore set_model failures (might not be supported on all versions)
+                }
+            }
+
             // Try POST /stream first (supports long text and avoids URL encoding limits).
             var postResult = await TryCallStreamPostAsync(candidateBaseUrl, request, cancellationToken);
             if (postResult is not null)
