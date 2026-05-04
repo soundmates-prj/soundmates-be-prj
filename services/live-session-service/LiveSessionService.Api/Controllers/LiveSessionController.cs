@@ -182,7 +182,8 @@ public class LiveSessionController : ControllerBase
                 (int)ErrorCode.Unauthorized));
         }
 
-        var query = new GetHostAnalyticsOverviewQuery(currentUserId, days);
+        var isStaffOrAdmin = User.IsInRole("STAFF") || User.IsInRole("ADMIN");
+        var query = new GetHostAnalyticsOverviewQuery(currentUserId, days, isStaffOrAdmin);
         var result = await _queries.Send<GetHostAnalyticsOverviewQuery, HostAnalyticsOverviewResult>(query, ct);
 
         if (!result.IsSuccess)

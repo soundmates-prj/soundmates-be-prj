@@ -112,6 +112,40 @@ public sealed class AzuraCastClient : IAzuraCastClient
         return applicationModel;
     }
 
+    public async Task<AzuraCastStationListData?> CreateStationAsync(
+        string name,
+        string? shortCode,
+        string? description,
+        int port,
+        CancellationToken cancellationToken = default)
+    {
+        var body = new
+        {
+            name,
+            short_name = shortCode,
+            description,
+            frontend_type = "icecast",
+            backend_type = "liquidsoap",
+            frontend_config = new { port }
+        };
+
+        using var response = await _httpClient.PostAsJsonAsync(
+            "api/admin/stations", body, cancellationToken);
+        
+        await EnsureAzuraCastSuccessAsync(response, "create station", cancellationToken);
+
+        var result = await response.Content
+            .ReadFromJsonAsync<AzuraCastApiStationListResponse>(cancellationToken);
+
+        if (result == null) return null;
+
+        _logger.LogInformation(
+            "Created AzuraCast station '{Name}' (id: {Id})",
+            result.Name, result.Id);
+
+        return result.ToApplicationModel();
+    }
+
     public async Task<List<AzuraCastPlaylistData>> GetStationPlaylistsAsync(
         int stationId,
         CancellationToken cancellationToken = default)

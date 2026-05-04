@@ -22,6 +22,14 @@ public interface IAzuraCastClient
         int stationId,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Creates a new station in AzuraCast</summary>
+    Task<AzuraCastStationListData?> CreateStationAsync(
+        string name,
+        string? shortCode,
+        string? description,
+        int port,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Gets all playlists for a station from AzuraCast</summary>
     Task<List<AzuraCastPlaylistData>> GetStationPlaylistsAsync(
         int stationId,

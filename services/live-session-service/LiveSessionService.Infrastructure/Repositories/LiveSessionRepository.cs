@@ -309,17 +309,20 @@ public sealed class LiveSessionRepository : ILiveSessionRepository
         };
     }
 
-    public async Task<HostAnalyticsOverview> GetHostAnalyticsOverviewAsync(Guid hostUserId, int days, CancellationToken cancellationToken = default)
+    public async Task<HostAnalyticsOverview> GetHostAnalyticsOverviewAsync(Guid hostUserId, int days, bool isStaffOrAdmin = false, CancellationToken cancellationToken = default)
     {
         var normalizedDays = days <= 0 ? 7 : Math.Min(days, 90);
         var utcToday = DateTime.UtcNow.Date;
         var fromDate = utcToday.AddDays(-(normalizedDays - 1));
 
-        // Get all sessions of the host
-        var hostSessions = await _context.LiveSessions
-            .AsNoTracking()
-            .Where(x => x.HostUserId == hostUserId)
-            .ToListAsync(cancellationToken);
+        // Get all sessions of the host (or all sessions if Staff/Admin)
+        var hostSessionsQuery = _context.LiveSessions.AsNoTracking();
+        if (!isStaffOrAdmin)
+        {
+            hostSessionsQuery = hostSessionsQuery.Where(x => x.HostUserId == hostUserId);
+        }
+
+        var hostSessions = await hostSessionsQuery.ToListAsync(cancellationToken);
 
         var hostSessionIds = hostSessions.Select(x => x.Id).ToList();
 
