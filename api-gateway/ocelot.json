@@ -150,6 +150,144 @@
       }
     },
     {
+      "DownstreamPathTemplate": "/api/v1/users/{userId}/posts",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-content-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/users/{userId}/posts",
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/users/{userId}/saved-podcasts",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "live-session-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/users/{userId}/saved-podcasts",
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/userplaylist/user/{userId}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "live-session-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/userplaylist/user/{userId}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/users/{userId}/favorites",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "auth-query-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/users/{userId}/favorites",
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/users/bank-account",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "auth-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/users/bank-account",
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/users/{id}/bank-account",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "auth-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/users/{id}/bank-account",
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
+    },
+    {
       "DownstreamPathTemplate": "/api/v1/users/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
@@ -308,7 +446,7 @@
       "QoSOptions": {
         "ExceptionsAllowedBeforeBreaking": 5,
         "DurationOfBreak": 30000,
-        "TimeoutValue": 8000
+        "TimeoutValue": 30000
       }
     },
     {
@@ -331,7 +469,7 @@
       "QoSOptions": {
         "ExceptionsAllowedBeforeBreaking": 5,
         "DurationOfBreak": 30000,
-        "TimeoutValue": 8000
+        "TimeoutValue": 30000
       }
     },
     {
@@ -355,7 +493,7 @@
       "QoSOptions": {
         "ExceptionsAllowedBeforeBreaking": 5,
         "DurationOfBreak": 30000,
-        "TimeoutValue": 8000
+        "TimeoutValue": 30000
       }
     },
     {
@@ -714,36 +852,16 @@
     },
     {
       "DownstreamPathTemplate": "/hubs/notifications",
-      "DownstreamScheme": "http",
+      "DownstreamScheme": "ws",
       "DownstreamHostAndPorts": [
         {
           "Host": "account-content-service",
           "Port": 8080
         }
       ],
-      "UpstreamPathTemplate": "/hubs/notifications",
+      "UpstreamPathTemplate": "/notificationHub",
       "UpstreamHttpMethod": [
         "GET",
-        "POST",
-        "OPTIONS"
-      ],
-      "LoadBalancerOptions": {
-        "Type": "RoundRobin"
-      }
-    },
-    {
-      "DownstreamPathTemplate": "/hubs/notifications/{everything}",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "account-content-service",
-          "Port": 8080
-        }
-      ],
-      "UpstreamPathTemplate": "/hubs/notifications/{everything}",
-      "UpstreamHttpMethod": [
-        "GET",
-        "POST",
         "OPTIONS"
       ],
       "LoadBalancerOptions": {
@@ -760,6 +878,52 @@
         }
       ],
       "UpstreamPathTemplate": "/api/v1/me/notifications",
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/me/notifications/not-read",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-content-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/me/notifications/not-read",
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/me/notifications/read",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-content-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/me/notifications/read",
       "UpstreamHttpMethod": [
         "GET",
         "OPTIONS"
@@ -1049,6 +1213,21 @@
         "DurationOfBreak": 30000,
         "TimeoutValue": 8000
       }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/me/revenues",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-content-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/me/revenues",
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ]
     },
     {
       "DownstreamPathTemplate": "/api/v1/me/transaction/history",
@@ -1826,7 +2005,7 @@
       "QoSOptions": {
         "ExceptionsAllowedBeforeBreaking": 5,
         "DurationOfBreak": 30000,
-        "TimeoutValue": 8000
+        "TimeoutValue": 45000
       }
     },
     {
@@ -1853,7 +2032,7 @@
       "QoSOptions": {
         "ExceptionsAllowedBeforeBreaking": 5,
         "DurationOfBreak": 30000,
-        "TimeoutValue": 8000
+        "TimeoutValue": 45000
       }
     },
     {
@@ -1877,7 +2056,7 @@
       "QoSOptions": {
         "ExceptionsAllowedBeforeBreaking": 5,
         "DurationOfBreak": 30000,
-        "TimeoutValue": 8000
+        "TimeoutValue": 45000
       }
     },
     {
@@ -1904,7 +2083,7 @@
       "QoSOptions": {
         "ExceptionsAllowedBeforeBreaking": 5,
         "DurationOfBreak": 30000,
-        "TimeoutValue": 8000
+        "TimeoutValue": 45000
       }
     },
     {
@@ -2117,6 +2296,104 @@
       "UpstreamHttpMethod": [
         "POST",
         "DELETE",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/podcast-requests",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "live-session-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/podcast-requests",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/podcast-requests/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "live-session-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/podcast-requests/{everything}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "DELETE",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
+    },
+
+    {
+      "DownstreamPathTemplate": "/api/v1/podcast-episode-requests",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "live-session-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/podcast-episode-requests",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/podcast-episode-requests/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "live-session-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/podcast-episode-requests/{everything}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
         "OPTIONS"
       ],
       "LoadBalancerOptions": {
