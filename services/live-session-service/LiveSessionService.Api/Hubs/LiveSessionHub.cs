@@ -44,14 +44,19 @@ public sealed class LiveSessionHub : Hub
             .Select(s => s.HostUserId)
             .FirstOrDefaultAsync(cancellationToken);
 
-        var currentListeners = await _dbContext.SessionListeners
+        var listenerIdentifiers = await _dbContext.SessionListeners
             .Where(x => x.LiveSessionId == sessionId 
                      && x.IsConnected
-                     && x.UserId.HasValue
-                     && x.UserId.Value != hostUserId)
-            .Select(x => x.UserId)
+                     && (!x.UserId.HasValue || x.UserId.Value != hostUserId))
+            .Select(x => new { x.UserId, x.AnonymousIdentifier, x.Id })
+            .ToListAsync(cancellationToken);
+
+        var currentListeners = listenerIdentifiers
+            .Select(x => x.UserId.HasValue 
+                ? $"u:{x.UserId.Value}" 
+                : $"a:{x.AnonymousIdentifier ?? x.Id.ToString()}")
             .Distinct()
-            .CountAsync(cancellationToken);
+            .Count();
 
         return currentListeners;
     }
