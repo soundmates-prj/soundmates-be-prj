@@ -22,6 +22,7 @@ namespace AccountContentService.Application.Mappings
             CreateMap<UpdatePostCommand, BlogPost>()
                 .ForAllMembers(opts =>
                 opts.Condition((src, dest, srcMember) => srcMember != null));
+            CreateMap<BlogReport, BlogReportDto>();
         }
 
         private static ShareMusicDto? BuildShareMusic(BlogPost src)

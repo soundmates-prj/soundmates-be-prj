@@ -18,6 +18,9 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sprache;
+using AccountContentService.Application.Features.BlogReports.Commands;
+using AccountContentService.Application.DTOs;
+using AccountContentService.Application.Features.BlogReports.Queries;
 
 
 /// <summary>
@@ -317,7 +320,7 @@ public class BlogController : ControllerBase
     public async Task<IActionResult> GetCurrentUserPost([FromQuery] PaginationRequest request)
     {
         var userId = UserContext.GetUserId(HttpContext);
-        var query = new GetUserPostDetailQuery(userId, request.Page, request.PageSize);
+        var query = new GetCurrentUserPostDetailQuery(userId, request.Page, request.PageSize);
         var result = await _mediator.Send(query);
 
         if (result == null)
@@ -425,5 +428,72 @@ public class BlogController : ControllerBase
         return Ok(ApiResponse<bool>.Ok(result, $"Status: {result}"));
     }
 
-  
+    /// <summary>
+    /// Report a blog post
+    /// </summary>
+    [Authorize]
+    [HttpPost("{postId}/reports")]
+    public async Task<IActionResult> ReportPost(Guid postId, [FromBody] ReportPostRequest request)
+    {
+        var userId = UserContext.GetUserId(HttpContext);
+
+        var command = new ReportPostCommand
+        {
+            BlogPostId = postId,
+            ReporterUserId = userId,
+            Reason = request.Reason,
+            Description = request.Description
+        };
+
+        var result = await _mediator.Send(command);
+        return Ok(ApiResponse<BlogReportDto>.Ok(result, "Post reported successfully"));
+    }
+
+    /// <summary>
+    /// Get a list of posts that have been reported (Moderation view)
+    /// </summary>
+    [Authorize] // Adjust role requirements like Roles = "Admin,Moderator" if needed
+    [HttpGet("reported")]
+    public async Task<IActionResult> GetReportedPosts()
+    {
+        var query = new GetReportedPostsQuery();
+        var result = await _mediator.Send(query);
+        return Ok(ApiResponse<IEnumerable<ReportedPostDto>>.Ok(result));
+    }
+
+    /// <summary>
+    /// Get all reports specifically for a single post
+    /// </summary>
+    [Authorize] 
+    [HttpGet("{postId}/reports")]
+    public async Task<IActionResult> GetPostReports(Guid postId)
+    {
+        var query = new GetPostReportsQuery { PostId = postId };
+        var result = await _mediator.Send(query);
+        return Ok(ApiResponse<IEnumerable<BlogReportDto>>.Ok(result));
+    }
+
+    /// <summary>
+    /// Ban a reported post
+    /// </summary>
+    [Authorize]
+    [HttpPost("{postId}/ban")]
+    public async Task<IActionResult> BanReportedPost(Guid postId)
+    {
+        var command = new BanReportedPostCommand(postId);
+        await _mediator.Send(command);
+        return Ok(ApiResponse<bool>.Ok(true, "Post banned successfully"));
+    }
+
+    /// <summary>
+    /// Dismiss reports for a post (Mark as no problem)
+    /// </summary>
+    [Authorize]
+    [HttpPost("{postId}/dismiss-reports")]
+    public async Task<IActionResult> DismissReportedPost(Guid postId)
+    {
+        var command = new DismissReportedPostCommand(postId);
+        await _mediator.Send(command);
+        return Ok(ApiResponse<bool>.Ok(true, "Post reports dismissed successfully"));
+    }
 }
