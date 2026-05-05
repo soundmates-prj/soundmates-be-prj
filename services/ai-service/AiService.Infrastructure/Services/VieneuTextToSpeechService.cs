@@ -54,23 +54,17 @@ public class VieneuTextToSpeechService : ITextToSpeechService
 
         if (voice == null)
         {
-            // Fallback to q4 baseline
-            voiceCodeToUse = "q4";
-            _logger.LogWarning("[TTS] Cloned voice not found in DB, falling back to 'q4'");
-            voice = await _voiceRepository.GetByCodeAsync(AiProviderConstants.VieNeuTts, voiceCodeToUse, cancellationToken);
-
-            // If still null, try to take the first active one
-            if (voice == null)
+            if (!string.IsNullOrWhiteSpace(request.Voice))
             {
-                var activeVoices = await _voiceRepository.GetActiveAsync(cancellationToken);
-                voice = activeVoices.FirstOrDefault();
-                if (voice != null)
-                {
-                    voiceCodeToUse = voice.VoiceCode;
-                    _logger.LogWarning("[TTS] Fallback 'q4' not found either. Using first active voice: '{Name}' ({Code})",
-                        voice.DisplayName, voice.VoiceCode);
-                }
+                return Result<TextToSpeechResult>.Failure($"Voice '{request.Voice}' not found", (int)ApiStatusCode.HB40401);
             }
+            
+            // Fallback to q4 baseline only if no voice was specifically requested
+            voiceCodeToUse = "q4";
+            voice = await _voiceRepository.GetByCodeAsync(AiProviderConstants.VieNeuTts, "q4", cancellationToken);
+            
+            if (voice == null)
+                return Result<TextToSpeechResult>.Failure("Baseline voice 'q4' not found in database", (int)ApiStatusCode.HB50001);
         }
 
         _logger.LogInformation(
