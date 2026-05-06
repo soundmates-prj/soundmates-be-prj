@@ -49,4 +49,38 @@ public class AuthApiClient : IAuthApiClient
             return null;
         }
     }
+
+    public async Task<List<Guid>> GetAdminUserIdsAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync("/api/v1/users/admins?page=1&pageSize=100", cancellationToken);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<System.Text.Json.Nodes.JsonObject>(cancellationToken: cancellationToken);
+                var items = result?["data"]?["items"]?.AsArray();
+                
+                if (items != null)
+                {
+                    var ids = new System.Collections.Generic.List<Guid>();
+                    foreach (var item in items)
+                    {
+                        if (item?["id"] != null && Guid.TryParse(item["id"]!.ToString(), out var id))
+                        {
+                            ids.Add(id);
+                        }
+                    }
+                    return ids;
+                }
+            }
+            
+            _logger.LogWarning("Failed to fetch admin users. Status: {StatusCode}", response.StatusCode);
+            return new System.Collections.Generic.List<Guid>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching admin users");
+            return new System.Collections.Generic.List<Guid>();
+        }
+    }
 }

@@ -10,4 +10,5 @@ public sealed record CreatePodcastRequestCommand(
     string? Description,
     string? BannerUrl,
     decimal Price,
-    bool IsPaid) : ICommand<Application.Features.Results.PodcastRequests.PodcastRequestResult>;
+    bool IsPaid,
+    Guid? TargetPodcastId) : ICommand<Application.Features.Results.PodcastRequests.PodcastRequestResult>;

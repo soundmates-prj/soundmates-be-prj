@@ -45,25 +45,50 @@ public sealed class CreateStationHandler : ICommandHandler<CreateStationCommand,
         {
             _logger.LogInformation("Creating station: {StationName}", command.StationName);
 
-            // Local-only creation for now: generate a unique positive external ID placeholder
+            // Auto-generate port (starts from 8010: 8009 + next external ID)
             var nextExternalStationId = await _stationRepository.GetNextExternalStationIdAsync(cancellationToken);
+            var port = 8009 + nextExternalStationId;
+
+            // Create station in AzuraCast via API
+            var azuraStation = await _azuraCastClient.CreateStationAsync(
+                command.StationName,
+                command.ShortCode,
+                command.Description,
+                port,
+                cancellationToken);
+
+            if (azuraStation == null)
+            {
+                return Result<StationResult>.Failure(
+                    "Failed to create station in AzuraCast API. No data returned.",
+                    ErrorCode.InternalServerError);
+            }
 
             var station = AzuraCastStation.Create(
-                externalStationId: nextExternalStationId,
-                stationName: command.StationName,
-                streamUrl: "http://placeholder", // Will be updated after AzuraCast integration
+                externalStationId: azuraStation.Id,
+                stationName: azuraStation.Name ?? command.StationName,
+                streamUrl: azuraStation.ListenUrl ?? "http://placeholder",
                 description: command.Description,
                 apiBaseUrl: null,
                 dateTimeProvider: _dateTimeProvider);
 
-            if (!string.IsNullOrWhiteSpace(command.ShortCode))
+            if (!string.IsNullOrWhiteSpace(azuraStation.Shortcode))
+            {
+                station.StationShortcode = azuraStation.Shortcode;
+            }
+            else if (!string.IsNullOrWhiteSpace(command.ShortCode))
             {
                 station.StationShortcode = command.ShortCode.Trim();
             }
 
+            if (!string.IsNullOrWhiteSpace(azuraStation.PublicPlayerUrl))
+            {
+                station.PublicPlayerUrl = azuraStation.PublicPlayerUrl;
+            }
+
             await _stationRepository.AddAsync(station, cancellationToken);
 
-            // Mark as Synced immediately since it was created locally
+            // Mark as Synced since we successfully created it in AzuraCast
             station.MarkSyncSuccessful(_dateTimeProvider);
             await _stationRepository.UpdateAsync(station, cancellationToken);
 

@@ -26,7 +26,7 @@ public sealed class GetPodcastRequestByIdHandler
         if (!string.IsNullOrWhiteSpace(r.AuthorInfo))
         {
             var a = r.AuthorInfo.Trim();
-                if (a.Length > 0 && (a[0] == '{' || a[0] == '[' || a[0] == '"'))
+            if (a.Length > 0 && (a[0] == '{' || a[0] == '[' || a[0] == '"'))
             {
                 try { parsedAuthorInfo = System.Text.Json.JsonSerializer.Deserialize<object>(a); }
                 catch (Exception) { parsedAuthorInfo = a; }
@@ -38,7 +38,8 @@ public sealed class GetPodcastRequestByIdHandler
         {
             Id = r.Id,
             RequestedByUserId = r.RequestedByUserId,
-            AuthorInfo = parsedAuthorInfo,
+            TargetPodcastId = r.TargetPodcastId,
+            AuthorInfo = string.IsNullOrWhiteSpace(r.AuthorInfo) ? null : System.Text.Json.JsonSerializer.Deserialize<object>(r.AuthorInfo),
             Title = r.Title,
             Type = r.Type,
             Description = r.Description,

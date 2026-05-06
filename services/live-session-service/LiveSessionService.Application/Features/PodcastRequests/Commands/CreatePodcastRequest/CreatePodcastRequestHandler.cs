@@ -7,6 +7,8 @@ using LiveSessionService.Application.Features.Results.PodcastRequests;
 using LiveSessionService.Domain.Enums;
 using LiveSessionService.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
+using shared.Contracts.Events.Notifications;
+using System.Text.Json;
 
 namespace LiveSessionService.Application.Features.PodcastRequests.Commands.CreatePodcastRequest;
 
@@ -16,15 +18,18 @@ public sealed class CreatePodcastRequestHandler
     private readonly IPodcastRequestRepository _repository;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<CreatePodcastRequestHandler> _logger;
+    private readonly IMessageBusPublisher _eventBus;
 
     public CreatePodcastRequestHandler(
         IPodcastRequestRepository repository,
         IDateTimeProvider dateTimeProvider,
-        ILogger<CreatePodcastRequestHandler> logger)
+        ILogger<CreatePodcastRequestHandler> logger,
+        IMessageBusPublisher eventBus)
     {
         _repository = repository;
         _dateTimeProvider = dateTimeProvider;
         _logger = logger;
+        _eventBus = eventBus;
     }
 
     public async Task<Result<PodcastRequestResult>> Handle(
@@ -37,6 +42,7 @@ public sealed class CreatePodcastRequestHandler
         {
             Id = Guid.NewGuid(),
             RequestedByUserId = command.RequestedByUserId,
+            TargetPodcastId = command.TargetPodcastId,
             AuthorInfo = command.AuthorInfo,
             Title = command.Title.Trim(),
             Type = command.Type.Trim(),
@@ -54,23 +60,22 @@ public sealed class CreatePodcastRequestHandler
             "PodcastRequest {Id} created for series '{Title}' by user {UserId}",
             podcastRequest.Id, podcastRequest.Title, command.RequestedByUserId);
 
-            object? parsedAuthorInfo = null;
-            if (!string.IsNullOrWhiteSpace(podcastRequest.AuthorInfo))
-            {
-                var a = podcastRequest.AuthorInfo.Trim();
-                if (a.Length > 0 && (a[0] == '{' || a[0] == '[' || a[0] == '"'))
-                {
-                    try { parsedAuthorInfo = System.Text.Json.JsonSerializer.Deserialize<object>(a); }
-                    catch (Exception) { parsedAuthorInfo = a; }
-                }
-                else { parsedAuthorInfo = a; }
-            }
+        var notificationEvent = new NotificationEvent
+        {
+            Title = "Yêu cầu tạo Podcast mới",
+            Message = $"Có yêu cầu tạo podcast '{podcastRequest.Title}' đang chờ duyệt.",
+            TargetRole = "ADMIN",
+            ReferenceId = podcastRequest.Id,
+            Type = "podcast_request_created"
+        };
+        await _eventBus.PublishAsync("notification.created", JsonSerializer.Serialize(notificationEvent), cancellationToken);
 
-            return Result<PodcastRequestResult>.Success(new PodcastRequestResult
-            {
+        return Result<PodcastRequestResult>.Success(new PodcastRequestResult
+        {
             Id = podcastRequest.Id,
             RequestedByUserId = podcastRequest.RequestedByUserId,
-                AuthorInfo = parsedAuthorInfo,
+            TargetPodcastId = podcastRequest.TargetPodcastId,
+            AuthorInfo = string.IsNullOrWhiteSpace(podcastRequest.AuthorInfo) ? null : System.Text.Json.JsonSerializer.Deserialize<object>(podcastRequest.AuthorInfo),
             Title = podcastRequest.Title,
             Type = podcastRequest.Type,
             Description = podcastRequest.Description,

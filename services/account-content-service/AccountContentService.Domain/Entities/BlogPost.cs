@@ -36,4 +36,6 @@ public class BlogPost
     public ICollection<BlogComment> Comments { get; set; } = new List<BlogComment>();
 
     public ICollection<PostReaction> Reactions { get; set; } = new List<PostReaction>();
+
+    public ICollection<BlogReport> Reports { get; set; } = new List<BlogReport>();
 }

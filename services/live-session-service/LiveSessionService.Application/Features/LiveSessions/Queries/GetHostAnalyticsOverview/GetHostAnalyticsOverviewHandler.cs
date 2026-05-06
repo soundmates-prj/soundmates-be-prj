@@ -16,7 +16,7 @@ public sealed class GetHostAnalyticsOverviewHandler : IQueryHandler<GetHostAnaly
 
     public async Task<Result<HostAnalyticsOverviewResult>> Handle(GetHostAnalyticsOverviewQuery query, CancellationToken cancellationToken)
     {
-        var overview = await _sessionRepository.GetHostAnalyticsOverviewAsync(query.HostUserId, query.Days, cancellationToken);
+        var overview = await _sessionRepository.GetHostAnalyticsOverviewAsync(query.HostUserId, query.Days, query.IsStaffOrAdmin, cancellationToken);
 
         var result = new HostAnalyticsOverviewResult
         {

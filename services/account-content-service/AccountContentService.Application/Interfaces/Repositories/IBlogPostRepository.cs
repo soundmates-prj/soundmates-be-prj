@@ -33,5 +33,11 @@ namespace AccountContentService.Application.Interfaces.Repositories
         Task<BlogPost> GetPublishByIdAsync(Guid id, CancellationToken cancellationToken);
         Task<PaginationResult<TrendingPostResponse>> GetTrendingPostsAsync(GetTrendingPostsQuery request, CancellationToken cancellationToken);
         Task<PaginationResult<PopularPostsResponse>> GetPopularPostsAsync(GetPopularPostsQuery request, CancellationToken cancellationToken);
+
+        Task<PaginationResult<BlogPost>> GetMyPublishedAsync(
+            Guid userId,
+            int pageSize,
+            int page,
+            CancellationToken cancellationToken);
     }
 }

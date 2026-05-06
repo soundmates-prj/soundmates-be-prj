@@ -34,6 +34,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<ISystemSettingReposiotry, SystemSettingReposiotry>();
         services.AddScoped<IThemeRepository, ThemeRepository>();
         services.AddScoped<IPendingPayoutRepository, PendingPayoutRepository>();
+        services.AddScoped<IBlogReportRepository, BlogReportRepository>();
 
         // EDA — User Profile Read Model (local projection via RabbitMQ events)
         services.AddScoped<IUserProfileReadModelRepository, UserProfileReadModelRepository>();

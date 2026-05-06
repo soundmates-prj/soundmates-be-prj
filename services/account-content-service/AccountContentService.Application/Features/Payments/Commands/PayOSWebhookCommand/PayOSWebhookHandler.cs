@@ -5,6 +5,8 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using AccountContentService.Application.Interfaces.Services;
+using AccountContentService.Application.Interfaces;
+using shared.Contracts.Events.Notifications;
 
 namespace AccountContentService.Application.Features.Payments.Commands.PayOSWebhookCommand;
 
@@ -16,7 +18,10 @@ public sealed class PayOSWebhookHandler : IRequestHandler<PayOSWebhookCommand, b
     private readonly IPendingPayoutRepository _pendingPayoutRepo;
     private readonly ILiveSessionApiClient _liveSessionApiClient;
     private readonly IAuthApiClient _authApiClient;
+    private readonly INotificationRepository _notificationRepo;
+    private readonly INotificationPusher _notificationPusher;
     private readonly ILogger<PayOSWebhookHandler> _logger;
+    private readonly IMessageBusPublisher _eventBus;
 
     public PayOSWebhookHandler(
         IPaymentRepository paymentRepo,
@@ -25,7 +30,10 @@ public sealed class PayOSWebhookHandler : IRequestHandler<PayOSWebhookCommand, b
         IPendingPayoutRepository pendingPayoutRepo,
         ILiveSessionApiClient liveSessionApiClient,
         IAuthApiClient authApiClient,
-        ILogger<PayOSWebhookHandler> logger)
+        INotificationRepository notificationRepo,
+        INotificationPusher notificationPusher,
+        ILogger<PayOSWebhookHandler> logger,
+        IMessageBusPublisher eventBus)
     {
         _paymentRepo = paymentRepo;
         _transactionRepo = transactionRepo;
@@ -33,7 +41,10 @@ public sealed class PayOSWebhookHandler : IRequestHandler<PayOSWebhookCommand, b
         _pendingPayoutRepo = pendingPayoutRepo;
         _liveSessionApiClient = liveSessionApiClient;
         _authApiClient = authApiClient;
+        _notificationRepo = notificationRepo;
+        _notificationPusher = notificationPusher;
         _logger = logger;
+        _eventBus = eventBus;
     }
 
     public async Task<bool> Handle(PayOSWebhookCommand request, CancellationToken cancellationToken)
@@ -111,7 +122,7 @@ public sealed class PayOSWebhookHandler : IRequestHandler<PayOSWebhookCommand, b
                         Id = Guid.NewGuid(),
                         PaymentId = payment.Id,
                         TargetUserId = podcast.CreatedBy,
-                        Amount = podcast.Price, // Just the price, fee is kept by the system
+                        Amount = podcast.Price * 0.8m, // System keeps 20% fee
                         BankId = bankAccount?.BankId,
                         AccountNumber = bankAccount?.AccountNumber,
                         AccountName = bankAccount?.AccountName,
@@ -128,6 +139,20 @@ public sealed class PayOSWebhookHandler : IRequestHandler<PayOSWebhookCommand, b
                     // Grant access to the podcast
                     await _liveSessionApiClient.GrantPodcastAccessAsync(payment.TargetId, payment.UserId, podcast.Price, cancellationToken);
                     _logger.LogInformation("Granted access to Podcast {PodcastId} for User {UserId}", payment.TargetId, payment.UserId);
+
+                    // Send notification to Podcast Owner
+                    var notification = new Notification
+                    {
+                        Id = Guid.NewGuid(),
+                        UserId = podcast.CreatedBy,
+                        Type = "podcast_purchased",
+                        ReferenceId = payment.TargetId,
+                        Message = $"Chúc mừng! Có người vừa mua podcast \"{podcast.Title}\" của bạn. Bạn nhận được {podcast.Price * 0.8m:N0}đ.",
+                        IsRead = false,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    await _notificationRepo.AddAsync(notification, cancellationToken);
+                    await _notificationPusher.PushToUserAsync(podcast.CreatedBy, notification, cancellationToken);
                 }
             }
             else

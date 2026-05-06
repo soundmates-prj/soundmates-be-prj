@@ -48,6 +48,32 @@ public sealed class GetStationNowPlayingHandler
         {
             data = await _azuraCastClient.GetNowPlayingAsync(station.ExternalStationId, cancellationToken);
         }
+        catch (AzuraCastException ex) when (ex.ErrorCode == ErrorCode.NotFound)
+        {
+            _logger.LogWarning(ex,
+                "AzuraCast now-playing request returned 404 for station {StationId} (external: {ExternalId}). The station may still be starting up.",
+                station.Id, station.ExternalStationId);
+            
+            // Return a default offline state instead of failing completely
+            var offlineResult = new StationNowPlayingResult
+            {
+                ExternalStationId = station.ExternalStationId,
+                StationName       = station.StationName,
+                StationShortcode  = station.StationShortcode,
+                ListenUrl         = station.StreamUrl,
+                PublicPlayerUrl   = station.PublicPlayerUrl,
+                IsOnline          = false,
+                IsLive            = false,
+                TotalListeners    = 0,
+                UniqueListeners   = 0,
+                CurrentTrack      = null,
+                PlayingNext       = null,
+                UpcomingQueue     = [],
+                SongHistory       = []
+            };
+
+            return Result<StationNowPlayingResult>.Success(offlineResult);
+        }
         catch (AzuraCastException ex)
         {
             _logger.LogWarning(ex,

@@ -319,6 +319,27 @@ namespace AuthQueryService.Api.Controllers
             return Ok(res);
         }
 
+        /// <summary>
+        /// Get users with ADMIN role (Admin only or Internal Server)
+        /// </summary>
+        /// <param name="page">Page number (default: 1)</param>
+        /// <param name="pageSize">Page size (default: 100)</param>
+        /// <param name="ct">Cancellation token</param>
+        /// <returns>Paginated list of admin accounts</returns>
+        [AllowAnonymous] // Allow internal services to call this
+        [HttpGet("admins")]
+        [ProducesResponseType(typeof(ApiResponse<PagedResult<UserReadDto>>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetAdminUsers(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 100,
+            CancellationToken ct = default)
+        {
+            _logger.LogInformation("Retrieving ADMIN accounts: Page={Page}, PageSize={PageSize}", page, pageSize);
+
+            var res = await _queries.Query(new GetUsersByRoleQuery("ADMIN", page, pageSize), ct);
+            return Ok(res);
+        }
+
         private Guid? ResolveUserId()
         {
             var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 

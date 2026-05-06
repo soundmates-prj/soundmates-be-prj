@@ -130,6 +130,38 @@ namespace AccountContentService.Infrastructure.Migrations
                     b.ToTable("BlogPosts");
                 });
 
+            modelBuilder.Entity("AccountContentService.Domain.Entities.BlogReport", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BlogPostId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("ReporterUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BlogPostId");
+
+                    b.ToTable("BlogReport");
+                });
+
             modelBuilder.Entity("AccountContentService.Domain.Entities.ContentReport", b =>
                 {
                     b.Property<Guid>("Id")
@@ -738,6 +770,17 @@ namespace AccountContentService.Infrastructure.Migrations
                     b.Navigation("Post");
                 });
 
+            modelBuilder.Entity("AccountContentService.Domain.Entities.BlogReport", b =>
+                {
+                    b.HasOne("AccountContentService.Domain.Entities.BlogPost", "BlogPost")
+                        .WithMany("Reports")
+                        .HasForeignKey("BlogPostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("BlogPost");
+                });
+
             modelBuilder.Entity("AccountContentService.Domain.Entities.PaymentTransaction", b =>
                 {
                     b.HasOne("AccountContentService.Domain.Entities.Payment", "Payment")
@@ -776,6 +819,8 @@ namespace AccountContentService.Infrastructure.Migrations
                     b.Navigation("Comments");
 
                     b.Navigation("Reactions");
+
+                    b.Navigation("Reports");
                 });
 
             modelBuilder.Entity("AccountContentService.Domain.Entities.Payment", b =>

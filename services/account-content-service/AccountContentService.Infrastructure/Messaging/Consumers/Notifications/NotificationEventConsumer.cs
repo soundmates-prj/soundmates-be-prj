@@ -209,8 +209,59 @@ namespace AccountContentService.Infrastructure.Messaging.Consumers.Notifications
                 return;
             }
 
+            // ── ROLE-BASED TARGETING (e.g. "ADMIN") ──
+            if (!string.IsNullOrEmpty(evt.TargetRole))
+            {
+                var authClient = scope.ServiceProvider.GetService<AccountContentService.Application.Interfaces.Services.IAuthApiClient>();
+                var dbContext = scope.ServiceProvider.GetService<AccountContentDbContext>();
+                
+                if (authClient != null && dbContext != null)
+                {
+                    List<Guid> targetUserIds = new();
+                    if (evt.TargetRole.Equals("ADMIN", StringComparison.OrdinalIgnoreCase))
+                    {
+                        targetUserIds = await authClient.GetAdminUserIdsAsync(cancellationToken);
+                    }
+                    // Add other roles here if needed in the future
+
+                    if (targetUserIds.Count > 0)
+                    {
+                        var notifications = targetUserIds.Select(userId => new Notification
+                        {
+                            Id = Guid.NewGuid(),
+                            UserId = userId,
+                            Title = evt.Title,
+                            ReferenceId = evt.ReferenceId,
+                            Type = evt.Type,
+                            Message = evt.Message,
+                            IsRead = false,
+                            CreatedAt = DateTime.UtcNow
+                        }).ToList();
+
+                        dbContext.Notifications.AddRange(notifications);
+                        await dbContext.SaveChangesAsync(cancellationToken);
+
+                        if (notificationPusher != null)
+                        {
+                            foreach (var notification in notifications)
+                            {
+                                try
+                                {
+                                    await notificationPusher.PushToUserAsync(notification.UserId, notification, cancellationToken);
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger.LogError(ex, "Failed to push notification to role user {UserId}", notification.UserId);
+                                }
+                            }
+                        }
+                    }
+                }
+                return;
+            }
+
             // ── PERSONAL: persist & push to specific user ──
-            var notification = new Notification
+            var singleNotification = new Notification
             {
                 Id = Guid.NewGuid(),
                 UserId = evt.ReceiveUserId,
@@ -222,19 +273,19 @@ namespace AccountContentService.Infrastructure.Messaging.Consumers.Notifications
                 CreatedAt = DateTime.UtcNow
             };
 
-            await _repo.AddAsync(notification, cancellationToken);
+            await _repo.AddAsync(singleNotification, cancellationToken);
 
             // Push notification to user in real-time via SignalR
             if (notificationPusher != null)
             {
                 try
                 {
-                    await notificationPusher.PushToUserAsync(evt.ReceiveUserId, notification, cancellationToken);
-                    _logger.LogInformation("Pushed notification {NotificationId} to user {UserId}", notification.Id, evt.ReceiveUserId);
+                    await notificationPusher.PushToUserAsync(evt.ReceiveUserId, singleNotification, cancellationToken);
+                    _logger.LogInformation("Pushed notification {NotificationId} to user {UserId}", singleNotification.Id, evt.ReceiveUserId);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to push notification {NotificationId} to user {UserId}", notification.Id, evt.ReceiveUserId);
+                    _logger.LogError(ex, "Failed to push notification {NotificationId} to user {UserId}", singleNotification.Id, evt.ReceiveUserId);
                 }
             }
         }

@@ -49,4 +49,12 @@ public class PendingPayoutRepository : IPendingPayoutRepository
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<IEnumerable<PendingPayout>> GetByTargetUserIdAsync(Guid targetUserId, CancellationToken cancellationToken)
+    {
+        return await _context.PendingPayouts
+            .Where(x => x.TargetUserId == targetUserId)
+            .OrderByDescending(x => x.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
 }
