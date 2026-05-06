@@ -432,7 +432,7 @@ public class BlogController : ControllerBase
     /// Report a blog post
     /// </summary>
     [Authorize]
-    [HttpPost("{postId}/reports")]
+    [HttpPost(ApiRoutes.Posts.Report)]
     public async Task<IActionResult> ReportPost(Guid postId, [FromBody] ReportPostRequest request)
     {
         var userId = UserContext.GetUserId(HttpContext);
@@ -453,7 +453,7 @@ public class BlogController : ControllerBase
     /// Get a list of posts that have been reported (Moderation view)
     /// </summary>
     [Authorize] // Adjust role requirements like Roles = "Admin,Moderator" if needed
-    [HttpGet("reported")]
+    [HttpGet(ApiRoutes.Posts.GetReported)]
     public async Task<IActionResult> GetReportedPosts()
     {
         var query = new GetReportedPostsQuery();
@@ -465,7 +465,7 @@ public class BlogController : ControllerBase
     /// Get all reports specifically for a single post
     /// </summary>
     [Authorize] 
-    [HttpGet("{postId}/reports")]
+    [HttpGet(ApiRoutes.Posts.GetReports)]
     public async Task<IActionResult> GetPostReports(Guid postId)
     {
         var query = new GetPostReportsQuery { PostId = postId };
@@ -477,7 +477,7 @@ public class BlogController : ControllerBase
     /// Ban a reported post
     /// </summary>
     [Authorize]
-    [HttpPost("{postId}/ban")]
+    [HttpPost(ApiRoutes.Posts.Ban)]
     public async Task<IActionResult> BanReportedPost(Guid postId)
     {
         var command = new BanReportedPostCommand(postId);
@@ -489,7 +489,7 @@ public class BlogController : ControllerBase
     /// Dismiss reports for a post (Mark as no problem)
     /// </summary>
     [Authorize]
-    [HttpPost("{postId}/dismiss-reports")]
+    [HttpPost(ApiRoutes.Posts.DismissReports)]
     public async Task<IActionResult> DismissReportedPost(Guid postId)
     {
         var command = new DismissReportedPostCommand(postId);
