@@ -4,6 +4,7 @@ using LiveSessionService.Api.Models.Responses;
 using LiveSessionService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
 using LiveSessionService.Application.Enums;
 using LiveSessionService.Application.Features.LiveSessions.Commands.CreateLiveSession;
+using LiveSessionService.Application.Features.LiveSessions.Commands.CancelSession;
 using LiveSessionService.Application.Features.LiveSessions.Commands.PauseSession;
 using LiveSessionService.Application.Features.LiveSessions.Commands.ResumeSession;
 using LiveSessionService.Application.Features.LiveSessions.Commands.StartSession;
@@ -481,6 +482,40 @@ public class LiveSessionController : ControllerBase
         }
 
         return Ok(ApiResponse<LiveSessionResult>.SuccessResponse(result.Data!, "Live session updated"));
+    }
+
+    /// <summary>
+    /// Cancel a live session that is created or scheduled
+    /// </summary>
+    [HttpPatch("{id:guid}/cancelled")]
+    [ProducesResponseType(typeof(ApiResponse<LiveSessionResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> Cancel(Guid id, CancellationToken ct)
+    {
+        if (!TryGetCurrentUserId(out var currentUserId))
+        {
+            return Unauthorized(ApiResponse<object>.FailureResponse(
+                "Invalid or missing user token",
+                (int)ErrorCode.Unauthorized));
+        }
+
+        var command = new CancelSessionCommand(id, currentUserId);
+        var result = await _commands.Send<CancelSessionCommand, LiveSessionResult>(command, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                ErrorCode.Conflict => Conflict(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(ApiResponse<LiveSessionResult>.SuccessResponse(result.Data!, "Session cancelled"));
     }
 
     /// <summary>

@@ -29,8 +29,9 @@ internal static class ScheduleOccurrenceCalculator
 
     private static DateTime? GetOneTimeOccurrenceUtc(SessionSchedule schedule, DateTime nowUtc)
     {
-        var occurrence = DateTime.SpecifyKind(schedule.StartDate.ToDateTime(schedule.StartTime), DateTimeKind.Utc);
-        return occurrence > nowUtc ? occurrence : null;
+        var localOccurrence = schedule.StartDate.ToDateTime(schedule.StartTime);
+        var occurrenceUtc = ScheduleTimeConverter.ConvertVietnamLocalToUtc(localOccurrence);
+        return occurrenceUtc > nowUtc ? occurrenceUtc : null;
     }
 
     private static DateTime? GetNextRecurringOccurrenceUtc(SessionSchedule schedule, DateTime nowUtc)
@@ -51,9 +52,10 @@ internal static class ScheduleOccurrenceCalculator
             if (!IsIncluded(schedule.DaysOfWeek, date.DayOfWeek))
                 continue;
 
-            var candidate = DateTime.SpecifyKind(date.ToDateTime(schedule.StartTime), DateTimeKind.Utc);
-            if (candidate > nowUtc)
-                return candidate;
+            var localCandidate = date.ToDateTime(schedule.StartTime);
+            var candidateUtc = ScheduleTimeConverter.ConvertVietnamLocalToUtc(localCandidate);
+            if (candidateUtc > nowUtc)
+                return candidateUtc;
         }
 
         return null;
