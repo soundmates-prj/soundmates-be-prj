@@ -227,6 +227,27 @@ public partial class LiveSession
     }
 
     /// <summary>
+    /// Cancel the live session
+    /// 
+    /// BUSINESS RULES:
+    /// - Session must be in Created or Scheduled state
+    /// - Cannot cancel a session that's already ended or active
+    /// </summary>
+    /// <exception cref="InvalidSessionStateException">When session is not cancelable</exception>
+    public void Cancel(IDateTimeProvider dateTimeProvider)
+    {
+        if (Status != SessionStatus.Created && Status != SessionStatus.Scheduled)
+            throw new InvalidSessionStateException(
+                "Only created or scheduled sessions can be cancelled",
+                LiveSessionErrorCodes.SessionNotActive);
+
+        Status = SessionStatus.Cancelled;
+        StartedAt = null;
+        EndedAt = null;
+        UpdatedAt = dateTimeProvider.UtcNow;
+    }
+
+    /// <summary>
     /// Updates session details
     /// </summary>
     public void UpdateDetails(

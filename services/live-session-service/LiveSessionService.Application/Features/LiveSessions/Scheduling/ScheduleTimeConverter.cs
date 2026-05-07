@@ -16,6 +16,20 @@ internal static class ScheduleTimeConverter
             : TimeZoneInfo.ConvertTimeFromUtc(normalizedUtc, vietnamTimeZone);
     }
 
+    public static DateTime ConvertVietnamLocalToUtc(DateTime localTime)
+    {
+        var vietnamTimeZone = TryGetTimeZone("SE Asia Standard Time")
+            ?? TryGetTimeZone("Asia/Ho_Chi_Minh");
+
+        var normalizedLocal = localTime.Kind == DateTimeKind.Unspecified
+            ? localTime
+            : DateTime.SpecifyKind(localTime, DateTimeKind.Unspecified);
+
+        return vietnamTimeZone is null
+            ? normalizedLocal.AddHours(-7)
+            : TimeZoneInfo.ConvertTimeToUtc(normalizedLocal, vietnamTimeZone);
+    }
+
     private static TimeZoneInfo? TryGetTimeZone(string timeZoneId)
     {
         try
