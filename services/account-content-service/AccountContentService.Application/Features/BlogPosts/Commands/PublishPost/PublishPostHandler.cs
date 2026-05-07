@@ -12,10 +12,12 @@ namespace AccountContentService.Application.Features.BlogPosts.Commands.PublishP
     : IRequestHandler<PublishPostCommand, bool>
     {
         private readonly IBlogPostRepository _repository;
+        private readonly IBlogReportRepository _reportRepository;
 
-        public PublishPostHandler(IBlogPostRepository repository)
+        public PublishPostHandler(IBlogPostRepository repository, IBlogReportRepository reportRepository)
         {
             _repository = repository;
+            _reportRepository = reportRepository;
         }
 
         public async Task<bool> Handle(
@@ -31,10 +33,11 @@ namespace AccountContentService.Application.Features.BlogPosts.Commands.PublishP
 
             if (post.Status.ToLower().Equals(PostStatus.Banned.ToString().ToLower()))
             {
-                throw new InvalidOperationException("This post can not be published");
+                await _reportRepository.DeleteReportsByPostIdAsync(request.PostId, cancellationToken);
             }
 
             post.Status = PostStatus.Published.ToString();
+            post.IsActive = true;
             post.PublishedAt = DateTime.UtcNow;
 
             await _repository.UpdateAsync(post);

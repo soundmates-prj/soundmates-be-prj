@@ -1,4 +1,4 @@
-﻿namespace AccountContentService.Api.Constants
+namespace AccountContentService.Api.Constants
 {
     /// <summary>
     /// Centralized API route definitions for AccountContentService.
@@ -117,6 +117,25 @@
 
             /// <summary>Increase post view count.</summary>
             public const string IncreaseViews = $"{BaseRoute}/{{postId:guid}}/views";
+
+            // ===============================
+            // REPORTING & MODERATION
+            // ===============================
+
+            /// <summary>Report a blog post.</summary>
+            public const string Report = $"{BaseRoute}/{{postId:guid}}/reports";
+
+            /// <summary>Get all reports for a specific post.</summary>
+            public const string GetReports = $"{BaseRoute}/{{postId:guid}}/reports";
+
+            /// <summary>Get all reported posts (moderation list).</summary>
+            public const string GetReported = $"{BaseRoute}/reported";
+
+            /// <summary>Ban a reported post.</summary>
+            public const string Ban = $"{BaseRoute}/{{postId:guid}}/ban";
+
+            /// <summary>Dismiss reports for a post.</summary>
+            public const string DismissReports = $"{BaseRoute}/{{postId:guid}}/dismiss-reports";
         }
 
         // =====================================================

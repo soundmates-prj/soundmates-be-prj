@@ -55,4 +55,12 @@ public class UserProfileReadModelRepository : IUserProfileReadModelRepository
             await _context.SaveChangesAsync(ct);
         }
     }
+    public async Task<IEnumerable<UserProfileReadModel>> GetByIdsAsync(
+    IEnumerable<Guid> userIds,
+    CancellationToken cancellationToken)
+    {
+        return await _context.UserProfileReadModels
+            .Where(u => userIds.Contains(u.Id))
+            .ToListAsync(cancellationToken);
+    }
 }
