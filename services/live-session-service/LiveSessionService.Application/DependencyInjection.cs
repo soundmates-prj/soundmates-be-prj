@@ -1,6 +1,7 @@
 using LiveSessionService.Application.Abstractions.Messaging;
 using LiveSessionService.Application.Abstractions.Messaging.Dispatcher;
 using LiveSessionService.Application.Abstractions.Messaging.Dispatcher.Interfaces;
+using LiveSessionService.Application.Features.LiveSessions.Commands.CancelSession;
 using LiveSessionService.Application.Features.LiveSessions.Commands.CreateLiveSession;
 using LiveSessionService.Application.Features.LiveSessions.Commands.CreateSessionSchedule;
 using LiveSessionService.Application.Features.LiveSessions.Commands.DeleteSessionSchedule;
@@ -130,6 +131,7 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<CreateSessionScheduleCommand, SessionScheduleResult>, CreateSessionScheduleHandler>();
         services.AddScoped<ICommandHandler<UpdateSessionScheduleCommand, SessionScheduleResult>, UpdateSessionScheduleHandler>();
         services.AddScoped<ICommandHandler<UpdateLiveSessionCommand, LiveSessionResult>, UpdateLiveSessionHandler>();
+        services.AddScoped<ICommandHandler<CancelSessionCommand, LiveSessionResult>, CancelSessionHandler>();
         services.AddScoped<ICommandHandler<DeleteSessionScheduleCommand>, DeleteSessionScheduleHandler>();
         services.AddScoped<ICommandHandler<StartSessionCommand, LiveSessionResult>, StartSessionHandler>();
         services.AddScoped<ICommandHandler<PauseSessionCommand, LiveSessionResult>, PauseSessionHandler>();
