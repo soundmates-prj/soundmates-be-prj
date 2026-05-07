@@ -578,6 +578,99 @@
       }
     },
     {
+      "DownstreamPathTemplate": "/api/v1/posts/reported",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-content-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/posts/reported",
+      "UpstreamHttpMethod": [
+        "GET",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/posts/{postId}/reports",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-content-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/posts/{postId}/reports",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/posts/{postId}/ban",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-content-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/posts/{postId}/ban",
+      "UpstreamHttpMethod": [
+        "POST",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/posts/{postId}/dismiss-reports",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-content-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/posts/{postId}/dismiss-reports",
+      "UpstreamHttpMethod": [
+        "POST",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 30000,
+        "TimeoutValue": 8000
+      }
+    },
+    {
       "DownstreamPathTemplate": "/api/v1/posts/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
@@ -2356,7 +2449,6 @@
         "TimeoutValue": 8000
       }
     },
-
     {
       "DownstreamPathTemplate": "/api/v1/podcast-episode-requests",
       "DownstreamScheme": "http",
