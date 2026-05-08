@@ -51,6 +51,8 @@ using LiveSessionService.Application.Features.PodcastEpisodeRequests.Commands.Re
 using LiveSessionService.Application.Features.PodcastEpisodeRequests.Queries.GetPodcastEpisodeRequests;
 using LiveSessionService.Application.Features.PodcastEpisodeRequests.Queries.GetMyPodcastEpisodeRequests;
 using LiveSessionService.Application.Features.PodcastEpisodeRequests.Queries.GetPodcastEpisodeRequestById;
+using LiveSessionService.Application.Features.PodcastEpisodeRequests.Commands.CheckPodcastEpisodeToxicity;
+using LiveSessionService.Domain.Interfaces;
 using LiveSessionService.Application.Features.Results.PodcastRequests;
 using LiveSessionService.Application.Features.Playlists.Commands.AddMediaToPlaylist;
 using LiveSessionService.Application.Features.Playlists.Commands.AddTracksToUserPlaylist;
@@ -243,6 +245,7 @@ public static class DependencyInjection
         // Register PodcastEpisodeRequest Command Handlers
         services.AddScoped<ICommandHandler<CreatePodcastEpisodeRequestCommand, PodcastEpisodeRequestResult>, CreatePodcastEpisodeRequestHandler>();
         services.AddScoped<ICommandHandler<ReviewPodcastEpisodeRequestCommand, PodcastEpisodeRequestResult>, ReviewPodcastEpisodeRequestHandler>();
+        services.AddScoped<ICommandHandler<CheckPodcastEpisodeToxicityCommand, ModerationResult>, CheckPodcastEpisodeToxicityHandler>();
 
         // Register PodcastEpisodeRequest Query Handlers
         services.AddScoped<IQueryHandler<GetPodcastEpisodeRequestsQuery, List<PodcastEpisodeRequestResult>>, GetPodcastEpisodeRequestsHandler>();

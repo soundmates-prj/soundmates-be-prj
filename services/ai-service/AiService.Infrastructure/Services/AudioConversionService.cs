@@ -153,6 +153,77 @@ public sealed class AudioConversionService : IAudioConversionService
         }
     }
 
+    public async Task<(bool IsSuccess, byte[]? ConcatenatedBytes, string? ErrorMessage)> ConcatenateAudiosAsync(
+        List<byte[]> audioChunks,
+        string extension,
+        CancellationToken cancellationToken = default)
+    {
+        if (audioChunks == null || audioChunks.Count == 0)
+            return (false, null, "No audio chunks to concatenate");
+
+        if (audioChunks.Count == 1)
+            return (true, audioChunks[0], null);
+
+        var tempFiles = new List<string>();
+        var listFile = Path.Combine(Path.GetTempPath(), $"concat_list_{Guid.NewGuid():N}.txt");
+        var tempOut = Path.Combine(Path.GetTempPath(), $"concat_out_{Guid.NewGuid():N}{extension}");
+
+        try
+        {
+            var listContent = new StringBuilder();
+            foreach (var chunk in audioChunks)
+            {
+                var chunkFile = Path.Combine(Path.GetTempPath(), $"chunk_{Guid.NewGuid():N}{extension}");
+                await File.WriteAllBytesAsync(chunkFile, chunk, cancellationToken);
+                tempFiles.Add(chunkFile);
+                
+                // Escape single quotes for FFmpeg concat file format
+                var escapedPath = chunkFile.Replace("'", "'\\''");
+                listContent.AppendLine($"file '{escapedPath}'");
+            }
+
+            await File.WriteAllTextAsync(listFile, listContent.ToString(), cancellationToken);
+
+            // -f concat -safe 0: use the list file to concatenate
+            // -c copy: don't re-encode if possible (fast and lossless for same formats)
+            var args = $"-y -f concat -safe 0 -i \"{listFile}\" -c copy \"{tempOut}\"";
+            
+            var ffmpegResult = await RunFFmpegProcessAsync(args, cancellationToken);
+            if (ffmpegResult.Success && File.Exists(tempOut))
+            {
+                var concatenatedBytes = await File.ReadAllBytesAsync(tempOut, cancellationToken);
+                return (true, concatenatedBytes, null);
+            }
+
+            // Fallback: If 'copy' fails (e.g. different sample rates), try re-encoding
+            _logger.LogWarning("FFmpeg concat-copy failed, retrying with re-encoding: {Error}", ffmpegResult.ErrorMessage);
+            var reencodeArgs = $"-y -f concat -safe 0 -i \"{listFile}\" \"{tempOut}\"";
+            var reencodeResult = await RunFFmpegProcessAsync(reencodeArgs, cancellationToken);
+            
+            if (reencodeResult.Success && File.Exists(tempOut))
+            {
+                var concatenatedBytes = await File.ReadAllBytesAsync(tempOut, cancellationToken);
+                return (true, concatenatedBytes, null);
+            }
+
+            return (false, null, reencodeResult.ErrorMessage ?? "FFmpeg concatenation failed");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Audio concatenation failed");
+            return (false, null, ex.Message);
+        }
+        finally
+        {
+            try { if (File.Exists(listFile)) File.Delete(listFile); } catch { }
+            try { if (File.Exists(tempOut)) File.Delete(tempOut); } catch { }
+            foreach (var file in tempFiles)
+            {
+                try { if (File.Exists(file)) File.Delete(file); } catch { }
+            }
+        }
+    }
+
     private async Task<(bool Success, string? ErrorMessage)> RunFFmpegProcessAsync(string args, CancellationToken cancellationToken)
     {
         var startInfo = new ProcessStartInfo

@@ -80,15 +80,36 @@ public static class MigrationExtensions
 
             var defaultVoices = new List<AiService.Domain.Entities.TtsVoice>
             {
-                new() { VoiceId = Guid.NewGuid(), Provider = "vieneutts", VoiceCode = "ngochuyen",
-                    DisplayName = "Ngọc Huyền (Standard)", Region = "VN", Gender = "Female",
-                    Model = "ngochuyen", IsActive = true, CreatedAt = DateTime.UtcNow },
+                // Baseline & Existing models
                 new() { VoiceId = Guid.NewGuid(), Provider = "vieneutts", VoiceCode = "q4",
                     DisplayName = "VieNeu Fast (Q4)", Region = "VN", Gender = "Unknown",
                     Model = "q4", IsActive = true, CreatedAt = DateTime.UtcNow },
                 new() { VoiceId = Guid.NewGuid(), Provider = "vieneutts", VoiceCode = "q8",
                     DisplayName = "VieNeu High Quality (Q8)", Region = "VN", Gender = "Unknown",
                     Model = "q8", IsActive = true, CreatedAt = DateTime.UtcNow },
+                new() { VoiceId = Guid.NewGuid(), Provider = "vieneutts", VoiceCode = "ngochuyen",
+                    DisplayName = "Ngọc Huyền (Standard)", Region = "VN", Gender = "Female",
+                    Model = "ngochuyen", IsActive = true, CreatedAt = DateTime.UtcNow },
+
+                // Additional voices from VieNeu-TTS reference
+                new() { VoiceId = Guid.NewGuid(), Provider = "vieneutts", VoiceCode = "binh",
+                    DisplayName = "Bình (Male North)", Region = "North", Gender = "Male",
+                    Model = "binh", IsActive = true, CreatedAt = DateTime.UtcNow },
+                new() { VoiceId = Guid.NewGuid(), Provider = "vieneutts", VoiceCode = "tuyen",
+                    DisplayName = "Tuyên (Male North)", Region = "North", Gender = "Male",
+                    Model = "tuyen", IsActive = true, CreatedAt = DateTime.UtcNow },
+                new() { VoiceId = Guid.NewGuid(), Provider = "vieneutts", VoiceCode = "vinh",
+                    DisplayName = "Vinh (Male South)", Region = "South", Gender = "Male",
+                    Model = "vinh", IsActive = true, CreatedAt = DateTime.UtcNow },
+                new() { VoiceId = Guid.NewGuid(), Provider = "vieneutts", VoiceCode = "ly",
+                    DisplayName = "Ly (Female North)", Region = "North", Gender = "Female",
+                    Model = "ly", IsActive = true, CreatedAt = DateTime.UtcNow },
+                new() { VoiceId = Guid.NewGuid(), Provider = "vieneutts", VoiceCode = "ngoc",
+                    DisplayName = "Ngọc (Female North)", Region = "North", Gender = "Female",
+                    Model = "ngoc", IsActive = true, CreatedAt = DateTime.UtcNow },
+                new() { VoiceId = Guid.NewGuid(), Provider = "vieneutts", VoiceCode = "doan",
+                    DisplayName = "Đoan (Female South)", Region = "South", Gender = "Female",
+                    Model = "doan", IsActive = true, CreatedAt = DateTime.UtcNow },
             };
 
             var addedCount = 0;
