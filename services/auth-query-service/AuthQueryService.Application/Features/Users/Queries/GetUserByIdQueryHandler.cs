@@ -26,6 +26,7 @@ namespace AuthQueryService.Application.Services.Users.Queries.GetUserById
                 LastName = u.LastName,
                 RoleId = u.RoleId,
                 RoleName = u.RoleName,
+                AvatarUrl = u.ProfileImageUrl,
                 AccountStatus = u.AccountStatus,
                 IsActive = u.IsActive,
                 IsVerified = u.IsVerified,

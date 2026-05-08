@@ -80,7 +80,7 @@ public sealed class PodcastRequestController : ControllerBase
             ?? User.FindFirst("name")?.Value 
             ?? User.FindFirst("preferred_username")?.Value 
             ?? "SoundMates Member";
-        var authorAvatar = User.FindFirst("picture")?.Value;
+        var authorAvatar = User.FindFirst("picture")?.Value ?? User.FindFirst("avatar")?.Value;
         var authorEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value;
         
         var authorInfoStr = System.Text.Json.JsonSerializer.Serialize(new {
@@ -100,7 +100,7 @@ public sealed class PodcastRequestController : ControllerBase
             BannerUrl: request.BannerUrl,
             Price: request.Price ?? 0m,
             IsPaid: request.IsPaid ?? false,
-            TargetPodcastId: request.TargetPodcastId);
+            TargetPodcastId: request.TargetPodcastId ?? null);
 
         var result = await _commands.Send<CreatePodcastRequestCommand, PodcastRequestResult>(command, ct);
 

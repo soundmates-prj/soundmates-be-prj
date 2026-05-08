@@ -13,6 +13,7 @@ namespace AuthQueryService.Application.DTOs
         public string? LastName { get; init; }
         public Guid? RoleId { get; init; }
         public string? RoleName { get; init; }
+        public string? AvatarUrl { get; init; }
 
         // Canonical account status
         public int AccountStatus { get; init; } = 1;

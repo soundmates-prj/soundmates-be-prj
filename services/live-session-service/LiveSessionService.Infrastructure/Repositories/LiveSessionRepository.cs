@@ -253,6 +253,7 @@ public sealed class LiveSessionRepository : ILiveSessionRepository
 
         var endedSessionIds = endedSessions.Select(x => x.Id).ToList();
         var musicRequestsBySession = new Dictionary<Guid, int>();
+        var endedListeners = new List<SessionListener>();
         
         if (endedSessionIds.Any())
         {
@@ -261,6 +262,19 @@ public sealed class LiveSessionRepository : ILiveSessionRepository
                 .GroupBy(x => x.LiveSessionId)
                 .Select(g => new { SessionId = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.SessionId, x => x.Count, cancellationToken);
+
+            endedListeners = await _context.SessionListeners
+                .AsNoTracking()
+                .Where(x => endedSessionIds.Contains(x.LiveSessionId))
+                .Select(x => new { x.Id, x.LiveSessionId, x.UserId, x.AnonymousIdentifier })
+                .ToListAsync(cancellationToken)
+                .ContinueWith(t => t.Result.Select(x => new SessionListener 
+                { 
+                    Id = x.Id, 
+                    LiveSessionId = x.LiveSessionId, 
+                    UserId = x.UserId, 
+                    AnonymousIdentifier = x.AnonymousIdentifier 
+                }).ToList(), cancellationToken);
         }
 
         var endedSessionsAnalysis = endedSessions.Select(s => 
@@ -269,7 +283,7 @@ public sealed class LiveSessionRepository : ILiveSessionRepository
                 ? s.EndedAt.Value - s.StartedAt.Value 
                 : TimeSpan.Zero;
             
-            var sessionUniqueListeners = listenerRows
+            var sessionUniqueListeners = endedListeners
                 .Where(x => x.LiveSessionId == s.Id)
                 .Select(x => ToListenerKey(x.Id, x.UserId, x.AnonymousIdentifier))
                 .Distinct()
@@ -443,13 +457,28 @@ public sealed class LiveSessionRepository : ILiveSessionRepository
 
         var endedSessionIds = endedSessions.Select(x => x.Id).ToList();
         var musicRequestsBySession = new Dictionary<Guid, int>();
+        var endedListeners = new List<SessionListener>();
         
         if (endedSessionIds.Any())
         {
-            musicRequestsBySession = songRequests
+            musicRequestsBySession = await _context.SongRequests
                 .Where(x => endedSessionIds.Contains(x.LiveSessionId))
                 .GroupBy(x => x.LiveSessionId)
-                .ToDictionary(g => g.Key, g => g.Count());
+                .Select(g => new { SessionId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.SessionId, x => x.Count, cancellationToken);
+
+            endedListeners = await _context.SessionListeners
+                .AsNoTracking()
+                .Where(x => endedSessionIds.Contains(x.LiveSessionId))
+                .Select(x => new { x.Id, x.LiveSessionId, x.UserId, x.AnonymousIdentifier })
+                .ToListAsync(cancellationToken)
+                .ContinueWith(t => t.Result.Select(x => new SessionListener 
+                { 
+                    Id = x.Id, 
+                    LiveSessionId = x.LiveSessionId, 
+                    UserId = x.UserId, 
+                    AnonymousIdentifier = x.AnonymousIdentifier 
+                }).ToList(), cancellationToken);
         }
 
         var endedSessionsAnalysis = endedSessions.Select(s => 
@@ -458,7 +487,7 @@ public sealed class LiveSessionRepository : ILiveSessionRepository
                 ? s.EndedAt.Value - s.StartedAt.Value 
                 : TimeSpan.Zero;
             
-            var sessionUniqueListeners = listenerRows
+            var sessionUniqueListeners = endedListeners
                 .Where(x => x.LiveSessionId == s.Id)
                 .Select(x => ToListenerKey(x.Id, x.UserId, x.AnonymousIdentifier))
                 .Distinct()
