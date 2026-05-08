@@ -1,19 +1,23 @@
 using AccountContentService.Application.Interfaces.Repositories;
 using AccountContentService.Domain.Entities;
 using MediatR;
+using AutoMapper;
+using AccountContentService.Application.DTOs;
 
 namespace AccountContentService.Application.Features.SystemSettings.Commands.PatchSettingByKey
 {
-    public class PatchSettingByKeyHandler : IRequestHandler<PatchSettingByKeyCommand, SystemSetting>
+    public class PatchSettingByKeyHandler : IRequestHandler<PatchSettingByKeyCommand, SystemSettingDto>
     {
         private readonly ISystemSettingReposiotry _repository;
+        private readonly IMapper _mapper;
 
-        public PatchSettingByKeyHandler(ISystemSettingReposiotry repository)
+        public PatchSettingByKeyHandler(ISystemSettingReposiotry repository, IMapper mapper)
         {
             _repository = repository;
+            _mapper = mapper;
         }
 
-        public async Task<SystemSetting> Handle(PatchSettingByKeyCommand request, CancellationToken cancellationToken)
+        public async Task<SystemSettingDto> Handle(PatchSettingByKeyCommand request, CancellationToken cancellationToken)
         {
             var setting = await _repository.GetByKeyAsync(request.Key, cancellationToken);
             if (setting == null)
@@ -37,7 +41,7 @@ namespace AccountContentService.Application.Features.SystemSettings.Commands.Pat
                 await _repository.UpdateAsync(setting);
             }
 
-            return setting;
+            return _mapper.Map<SystemSettingDto>(setting);
         }
     }
 }
