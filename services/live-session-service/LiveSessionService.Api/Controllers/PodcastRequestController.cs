@@ -80,7 +80,7 @@ public sealed class PodcastRequestController : ControllerBase
             ?? User.FindFirst("name")?.Value 
             ?? User.FindFirst("preferred_username")?.Value 
             ?? "SoundMates Member";
-        var authorAvatar = User.FindFirst("picture")?.Value;
+        var authorAvatar = User.FindFirst("picture")?.Value ?? User.FindFirst("avatar")?.Value;
         var authorEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value;
         
         var authorInfoStr = System.Text.Json.JsonSerializer.Serialize(new {
