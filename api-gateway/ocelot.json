@@ -150,6 +150,33 @@
       }
     },
     {
+      "DownstreamPathTemplate": "/api/v1/settings/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account-content-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/v1/settings/{everything}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "OPTIONS"
+      ],
+      "LoadBalancerOptions": {
+        "Type": "RoundRobin"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 5,
+        "DurationOfBreak": 20000,
+        "TimeoutValue": 3000
+      }
+    },
+    {
       "DownstreamPathTemplate": "/api/v1/users/{userId}/posts",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
