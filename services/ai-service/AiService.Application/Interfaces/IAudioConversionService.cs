@@ -12,4 +12,9 @@ public interface IAudioConversionService
         string speechExtension,
         string bgmUrlOrPath,
         CancellationToken cancellationToken = default);
+
+    Task<(bool IsSuccess, byte[]? ConcatenatedBytes, string? ErrorMessage)> ConcatenateAudiosAsync(
+        List<byte[]> audioChunks,
+        string extension,
+        CancellationToken cancellationToken = default);
 }
