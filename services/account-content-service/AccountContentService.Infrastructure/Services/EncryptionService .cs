@@ -1,4 +1,4 @@
-﻿using AccountContentService.Application.Interfaces.Services;
+using AccountContentService.Application.Interfaces.Services;
 using Microsoft.Extensions.Configuration;
 using System.Security.Cryptography;
 using System.Text;
@@ -34,18 +34,33 @@ public class EncryptionService : IEncryptionService
 
     public string Decrypt(string cipherText)
     {
-        using var aes = Aes.Create();
-        aes.Key = _key;
-        aes.IV = _iv;
+        if (string.IsNullOrWhiteSpace(cipherText)) return cipherText;
 
-        var decryptor = aes.CreateDecryptor();
+        try
+        {
+            using var aes = Aes.Create();
+            aes.Key = _key;
+            aes.IV = _iv;
 
-        var buffer = Convert.FromBase64String(cipherText);
+            var decryptor = aes.CreateDecryptor();
 
-        using var ms = new MemoryStream(buffer);
-        using var cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read);
-        using var sr = new StreamReader(cs);
+            var buffer = Convert.FromBase64String(cipherText);
 
-        return sr.ReadToEnd();
+            using var ms = new MemoryStream(buffer);
+            using var cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read);
+            using var sr = new StreamReader(cs);
+
+            return sr.ReadToEnd();
+        }
+        catch (FormatException)
+        {
+            // Not a base64 string, might be plaintext
+            return cipherText;
+        }
+        catch (CryptographicException)
+        {
+            // Invalid encrypted data, might be plaintext or corrupted
+            return cipherText;
+        }
     }
 }
