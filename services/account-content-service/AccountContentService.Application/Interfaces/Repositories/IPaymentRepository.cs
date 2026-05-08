@@ -1,4 +1,4 @@
-﻿using AccountContentService.Domain.Entities;
+using AccountContentService.Domain.Entities;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -18,5 +18,7 @@ namespace AccountContentService.Application.Interfaces.Repositories
         Task<Payment> GetByIdAsync(Guid id, CancellationToken cancellationToken);
 
         Task<Payment?> GetByOrderCodeAsync(long orderCode, CancellationToken cancellationToken);
+
+        Task<IEnumerable<Payment>> GetPaymentsByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken);
     }
 }

@@ -19,4 +19,9 @@ public class PendingPayoutDto
     public string? ErrorMessage { get; set; }
     public System.DateTime ScheduledAt { get; set; }
     public System.DateTime CreatedAt { get; set; }
+
+    public string? AuthorFullName { get; set; }
+    public string? AuthorUsername { get; set; }
+    public string? AuthorAvatarUrl { get; set; }
+    public decimal SystemAmount { get; set; }
 }

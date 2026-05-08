@@ -1,4 +1,4 @@
-﻿using AccountContentService.Application.Interfaces.Repositories;
+using AccountContentService.Application.Interfaces.Repositories;
 using AccountContentService.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -56,6 +56,14 @@ namespace AccountContentService.Infrastructure.Repositories
             return await _context.Payments
                 .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.OrderCode == orderCode, cancellationToken);
+        }
+
+        public async Task<IEnumerable<Payment>> GetPaymentsByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken)
+        {
+            return await _context.Payments
+                .AsNoTracking()
+                .Where(x => ids.Contains(x.Id))
+                .ToListAsync(cancellationToken);
         }
     }
 }
