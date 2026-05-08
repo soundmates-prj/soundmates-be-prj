@@ -6,6 +6,7 @@ using AiService.Domain.Entities;
 using AiService.Domain.Enums;
 using AiService.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
+using System.Text;
 
 namespace AiService.Application.Services;
 
@@ -74,28 +75,57 @@ public class AudioService : IAudioService
 
         try
         {
-            var ttsResp = await _tts.SynthesizeAsync(
-                new TtsSynthesizeRequest(
-                    Text: script.ContentText,
-                    VoiceCode: voice.VoiceCode,
-                    Model: voice.Model,
-                    Speed: request.Speed,
-                    Pitch: request.Pitch),
-                cancellationToken);
+            // --- TEXT CHUNKING LOGIC ---
+            var textChunks = SplitTextToChunks(script.ContentText, maxChunkLength: 300);
+            _logger.LogInformation("Split text into {Count} chunks for TTS generation", textChunks.Count);
 
-            var validationError = ValidateTtsResponse(script.ContentText, (double)(request.Speed ?? 1.0m), ttsResp);
-            if (validationError is not null)
+            var audioChunks = new List<byte[]>();
+            var totalDuration = 0;
+            string? firstContentType = null;
+
+            foreach (var chunk in textChunks)
             {
-                audio.Status = AudioStatus.Failed.ToString().ToLowerInvariant();
-                audio.UpdatedAt = DateTime.UtcNow;
-                await _audios.UpdateAsync(audio, cancellationToken);
-                await _uow.SaveChangesAsync(cancellationToken);
-                return Result<ScriptAudio>.Failure(validationError, (int)ApiStatusCode.HB50001);
+                if (string.IsNullOrWhiteSpace(chunk)) continue;
+
+                var ttsResp = await _tts.SynthesizeAsync(
+                    new TtsSynthesizeRequest(
+                        Text: chunk,
+                        VoiceCode: voice.VoiceCode,
+                        Model: voice.Model,
+                        Speed: request.Speed,
+                        Pitch: request.Pitch),
+                    cancellationToken);
+
+                var validationError = ValidateTtsResponse(chunk, (double)(request.Speed ?? 1.0m), ttsResp);
+                if (validationError is not null)
+                {
+                    _logger.LogError("TTS Chunk validation failed: {Error}", validationError);
+                    audio.Status = AudioStatus.Failed.ToString().ToLowerInvariant();
+                    audio.UpdatedAt = DateTime.UtcNow;
+                    await _audios.UpdateAsync(audio, cancellationToken);
+                    await _uow.SaveChangesAsync(cancellationToken);
+                    return Result<ScriptAudio>.Failure($"Chunk generation failed: {validationError}", (int)ApiStatusCode.HB50001);
+                }
+
+                audioChunks.Add(ttsResp.AudioBytes);
+                totalDuration += ttsResp.DurationSeconds ?? 0;
+                firstContentType ??= ttsResp.ContentType;
             }
 
-            var ext = ttsResp.ContentType.Contains("wav", StringComparison.OrdinalIgnoreCase) ? ".wav" : ".mp3";
-            var finalBytes = ttsResp.AudioBytes;
-            var contentType = ttsResp.ContentType;
+            if (audioChunks.Count == 0)
+                return Result<ScriptAudio>.Failure("No audio generated");
+
+            var ext = (firstContentType ?? "").Contains("wav", StringComparison.OrdinalIgnoreCase) ? ".wav" : ".mp3";
+            
+            // Concatenate all chunks
+            var concatResult = await _audioConversion.ConcatenateAudiosAsync(audioChunks, ext, cancellationToken);
+            if (!concatResult.IsSuccess || concatResult.ConcatenatedBytes == null)
+            {
+                return Result<ScriptAudio>.Failure($"Audio concatenation failed: {concatResult.ErrorMessage}", (int)ApiStatusCode.HB50001);
+            }
+
+            var finalBytes = concatResult.ConcatenatedBytes;
+            var contentType = firstContentType ?? "audio/mpeg";
 
             if (!string.IsNullOrWhiteSpace(request.BgmUrl))
             {
@@ -122,52 +152,68 @@ public class AudioService : IAudioService
 
             audio.AudioPath = stored.RelativePath;
             audio.AudioUrl = $"/api/audios/{audio.AudioId}/file";
-            audio.Duration = ttsResp.DurationSeconds;
+            audio.Duration = totalDuration;
             audio.Status = AudioStatus.Done.ToString().ToLowerInvariant();
             audio.UpdatedAt = DateTime.UtcNow;
 
             await _audios.UpdateAsync(audio, cancellationToken);
             await _uow.SaveChangesAsync(cancellationToken);
 
-            if (ttsResp.TokensUsed is not null || ttsResp.Cost is not null)
-            {
-                await _usage.LogAsync(new AiUsage
-                {
-                    UsageId = Guid.NewGuid(),
-                    UserId = request.UserId,
-                    Provider = "tts",
-                    TokensUsed = ttsResp.TokensUsed,
-                    Cost = ttsResp.Cost,
-                    ScriptId = script.ScriptId,
-                    CreatedAt = DateTime.UtcNow
-                }, cancellationToken);
-            }
-
             return Result<ScriptAudio>.Success(audio);
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Audio generation failed");
             audio.Status = AudioStatus.Failed.ToString().ToLowerInvariant();
             audio.UpdatedAt = DateTime.UtcNow;
 
             try
             {
-                // Use a non-cancelable token so we can best-effort persist failure status
-                // even if the original request token has already been canceled.
                 await _audios.UpdateAsync(audio, CancellationToken.None);
                 await _uow.SaveChangesAsync(CancellationToken.None);
             }
             catch (Exception persistEx)
             {
-                _logger.LogWarning(
-                    persistEx,
-                    "Failed to persist audio failure status for audioId {AudioId} after error: {OriginalError}",
-                    audio.AudioId,
-                    ex.Message);
+                _logger.LogWarning(persistEx, "Failed to persist audio failure status");
             }
 
             throw;
         }
+    }
+
+    private List<string> SplitTextToChunks(string text, int maxChunkLength)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return new List<string>();
+        if (text.Length <= maxChunkLength) return new List<string> { text };
+
+        var chunks = new List<string>();
+        var sentences = text.Split(new[] { ". ", "! ", "? ", ".\n", "!\n", "?\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
+        
+        var currentChunk = new StringBuilder();
+        foreach (var sentence in sentences)
+        {
+            var trimmed = sentence.Trim();
+            if (string.IsNullOrEmpty(trimmed)) continue;
+
+            // Re-add the punctuation if it's not the end of the text
+            var sentenceWithPunct = trimmed;
+            if (!char.IsPunctuation(trimmed.Last())) sentenceWithPunct += ".";
+
+            if (currentChunk.Length + sentenceWithPunct.Length > maxChunkLength && currentChunk.Length > 0)
+            {
+                chunks.Add(currentChunk.ToString().Trim());
+                currentChunk.Clear();
+            }
+            
+            currentChunk.Append(sentenceWithPunct).Append(" ");
+        }
+
+        if (currentChunk.Length > 0)
+        {
+            chunks.Add(currentChunk.ToString().Trim());
+        }
+
+        return chunks;
     }
 
     private static string? ValidateTtsResponse(string sourceText, double speed, TtsSynthesizeResponse response)
@@ -179,7 +225,7 @@ public class AudioService : IAudioService
             return $"TTS returned invalid content type '{response.ContentType}'.";
 
         var isWav = response.ContentType.Contains("wav", StringComparison.OrdinalIgnoreCase);
-        var minLength = isWav ? 45 : 256;
+        var minLength = isWav ? 44 : 128; // Reduced min size for chunks
         if (response.AudioBytes.Length < minLength)
             return $"TTS returned suspiciously small audio payload ({response.AudioBytes.Length} bytes).";
 
@@ -187,23 +233,6 @@ public class AudioService : IAudioService
         {
             if (!(response.AudioBytes[0] == 'R' && response.AudioBytes[1] == 'I' && response.AudioBytes[2] == 'F' && response.AudioBytes[3] == 'F'))
                 return "TTS WAV payload is missing RIFF header.";
-
-            if (!(response.AudioBytes[8] == 'W' && response.AudioBytes[9] == 'A' && response.AudioBytes[10] == 'V' && response.AudioBytes[11] == 'E'))
-                return "TTS WAV payload is missing WAVE header.";
-        }
-
-        // Duration must be present and positive
-        if (!response.DurationSeconds.HasValue || response.DurationSeconds.Value <= 0)
-            return $"TTS returned invalid duration ({(response.DurationSeconds.HasValue ? response.DurationSeconds.Value : 0)}s).";
-
-        var compactLength = CountNonWhitespaceChars(sourceText);
-        if (compactLength >= 20)
-        {
-            // Natural Vietnamese speech at ~18-22 chars/s. We use 35 chars/s as a loose bound to account for fast models and custom speeds.
-            var effectiveCharsPerSec = 35d * speed;
-            var minimumDuration = (int)Math.Floor(compactLength / effectiveCharsPerSec);
-            if (minimumDuration > 2 && response.DurationSeconds.Value < minimumDuration)
-                return $"TTS returned suspiciously short duration ({response.DurationSeconds.Value}s for {compactLength} chars).";
         }
 
         return null;

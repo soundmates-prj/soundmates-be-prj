@@ -111,6 +111,9 @@ public static class DependencyInjection
         services.AddHttpClient("CloudinaryDownload");
         services.AddSingleton<ICloudinaryMediaStorage, CloudinaryMediaStorage>();
 
+        // Audio Moderation
+        services.AddScoped<IAudioModerationService, AudioModerationService>();
+
         // External Services - AzuraCast
         // Read from environment variables (Docker) or config
         var azuraCastBaseUrl = Environment.GetEnvironmentVariable("AZURACAST_BASE_URL")

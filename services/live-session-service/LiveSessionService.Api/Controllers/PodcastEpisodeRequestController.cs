@@ -8,6 +8,8 @@ using LiveSessionService.Application.Features.PodcastEpisodeRequests.Commands.Re
 using LiveSessionService.Application.Features.PodcastEpisodeRequests.Queries.GetPodcastEpisodeRequests;
 using LiveSessionService.Application.Features.PodcastEpisodeRequests.Queries.GetMyPodcastEpisodeRequests;
 using LiveSessionService.Application.Features.PodcastEpisodeRequests.Queries.GetPodcastEpisodeRequestById;
+using LiveSessionService.Application.Features.PodcastEpisodeRequests.Commands.CheckPodcastEpisodeToxicity;
+using LiveSessionService.Domain.Interfaces;
 using LiveSessionService.Api.Models.Responses;
 using LiveSessionService.Api.Extensions;
 using Microsoft.AspNetCore.Authorization;
@@ -191,5 +193,26 @@ public class PodcastEpisodeRequestController : ControllerBase
         }
 
         return Ok(result.ToApiResponse());
+    }
+
+    [HttpPost("{id:guid}/check-toxicity")]
+    [Authorize(Roles = "STAFF,ADMIN")]
+    [ProducesResponseType(typeof(ApiResponse<ModerationResult>), 200)]
+    public async Task<IActionResult> CheckToxicity(Guid id, CancellationToken ct)
+    {
+        var command = new CheckPodcastEpisodeToxicityCommand(id);
+        var result = await _commands.Send<CheckPodcastEpisodeToxicityCommand, ModerationResult>(command, ct);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                ErrorCode.NotFound => NotFound(result.ToApiResponse()),
+                ErrorCode.BadRequest => BadRequest(result.ToApiResponse()),
+                _ => StatusCode((int)(result.ErrorCode ?? ErrorCode.InternalServerError), result.ToApiResponse())
+            };
+        }
+
+        return Ok(ApiResponse<ModerationResult>.SuccessResponse(result.Data!, "Toxicity check completed successfully"));
     }
 }
