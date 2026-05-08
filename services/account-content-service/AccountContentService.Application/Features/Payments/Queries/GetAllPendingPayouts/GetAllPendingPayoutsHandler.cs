@@ -40,7 +40,7 @@ public sealed class GetAllPendingPayoutsHandler : IRequestHandler<GetAllPendingP
             var user = userProfileDict.GetValueOrDefault(p.TargetUserId);
             var payment = paymentDict.GetValueOrDefault(p.PaymentId);
 
-            var systemAmount = payment != null ? Math.Max(0, payment.Amount - p.Amount) : 0;
+            var systemAmount = payment != null ? Math.Max(0, payment.TotalAmount - p.Amount) : 0;
 
             return new PendingPayoutDto
             {
