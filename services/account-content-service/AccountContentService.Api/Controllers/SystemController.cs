@@ -1,4 +1,4 @@
-﻿
+
 using AccountContentService.Api.Common;
 using AccountContentService.Api.Constants;
 using AccountContentService.Api.Contracts.Requests;
@@ -136,6 +136,27 @@ namespace AccountContentService.Api.Controllers
             var response = _mapper.Map<SystemSettingResponse>(result);
 
             return Ok(ApiResponse<SystemSettingResponse>.Ok(response, "Get setting successfully"));
+        }
+
+        /// <summary>
+        /// Patch a system setting value by key. Creates it if it doesn't exist.
+        /// </summary>
+        /// <param name="key">The unique key of the system setting</param>
+        /// <param name="request">The value to update</param>
+        /// <response code="200">System setting patched successfully</response>
+        [HttpPatch(ApiRoutes.Settings.PatchByKey)]
+        public async Task<IActionResult> PatchSettingByKey([FromRoute] string key, [FromBody] PatchSettingByKeyRequest request)
+        {
+            var command = new AccountContentService.Application.Features.SystemSettings.Commands.PatchSettingByKey.PatchSettingByKeyCommand
+            {
+                Key = key,
+                Value = request.Value
+            };
+
+            var result = await _mediator.Send(command);
+            var response = _mapper.Map<SystemSettingResponse>(result);
+
+            return Ok(ApiResponse<SystemSettingResponse>.Ok(response, "Setting patched successfully"));
         }
 
         /// <summary>

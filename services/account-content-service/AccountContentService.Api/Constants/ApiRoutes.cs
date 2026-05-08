@@ -386,6 +386,9 @@ namespace AccountContentService.Api.Constants
             /// <summary>Retrieve setting details by Id.</summary>
             public const string GetByKey = $"{BaseRoute}/{{key}}";
 
+            /// <summary>Patch setting value by Key.</summary>
+            public const string PatchByKey = $"{BaseRoute}/{{key}}";
+
             /// <summary>Retrieve all setting values.</summary>
             public const string GetAll = BaseRoute;
         }

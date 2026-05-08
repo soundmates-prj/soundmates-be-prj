@@ -22,6 +22,7 @@ public sealed class PayOSWebhookHandler : IRequestHandler<PayOSWebhookCommand, b
     private readonly INotificationPusher _notificationPusher;
     private readonly ILogger<PayOSWebhookHandler> _logger;
     private readonly IMessageBusPublisher _eventBus;
+    private readonly ISystemSettingReposiotry _systemSettingRepo;
 
     public PayOSWebhookHandler(
         IPaymentRepository paymentRepo,
@@ -33,7 +34,8 @@ public sealed class PayOSWebhookHandler : IRequestHandler<PayOSWebhookCommand, b
         INotificationRepository notificationRepo,
         INotificationPusher notificationPusher,
         ILogger<PayOSWebhookHandler> logger,
-        IMessageBusPublisher eventBus)
+        IMessageBusPublisher eventBus,
+        ISystemSettingReposiotry systemSettingRepo)
     {
         _paymentRepo = paymentRepo;
         _transactionRepo = transactionRepo;
@@ -45,6 +47,7 @@ public sealed class PayOSWebhookHandler : IRequestHandler<PayOSWebhookCommand, b
         _notificationPusher = notificationPusher;
         _logger = logger;
         _eventBus = eventBus;
+        _systemSettingRepo = systemSettingRepo;
     }
 
     public async Task<bool> Handle(PayOSWebhookCommand request, CancellationToken cancellationToken)
@@ -116,13 +119,22 @@ public sealed class PayOSWebhookHandler : IRequestHandler<PayOSWebhookCommand, b
                 {
                     var bankAccount = await _authApiClient.GetUserBankAccountAsync(podcast.CreatedBy, cancellationToken);
 
+                    var percentageSetting = await _systemSettingRepo.GetByKeyAsync("PAYOUT_PERCENTAGE", cancellationToken);
+                    var payoutPercentage = 0.8m;
+                    if (percentageSetting != null && decimal.TryParse(percentageSetting.Value, out var parsed))
+                    {
+                        payoutPercentage = parsed / 100m;
+                    }
+
+                    var payoutAmount = podcast.Price * payoutPercentage;
+
                     // Create pending payout
                     var pendingPayout = new PendingPayout
                     {
                         Id = Guid.NewGuid(),
                         PaymentId = payment.Id,
                         TargetUserId = podcast.CreatedBy,
-                        Amount = podcast.Price * 0.8m, // System keeps 20% fee
+                        Amount = payoutAmount,
                         BankId = bankAccount?.BankId,
                         AccountNumber = bankAccount?.AccountNumber,
                         AccountName = bankAccount?.AccountName,
@@ -147,7 +159,7 @@ public sealed class PayOSWebhookHandler : IRequestHandler<PayOSWebhookCommand, b
                         UserId = podcast.CreatedBy,
                         Type = "podcast_purchased",
                         ReferenceId = payment.TargetId,
-                        Message = $"Chúc mừng! Có người vừa mua podcast \"{podcast.Title}\" của bạn. Bạn nhận được {podcast.Price * 0.8m:N0}đ.",
+                        Message = $"Chúc mừng! Có người vừa mua podcast \"{podcast.Title}\" của bạn. Bạn nhận được {payoutAmount:N0}đ.",
                         IsRead = false,
                         CreatedAt = DateTime.UtcNow
                     };

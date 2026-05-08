@@ -97,7 +97,10 @@ public sealed class UpdatePodcastHandler : ICommandHandler<UpdatePodcastCommand,
             IsPaid = podcast.IsPaid,
             Title = podcast.Title,
             Description = podcast.Description,
-            Author = string.IsNullOrWhiteSpace(podcast.Author) ? null : System.Text.Json.JsonSerializer.Deserialize<object>(podcast.Author),
+            Author = string.IsNullOrWhiteSpace(podcast.Author) ? null : 
+                     (podcast.Author.TrimStart().StartsWith("{") || podcast.Author.TrimStart().StartsWith("[")) 
+                        ? System.Text.Json.JsonSerializer.Deserialize<object>(podcast.Author) 
+                        : podcast.Author,
             Status = podcast.Status.ToString(),
             Type = podcast.Type,
             Banner = podcast.Banner,

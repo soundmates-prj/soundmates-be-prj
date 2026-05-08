@@ -112,14 +112,14 @@ public sealed class ReviewSongRequestHandler : ICommandHandler<ReviewSongRequest
                     else 
                     {
                         songRequest.Status = SongRequestStatus.Rejected;
-                        songRequest.RejectReason = "Không tìm thấy playlist nào có bật tính năng Request trên hệ thống AzuraCast.";
+                        songRequest.RejectReason = "Trạm phát hiện không có danh sách phát nào cho phép yêu cầu bài hát.";
                     }
                 }
                 catch (Exception retryEx)
                 {
                     _logger.LogError(retryEx, "Failed to force-queue song request {SongRequestId} to AzuraCast after assigning playlist", songRequest.Id);
                     songRequest.Status = SongRequestStatus.Rejected;
-                    songRequest.RejectReason = "Trạm phát (AzuraCast) từ chối yêu cầu và thủ thuật ép phát cũng thất bại.";
+                    songRequest.RejectReason = "Trạm phát từ chối yêu cầu đối với bài hát này.";
                 }
             }
             catch (Exception ex)

@@ -24,6 +24,7 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
         private readonly INotificationPusher _notificationPusher;
         private readonly IMapper _mapper;   
         private readonly IMessageBusPublisher _eventBus;
+        private readonly ISystemSettingReposiotry _systemSettingRepo;
 
         public VNPayCallbackHandler(
             IPaymentRepository paymentRepo,
@@ -36,7 +37,8 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
             INotificationRepository notificationRepo,
             INotificationPusher notificationPusher,
             IMapper mapper,
-            IMessageBusPublisher eventBus)
+            IMessageBusPublisher eventBus,
+            ISystemSettingReposiotry systemSettingRepo)
         {
             _paymentRepo = paymentRepo;
             _transactionRepo = transactionRepo;
@@ -49,6 +51,7 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
             _notificationPusher = notificationPusher;
             _mapper = mapper;
             _eventBus = eventBus;
+            _systemSettingRepo = systemSettingRepo;
         }
 
         public async Task<TransactionDto> Handle(VNPayCallbackCommand request, CancellationToken cancellationToken)
@@ -126,12 +129,21 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
                     {
                         var bankAccount = await _authApiClient.GetUserBankAccountAsync(podcast.CreatedBy, cancellationToken);
 
+                        var percentageSetting = await _systemSettingRepo.GetByKeyAsync("PAYOUT_PERCENTAGE", cancellationToken);
+                        var payoutPercentage = 0.8m;
+                        if (percentageSetting != null && decimal.TryParse(percentageSetting.Value, out var parsed))
+                        {
+                            payoutPercentage = parsed / 100m;
+                        }
+
+                        var payoutAmount = podcast.Price * payoutPercentage;
+
                         var pendingPayout = new PendingPayout
                         {
                             Id = Guid.NewGuid(),
                             PaymentId = payment.Id,
                             TargetUserId = podcast.CreatedBy,
-                            Amount = podcast.Price * 0.8m, // System keeps 20% fee
+                            Amount = payoutAmount,
                             BankId = bankAccount?.BankId,
                             AccountNumber = bankAccount?.AccountNumber,
                             AccountName = bankAccount?.AccountName,
@@ -153,7 +165,7 @@ namespace AccountContentService.Application.Features.Payments.Commands.CallbackC
                             UserId = podcast.CreatedBy,
                             Type = "podcast_purchased",
                             ReferenceId = payment.TargetId,
-                            Message = $"Chúc mừng! Có người vừa mua podcast \"{podcast.Title}\" của bạn. Bạn nhận được {podcast.Price * 0.8m:N0}đ.",
+                            Message = $"Chúc mừng! Có người vừa mua podcast \"{podcast.Title}\" của bạn. Bạn nhận được {payoutAmount:N0}đ.",
                             IsRead = false,
                             CreatedAt = DateTime.UtcNow
                         };
